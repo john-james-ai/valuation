@@ -1,0 +1,106 @@
+#!/usr/bin/env python3
+# -*- coding:utf-8 -*-
+# ================================================================================================ #
+# Project    : Mercor Dominick's Fine Foods Acquisition Analysis                                   #
+# Version    : 0.1.0                                                                               #
+# Python     : 3.12.11                                                                             #
+# Filename   : /config.yaml                                                                        #
+# ------------------------------------------------------------------------------------------------ #
+# Author     : John James                                                                          #
+# Email      : john.james.ai.studio@gmail.com                                                      #
+# URL        : https://github.com/john-james-ai/mercor-dominicks-acquisition-analysis              #
+# ------------------------------------------------------------------------------------------------ #
+# Created    : Thursday October 9th 2025 12:06:34 am                                               #
+# Modified   : Thursday October 9th 2025 03:02:06 am                                               #
+# ------------------------------------------------------------------------------------------------ #
+# License    : MIT License                                                                         #
+# Copyright  : (c) 2025 John James                                                                 #
+# ================================================================================================ #
+# Category Filepaths
+category_filenames:
+    analgesics: 
+      filename: wana.zip
+      category: Analgesics
+    bath_soap:
+      filename: wbat.zip
+      category: Bath Soap
+    beer:
+      filename: wber.zip
+      category: Beer
+    bottled_juices:
+      filename: wbjc.zip
+      category: Bottled Juices
+    cereals:
+      filename: wcer.zip
+      category: Cereals
+    cheeses:
+      filename: wche.zip
+      category: Cheeses-
+    cigarettes:
+      filename: wcig.zip
+      category: Cigarettes
+    cookies:
+      filename: wcoo.zip
+      category: Cookies
+    crackers:
+      filename: wcra.zip
+      category: Crackers
+    canned_soup:
+      filename: wcso.zip
+      category: Canned Soup
+    dish_detergent:
+      filename: wdid.zip
+      category: Dish Detergent
+    front_end_candies:
+      filename: wfec.zip
+      category: Front-end-candies
+    frozen_dinners:
+      filename: wfrd.zip
+      category: Frozen Dinners
+    frozen_entrees:
+      filename: wfre.zip
+      category: Frozen Entrees
+    frozen_juices:
+      filename: wfrj.zip
+      category: Frozen Juices
+    fabric_softeners:
+      filename: wfsf.zip
+      category: Fabric Softeners
+    grooming_products:
+      filename: wgro.zip
+      category: Grooming Products
+    laundry_detergents:
+      filename: wlnd.zip
+      category: Laundry Detergents
+    oatmeal:
+      filename: woat.zip
+      category: Oatmeal
+    paper_towels:
+      filename: wptw.zip
+      category: Paper Towels
+    soft_drinks:
+      filename: wsdr.zip
+      category: Soft Drinks
+    shampoos:
+      filename: wsha.zip
+      category: Shampoos
+    snack_crackers:
+      filename: wsna.zip
+      category: Snack Crackers
+    soaps:
+      filename: wsoa.zip
+      category: Soaps
+    toothbrushes:
+      filename: wtbr.zip
+      category: Toothbrushes
+    canned_tuna:
+      filename: wtna.zip
+      category: Canned Tuna
+    toothpastes:
+      filename: wtpa.zip
+      category: Toothpastes
+    bathroom_tissues:
+      filename: wtti.zip
+      category: Bathroom Tissues
+
+
