@@ -4,14 +4,14 @@
 # Project    : Mercor Dominick's Fine Foods Acquisition Analysis                                   #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
-# Filename   : /valuation/prep/sales.py                                                            #
+# Filename   : /valuation/dataset/sales.py                                                         #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
 # URL        : https://github.com/john-james-ai/mercor-dominicks-acquisition-analysis              #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Wednesday October 8th 2025 02:52:13 pm                                              #
-# Modified   : Friday October 10th 2025 05:11:53 am                                                #
+# Modified   : Friday October 10th 2025 03:32:20 pm                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -22,16 +22,17 @@ import pandas as pd
 from tqdm import tqdm
 
 from valuation.config import (
-    CATEGORY_DATA_FILENAME,
-    SALES_DATA_FILENAME,
-    SAME_STORE_SALES_DATA_FILENAME,
-    STORE_DATA_FILENAME,
-    TEST_DATA_FILENAME,
-    TRAIN_DATA_FILENAME,
-    VALIDATION_DATA_FILENAME,
+    CATEGORY_DATA_FILEPATH,
+    RAW_DATA_DIR,
+    SALES_DATA_FILEPATH,
+    SAME_STORE_SALES_DATA_FILEPATH,
+    STORE_DATA_FILEPATH,
+    TEST_DATA_FILEPATH,
+    TRAIN_DATA_FILEPATH,
+    VALIDATION_DATA_FILEPATH,
     WEEK_DECODE_TABLE_FILEPATH,
 )
-from valuation.prep.base import DataPrep
+from valuation.dataset.base import DataPrep
 
 # ------------------------------------------------------------------------------------------------ #
 
@@ -191,27 +192,27 @@ class SalesDataPrep(DataPrep):
         sales_datasets = []
 
         # Check if output file already exists and not forcing reprocessing
-        if not force and self.exists(filename=SALES_DATA_FILENAME):
+        if not force and self.exists(filepath=SALES_DATA_FILEPATH):
             logger.info(
-                f"Processed dataset {SALES_DATA_FILENAME} already exists.\n \
+                f"Processed dataset {SALES_DATA_FILEPATH} already exists.\n \
                     Skipping processing. To reprocess, set force=True."
             )
             return
 
         # If force is True and file exists, log that we are reprocessing and
         # remove the existing file
-        if force and self.exists(filename=SALES_DATA_FILENAME):
+        if force and self.exists(filepath=SALES_DATA_FILEPATH):
             logger.info(
                 f"Force reprocessing enabled. \
                     Existing files will be overwritten."
             )
-            self.delete(filename=SALES_DATA_FILENAME)
-            self.delete(filename=TRAIN_DATA_FILENAME)
-            self.delete(filename=VALIDATION_DATA_FILENAME)
-            self.delete(filename=TEST_DATA_FILENAME)
-            self.delete(filename=SAME_STORE_SALES_DATA_FILENAME)
-            self.delete(filename=CATEGORY_DATA_FILENAME)
-            self.delete(filename=STORE_DATA_FILENAME)
+            self.delete(filepath=SALES_DATA_FILEPATH)
+            self.delete(filepath=TRAIN_DATA_FILEPATH)
+            self.delete(filepath=VALIDATION_DATA_FILEPATH)
+            self.delete(filepath=TEST_DATA_FILEPATH)
+            self.delete(filepath=SAME_STORE_SALES_DATA_FILEPATH)
+            self.delete(filepath=CATEGORY_DATA_FILEPATH)
+            self.delete(filepath=STORE_DATA_FILEPATH)
 
         logger.info("Processing dataset...")
 
@@ -221,12 +222,13 @@ class SalesDataPrep(DataPrep):
         # Iterate through category sales files
         for _, category_info in pbar:
             filename = category_info["filename"]
+            filepath = RAW_DATA_DIR / filename
             category = category_info["category"]
             pbar.set_description(f"Processing category: {category} from file: {filename}")
 
             # Load, clean, calculate revenue, and aggregate
             processed_df = (
-                self.load(filename=filename)
+                self.load(filepath=filepath)
                 .pipe(self.add_category, category=category)
                 .pipe(self.clean_dataset)
                 .pipe(self.calculate_revenue)
@@ -239,4 +241,4 @@ class SalesDataPrep(DataPrep):
         full_dataset = pd.concat(sales_datasets, ignore_index=True)
 
         # Save processed dataset
-        self.save(df=full_dataset, filename=SALES_DATA_FILENAME)
+        self.save(df=full_dataset, filepath=SALES_DATA_FILEPATH)

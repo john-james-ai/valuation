@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/mercor-dominicks-acquisition-analysis              #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 9th 2025 11:01:16 pm                                               #
-# Modified   : Friday October 10th 2025 03:38:45 am                                                #
+# Modified   : Friday October 10th 2025 04:55:48 pm                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -20,7 +20,7 @@
 import typer
 
 from valuation.config import CONFIG_CATEGORY_FILEPATH, ConfigReader
-from valuation.prep.sales import SalesDataPrep
+from valuation.dataset.profile import SalesDataProfile
 
 # ------------------------------------------------------------------------------------------------ #
 app = typer.Typer()
@@ -44,7 +44,7 @@ def main(
 
     # ----------------------------------------------
     # Instantiate the processor
-    processor = SalesDataPrep()
+    processor = SalesDataProfile()
 
     # Run the processor pipeline
     processor.prepare(category_filenames=category_filenames, force=force)

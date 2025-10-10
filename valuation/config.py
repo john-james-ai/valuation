@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/mercor-dominicks-acquisition-analysis              #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Wednesday October 8th 2025 02:52:13 pm                                              #
-# Modified   : Friday October 10th 2025 06:31:17 am                                                #
+# Modified   : Friday October 10th 2025 03:29:46 pm                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -52,14 +52,15 @@ WEEK_DECODE_TABLE_FILEPATH = REFERENCES_DIR / "week_decode_table.csv"
 CONFIG_FILEPATH = PROJ_ROOT / "config.yaml"
 CONFIG_CATEGORY_FILEPATH = "category_filenames"
 
-# Filenames
-SALES_DATA_FILENAME = "sales.csv"
-SAME_STORE_SALES_DATA_FILENAME = "same_store_sales.csv"
-CATEGORY_DATA_FILENAME = "category.csv"
-STORE_DATA_FILENAME = "store.csv"
-TRAIN_DATA_FILENAME = "train.csv"
-VALIDATION_DATA_FILENAME = "validation.csv"
-TEST_DATA_FILENAME = "test.csv"
+# FILEPATHs
+DATASET_PROFILE_FILEPATH = PROCESSED_DATA_DIR / "profile.csv"
+SALES_DATA_FILEPATH = PROCESSED_DATA_DIR / "sales.csv"
+SAME_STORE_SALES_DATA_FILEPATH = PROCESSED_DATA_DIR / "same_store_sales.csv"
+CATEGORY_DATA_FILEPATH = PROCESSED_DATA_DIR / "category.csv"
+STORE_DATA_FILEPATH = PROCESSED_DATA_DIR / "store.csv"
+TRAIN_DATA_FILEPATH = PROCESSED_DATA_DIR / "train.csv"
+VALIDATION_DATA_FILEPATH = PROCESSED_DATA_DIR / "validation.csv"
+TEST_DATA_FILEPATH = PROCESSED_DATA_DIR / "test.csv"
 
 
 # Module Names
