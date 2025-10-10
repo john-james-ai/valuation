@@ -11,30 +11,31 @@
 # URL        : https://github.com/john-james-ai/mercor-dominicks-acquisition-analysis              #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Wednesday October 8th 2025 02:52:13 pm                                              #
-# Modified   : Thursday October 9th 2025 05:06:51 pm                                               #
+# Modified   : Friday October 10th 2025 02:04:19 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
 # ================================================================================================ #
+
 from loguru import logger
 import pandas as pd
 from tqdm import tqdm
-import typer
 
 from valuation.config import (
-    CONFIG_CATEGORY_FILEPATH,
     RAW_DATA_DIR,
     SALES_DATA_FILEPATH,
-    ConfigReader,
+    WEEK_DECODE_TABLE_FILEPATH,
 )
-from valuation.io import IOService
+from valuation.utils.io import IOService
 
 # ------------------------------------------------------------------------------------------------ #
-app = typer.Typer()
 
 
 class SalesDataProcessor:
     """Processes raw sales data into a cleaned and aggregated dataset."""
+
+    def __init__(self, io: IOService = IOService) -> None:
+        self._io = io
 
     def load(self, filename: str, category: str) -> pd.DataFrame:
         """Loads a single data file and adds a category identifier.
@@ -48,7 +49,7 @@ class SalesDataProcessor:
                 'category' column.
         """
         filepath = RAW_DATA_DIR / filename
-        df = IOService.read(filepath=filepath)
+        df = self._io.read(filepath=filepath)
         df["category"] = category
         return df
 
@@ -60,7 +61,7 @@ class SalesDataProcessor:
             filepath (str): The name of the file to save the DataFrame to within
                 the processed data directory.
         """
-        IOService.write(data=df, filepath=filepath)
+        self._io.write(data=df, filepath=filepath)
         logger.success(f"Saved aggregated dataset to {filepath}")
 
     def clean_dataset(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -104,6 +105,26 @@ class SalesDataProcessor:
 
         return df_clean
 
+    def add_dates(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Adds week start and end dates to the aggregated dataset.
+
+        This method assumes that the 'week' column contains week numbers (1-52)
+        and adds 'week_start_date' and 'week_end_date' columns based on a fixed year.
+
+        Args:
+            df (pd.DataFrame): The aggregated DataFrame with a 'week' column.
+        Returns:
+            pd.DataFrame: The input DataFrame with added 'week_start_date' and
+                'week_end_date' columns.
+        """
+        # Read the week decode table and count number of dates
+        week_dates = self._io.read(filepath=WEEK_DECODE_TABLE_FILEPATH)
+
+        # Merge start and end dates into the original DataFrame
+        df = df.merge(week_dates, on="week", how="left")
+
+        return df
+
     def calculate_revenue(self, df: pd.DataFrame) -> pd.DataFrame:
         """Calculates transaction-level revenue, accounting for product bundles.
 
@@ -132,7 +153,7 @@ class SalesDataProcessor:
         Returns:
             pd.DataFrame: The input DataFrame with an added 'gross_profit' column.
         """
-        df["gross_profit"] = df["revenue"] * (df["gross_margin_pct"] / 100)
+        df["gross_profit"] = df["revenue"] * (df["gross_margin_pct"] / 100.0)
         return df
 
     def aggregate(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -184,7 +205,8 @@ class SalesDataProcessor:
         # Check if output file already exists and not forcing reprocessing
         if not force and SALES_DATA_FILEPATH.exists():
             logger.info(
-                f"Processed dataset already exists at {SALES_DATA_FILEPATH}. Skipping processing.\nTo reprocess, set force=True."
+                f"Processed dataset already exists at {SALES_DATA_FILEPATH}. \
+                    Skipping processing.\nTo reprocess, set force=True."
             )
             return
 
@@ -192,16 +214,21 @@ class SalesDataProcessor:
         # remove the existing file
         if force and SALES_DATA_FILEPATH.exists():
             logger.info(
-                f"Force reprocessing enabled. Existing file at {SALES_DATA_FILEPATH} will be overwritten."
+                f"Force reprocessing enabled. \
+                    Existing file at {SALES_DATA_FILEPATH} will be overwritten."
             )
             SALES_DATA_FILEPATH.unlink()  # Remove the existing file
 
-        # Iterate through category sales files
         logger.info("Processing dataset...")
-        for _, category_info in tqdm(category_filenames.items(), total=len(category_filenames)):
+
+        # Set up the progress bar
+        pbar = tqdm(category_filenames.items(), total=len(category_filenames))
+
+        # Iterate through category sales files
+        for _, category_info in pbar:
             filename = category_info["filename"]
             category = category_info["category"]
-            logger.info(f"Processing category: {category} from file: {filename}")
+            pbar.set_description(f"Processing category: {category} from file: {filename}")
 
             # Load, clean, calculate revenue, and aggregate
             processed_df = (
@@ -219,31 +246,3 @@ class SalesDataProcessor:
 
         # Save processed dataset
         self.save(df=full_dataset, filepath=SALES_DATA_FILEPATH)
-
-
-@app.command()
-def main(
-    force: bool = typer.Option(
-        False,
-        "--force",
-        "-f",
-        case_sensitive=False,
-        help="Whether to force reprocessing if the file already exists.",
-    )
-):
-    """Processes raw sales data into a cleaned and aggregated dataset."""
-
-    # Obtain categories and filenames from config
-    config_reader = ConfigReader()
-    category_filenames = config_reader.read(CONFIG_CATEGORY_FILEPATH)
-
-    # ----------------------------------------------
-    # Instantiate the processor
-    processor = SalesDataProcessor()
-
-    # Run the processor pipeline
-    processor.process(category_filenames=category_filenames, force=force)
-
-
-if __name__ == "__main__":
-    app()

@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/mercor-dominicks-acquisition-analysis              #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Wednesday October 8th 2025 02:52:13 pm                                              #
-# Modified   : Thursday October 9th 2025 04:43:14 pm                                               #
+# Modified   : Friday October 10th 2025 02:04:48 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -20,12 +20,11 @@ from pathlib import Path
 
 from loguru import logger
 
-from valuation.io import IOService
+from valuation.utils.io import IOService
 
 # ------------------------------------------------------------------------------------------------ #
 # --- 1. Directories and Filepaths ---
 PROJ_ROOT = Path(__file__).resolve().parents[1]
-logger.info(f"PROJ_ROOT path is: {PROJ_ROOT}")
 
 # Define directories
 DATA_DIR = PROJ_ROOT / "data"
@@ -33,6 +32,7 @@ RAW_DATA_DIR = DATA_DIR / "raw"
 INTERIM_DATA_DIR = DATA_DIR / "interim"
 PROCESSED_DATA_DIR = DATA_DIR / "processed"
 EXTERNAL_DATA_DIR = DATA_DIR / "external"
+REFERENCES_DIR = PROJ_ROOT / "references"
 
 # Models directory
 MODELS_DIR = PROJ_ROOT / "models"
@@ -52,6 +52,15 @@ CONFIG_CATEGORY_FILEPATH = "category_filenames"
 SALES_DATA_FILEPATH = PROCESSED_DATA_DIR / "sales_data.csv"
 CATEGORY_DATA_FILEPATH = PROCESSED_DATA_DIR / "category_data.csv"
 STORE_DATA_FILEPATH = PROCESSED_DATA_DIR / "store_data.csv"
+TRAIN_DATA_FILEPATH = PROCESSED_DATA_DIR / "train.csv"
+VALIDATION_DATA_FILEPATH = PROCESSED_DATA_DIR / "validation.csv"
+TEST_DATA_FILEPATH = PROCESSED_DATA_DIR / "test.csv"
+WEEK_DECODE_TABLE_FILEPATH = REFERENCES_DIR / "week_decode_table.csv"
+
+# Module Names
+DATASET_MODULE = "valuation.dataset"
+MODELING_MODULE = "valuation.modeling"
+VALUATION_MODULE = "valuation.valuation"
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -68,17 +77,16 @@ class ConfigReader:
 # ------------------------------------------------------------------------------------------------ #
 # Configure logging
 try:
-    from tqdm import tqdm
+    logger.remove()  # Remove all previously added handlers
 
-    logger.remove(0)
-
+    # -------------------------------------------------------------------------------------------- #
+    #                                LOG FILE SINKS CONFIGURATION                                  #
+    # -------------------------------------------------------------------------------------------- #
     # 1. Configure a specific sink for ETL logs
-    # This sink will only accept logs from any module inside "modules.etl"
     logger.add(
         LOGS_DATASET,
         level="DEBUG",
-        filter=lambda record: record["name"] is not None
-        and record["name"].startswith("valuation.dataset"),
+        filter=lambda record: record["name"] == DATASET_MODULE,
         rotation="1 week",
     )
 
@@ -86,8 +94,7 @@ try:
     logger.add(
         LOGS_MODELING,
         level="DEBUG",
-        filter=lambda record: record["name"] is not None
-        and record["name"].startswith("valuation.modeling"),
+        filter=lambda record: record["name"] == MODELING_MODULE,
         rotation="1 week",
     )
 
@@ -95,13 +102,10 @@ try:
     logger.add(
         LOGS_VALUATION,
         level="DEBUG",
-        filter=lambda record: record["name"] is not None
-        and record["name"].startswith("valuation.valuation"),
+        filter=lambda record: record["name"] == VALUATION_MODULE,
         rotation="1 week",
     )
 
-    # 4. Configure a sink for console output that works well with tqdm
-    # https://github.com/Delgan/loguru/issues/135
-    logger.add(lambda msg: tqdm.write(msg, end=""), colorize=True)
+
 except ModuleNotFoundError:
     pass
