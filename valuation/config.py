@@ -11,12 +11,13 @@
 # URL        : https://github.com/john-james-ai/mercor-dominicks-acquisition-analysis              #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Wednesday October 8th 2025 02:52:13 pm                                              #
-# Modified   : Friday October 10th 2025 02:04:48 am                                                #
+# Modified   : Friday October 10th 2025 06:31:17 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
 # ================================================================================================ #
 from pathlib import Path
+from typing import Any, Dict
 
 from loguru import logger
 
@@ -44,18 +45,22 @@ LOGS_DATASET = LOGS_DIR / "dataset.log"
 LOGS_MODELING = LOGS_DIR / "modeling.log"
 LOGS_VALUATION = LOGS_DIR / "valuation.log"
 
+# Reference Filepaths
+WEEK_DECODE_TABLE_FILEPATH = REFERENCES_DIR / "week_decode_table.csv"
+
 # Configuration file and keys
 CONFIG_FILEPATH = PROJ_ROOT / "config.yaml"
 CONFIG_CATEGORY_FILEPATH = "category_filenames"
 
-# Filepaths
-SALES_DATA_FILEPATH = PROCESSED_DATA_DIR / "sales_data.csv"
-CATEGORY_DATA_FILEPATH = PROCESSED_DATA_DIR / "category_data.csv"
-STORE_DATA_FILEPATH = PROCESSED_DATA_DIR / "store_data.csv"
-TRAIN_DATA_FILEPATH = PROCESSED_DATA_DIR / "train.csv"
-VALIDATION_DATA_FILEPATH = PROCESSED_DATA_DIR / "validation.csv"
-TEST_DATA_FILEPATH = PROCESSED_DATA_DIR / "test.csv"
-WEEK_DECODE_TABLE_FILEPATH = REFERENCES_DIR / "week_decode_table.csv"
+# Filenames
+SALES_DATA_FILENAME = "sales.csv"
+SAME_STORE_SALES_DATA_FILENAME = "same_store_sales.csv"
+CATEGORY_DATA_FILENAME = "category.csv"
+STORE_DATA_FILENAME = "store.csv"
+TRAIN_DATA_FILENAME = "train.csv"
+VALIDATION_DATA_FILENAME = "validation.csv"
+TEST_DATA_FILENAME = "test.csv"
+
 
 # Module Names
 DATASET_MODULE = "valuation.dataset"
@@ -67,10 +72,10 @@ VALUATION_MODULE = "valuation.valuation"
 class ConfigReader:
     """Reads configuration settings from a YAML file."""
 
-    def __init__(self, io: IOService = IOService()):
+    def __init__(self, io: IOService = IOService()) -> None:
         self.config = io.read(filepath=CONFIG_FILEPATH)
 
-    def read(self, key: str, default=None):
+    def read(self, key: str, default=None) -> Dict[str, Any]:
         return self.config.get(key, default)
 
 
