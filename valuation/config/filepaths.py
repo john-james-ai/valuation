@@ -4,24 +4,19 @@
 # Project    : Mercor Dominick's Fine Foods Acquisition Analysis                                   #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
-# Filename   : /valuation/config.py                                                                #
+# Filename   : /valuation/config/filepaths.py                                                      #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
 # URL        : https://github.com/john-james-ai/mercor-dominicks-acquisition-analysis              #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Wednesday October 8th 2025 02:52:13 pm                                              #
-# Modified   : Friday October 10th 2025 03:29:46 pm                                                #
+# Modified   : Friday October 10th 2025 11:41:56 pm                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
 # ================================================================================================ #
 from pathlib import Path
-from typing import Any, Dict
-
-from loguru import logger
-
-from valuation.utils.io import IOService
 
 # ------------------------------------------------------------------------------------------------ #
 # --- 1. Directories and Filepaths ---
@@ -61,57 +56,3 @@ STORE_DATA_FILEPATH = PROCESSED_DATA_DIR / "store.csv"
 TRAIN_DATA_FILEPATH = PROCESSED_DATA_DIR / "train.csv"
 VALIDATION_DATA_FILEPATH = PROCESSED_DATA_DIR / "validation.csv"
 TEST_DATA_FILEPATH = PROCESSED_DATA_DIR / "test.csv"
-
-
-# Module Names
-DATASET_MODULE = "valuation.dataset"
-MODELING_MODULE = "valuation.modeling"
-VALUATION_MODULE = "valuation.valuation"
-
-
-# ------------------------------------------------------------------------------------------------ #
-class ConfigReader:
-    """Reads configuration settings from a YAML file."""
-
-    def __init__(self, io: IOService = IOService()) -> None:
-        self.config = io.read(filepath=CONFIG_FILEPATH)
-
-    def read(self, key: str, default=None) -> Dict[str, Any]:
-        return self.config.get(key, default)
-
-
-# ------------------------------------------------------------------------------------------------ #
-# Configure logging
-try:
-    logger.remove()  # Remove all previously added handlers
-
-    # -------------------------------------------------------------------------------------------- #
-    #                                LOG FILE SINKS CONFIGURATION                                  #
-    # -------------------------------------------------------------------------------------------- #
-    # 1. Configure a specific sink for ETL logs
-    logger.add(
-        LOGS_DATASET,
-        level="DEBUG",
-        filter=lambda record: record["name"] == DATASET_MODULE,
-        rotation="1 week",
-    )
-
-    # 2. Configure another specific sink for Modeling logs
-    logger.add(
-        LOGS_MODELING,
-        level="DEBUG",
-        filter=lambda record: record["name"] == MODELING_MODULE,
-        rotation="1 week",
-    )
-
-    # 3. Configure another specific sink for Valuation logs
-    logger.add(
-        LOGS_VALUATION,
-        level="DEBUG",
-        filter=lambda record: record["name"] == VALUATION_MODULE,
-        rotation="1 week",
-    )
-
-
-except ModuleNotFoundError:
-    pass

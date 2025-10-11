@@ -11,33 +11,39 @@
 # URL        : https://github.com/john-james-ai/mercor-dominicks-acquisition-analysis              #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Wednesday October 8th 2025 02:52:13 pm                                              #
-# Modified   : Friday October 10th 2025 03:32:20 pm                                                #
+# Modified   : Saturday October 11th 2025 12:08:47 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
 # ================================================================================================ #
+"""Sales Dataset Preparation"""
+from dataclasses import field
+from pathlib import Path
+from typing import Any, Dict
 
-from loguru import logger
 import pandas as pd
+from pydantic.dataclasses import dataclass
 from tqdm import tqdm
 
-from valuation.config import (
-    CATEGORY_DATA_FILEPATH,
-    RAW_DATA_DIR,
-    SALES_DATA_FILEPATH,
-    SAME_STORE_SALES_DATA_FILEPATH,
-    STORE_DATA_FILEPATH,
-    TEST_DATA_FILEPATH,
-    TRAIN_DATA_FILEPATH,
-    VALIDATION_DATA_FILEPATH,
-    WEEK_DECODE_TABLE_FILEPATH,
-)
-from valuation.dataset.base import DataPrep
+from valuation.config.data_prep import DataPrepBaseConfig
+from valuation.dataset.base import DataPrepSingleOutput
+
+
+# ------------------------------------------------------------------------------------------------ #
+@dataclass
+class SalesDataPrepConfig(DataPrepBaseConfig):
+    """Holds all parameters for the sales data preparation process."""
+
+    raw_data_directory: Path
+    output_filepath: Path
+    week_decode_filepath: Path
+    category_filenames: Dict[str, Any] = field(default_factory=dict)
+
 
 # ------------------------------------------------------------------------------------------------ #
 
 
-class SalesDataPrep(DataPrep):
+class SalesDataPrep(DataPrepSingleOutput):
     """Processes raw sales data into a cleaned and aggregated dataset."""
 
     def clean_dataset(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -94,20 +100,17 @@ class SalesDataPrep(DataPrep):
         df["category"] = category
         return df
 
-    def add_dates(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Adds week start and end dates to the aggregated dataset.
-
-        This method assumes that the 'week' column contains week numbers (1-52)
-        and adds 'week_start_date' and 'week_end_date' columns based on a fixed year.
-
+    def add_dates(self, df: pd.DataFrame, week_decode_filepath: Path) -> pd.DataFrame:
+        """Adds start and end dates to the DataFrame based on the week number.
         Args:
-            df (pd.DataFrame): The aggregated DataFrame with a 'week' column.
+            df (pd.DataFrame): The DataFrame to which dates will be added. Must contain
+                a 'week' column.
+            week_decode_filepath (Path): The path to the week decode CSV file.
         Returns:
-            pd.DataFrame: The input DataFrame with added 'week_start_date' and
-                'week_end_date' columns.
+            pd.DataFrame: The input DataFrame with added 'start_date' and 'end_date' columns.
         """
         # Read the week decode table and count number of dates
-        week_dates = self._io.read(filepath=WEEK_DECODE_TABLE_FILEPATH)
+        week_dates = self._io.read(filepath=week_decode_filepath)
 
         # Merge start and end dates into the original DataFrame
         df = df.merge(week_dates, on="week", how="left")
@@ -175,54 +178,20 @@ class SalesDataPrep(DataPrep):
 
         return aggregated
 
-    def prepare(self, category_filenames: dict, force: bool = False) -> None:
-        """Transforms raw sales data files into a cleaned and aggregated dataset.
+    def prepare(self, config: SalesDataPrepConfig) -> None:
 
-        This method orchestrates the loading, cleaning, revenue calculation,
-        gross profit calculation, aggregation, and saving of sales data.
-
-        Args:
-            category_filenames (dict): A dictionary mapping category names to
-                their corresponding filenames.
-            force (bool): If True, forces reprocessing even if the output file exists. Defaults to
-                False.
-        Returns:
-            None
-        """
         sales_datasets = []
 
-        # Check if output file already exists and not forcing reprocessing
-        if not force and self.exists(filepath=SALES_DATA_FILEPATH):
-            logger.info(
-                f"Processed dataset {SALES_DATA_FILEPATH} already exists.\n \
-                    Skipping processing. To reprocess, set force=True."
-            )
+        if self._use_cache(config=config):
             return
 
-        # If force is True and file exists, log that we are reprocessing and
-        # remove the existing file
-        if force and self.exists(filepath=SALES_DATA_FILEPATH):
-            logger.info(
-                f"Force reprocessing enabled. \
-                    Existing files will be overwritten."
-            )
-            self.delete(filepath=SALES_DATA_FILEPATH)
-            self.delete(filepath=TRAIN_DATA_FILEPATH)
-            self.delete(filepath=VALIDATION_DATA_FILEPATH)
-            self.delete(filepath=TEST_DATA_FILEPATH)
-            self.delete(filepath=SAME_STORE_SALES_DATA_FILEPATH)
-            self.delete(filepath=CATEGORY_DATA_FILEPATH)
-            self.delete(filepath=STORE_DATA_FILEPATH)
-
-        logger.info("Processing dataset...")
-
         # Set up the progress bar
-        pbar = tqdm(category_filenames.items(), total=len(category_filenames))
+        pbar = tqdm(config.category_filenames.items(), total=len(config.category_filenames))
 
         # Iterate through category sales files
         for _, category_info in pbar:
             filename = category_info["filename"]
-            filepath = RAW_DATA_DIR / filename
+            filepath = config.raw_data_directory / filename
             category = category_info["category"]
             pbar.set_description(f"Processing category: {category} from file: {filename}")
 
@@ -231,6 +200,7 @@ class SalesDataPrep(DataPrep):
                 self.load(filepath=filepath)
                 .pipe(self.add_category, category=category)
                 .pipe(self.clean_dataset)
+                .pipe(self.add_dates, week_decode_filepath=config.week_decode_filepath)
                 .pipe(self.calculate_revenue)
                 .pipe(self.calculate_gross_profit)
                 .pipe(self.aggregate)
@@ -241,4 +211,4 @@ class SalesDataPrep(DataPrep):
         full_dataset = pd.concat(sales_datasets, ignore_index=True)
 
         # Save processed dataset
-        self.save(df=full_dataset, filepath=SALES_DATA_FILEPATH)
+        self.save(df=full_dataset, filepath=config.output_filepath)

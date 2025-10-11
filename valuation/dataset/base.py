@@ -11,16 +11,23 @@
 # URL        : https://github.com/john-james-ai/mercor-dominicks-acquisition-analysis              #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday October 10th 2025 02:27:30 am                                                #
-# Modified   : Friday October 10th 2025 03:30:26 pm                                                #
+# Modified   : Saturday October 11th 2025 12:13:49 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
 # ================================================================================================ #
 from abc import ABC, abstractmethod
 from pathlib import Path
+from typing import Union
+from venv import logger
 
 import pandas as pd
 
+from valuation.config.data_prep import (
+    DataPrepBaseConfig,
+    DataPrepSingleOutputConfig,
+    DataPrepSISOConfig,
+)
 from valuation.utils.io import IOService
 
 
@@ -73,6 +80,45 @@ class DataPrep(ABC):
         return filepath.exists()
 
     @abstractmethod
-    def prepare(self, *args, **kwargs) -> pd.DataFrame:
-        """Process the data and return a DataFrame."""
+    def prepare(self, config: DataPrepBaseConfig) -> None:
+        """Abstract method to be implemented by subclasses for data preparation."""
         pass
+
+    @abstractmethod
+    def _use_cache(self, config: DataPrepBaseConfig) -> bool:
+        """Abstract method that controls the use of cache in alignment on a force flag."""
+
+
+# ------------------------------------------------------------------------------------------------ #
+class DataPrepSingleOutput(DataPrep):
+
+    @abstractmethod
+    def prepare(self, config: Union[DataPrepSISOConfig, DataPrepSingleOutputConfig]) -> None:
+        """Abstract method to be implemented by subclasses for data preparation."""
+        pass
+
+    def _use_cache(self, config: Union[DataPrepSISOConfig, DataPrepSingleOutputConfig]) -> bool:
+        """Determines whether to use cached data based on file existence and force flag.
+
+        Args:
+            config (DataPrepSISOConfig): Configuration object containing core settings.
+        Returns:
+            bool: True if cached data should be used, False otherwise.
+
+        """
+        print("Inside _use_cache of DataPrepSingleOutput")
+        if config.core_config.force:
+            self.delete(filepath=config.output_filepath)
+            use_cache = False
+        else:
+            use_cache = (
+                self.exists(filepath=config.output_filepath) and not config.core_config.force
+            )
+
+        if use_cache:
+            logger.info(
+                f"\n{config.core_config.task_name} - Output file already exists. Using cached data."
+            )
+        else:
+            logger.info(f"\n{config.core_config.task_name}  - Starting")
+        return use_cache

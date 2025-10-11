@@ -11,28 +11,43 @@
 # URL        : https://github.com/john-james-ai/mercor-dominicks-acquisition-analysis              #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Wednesday October 8th 2025 02:52:13 pm                                              #
-# Modified   : Friday October 10th 2025 05:13:48 pm                                                #
+# Modified   : Saturday October 11th 2025 12:43:55 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
 # ================================================================================================ #
-
+"""Dataset Profile Module"""
+from pathlib import Path
 from typing import Dict
 
-from loguru import logger
 import pandas as pd
+from pydantic import Field
+from pydantic.dataclasses import dataclass
 from tqdm import tqdm
 
-from valuation.config import DATASET_PROFILE_FILEPATH, RAW_DATA_DIR
-from valuation.dataset.base import DataPrep
+from valuation.config.data_prep import DataPrepSingleOutputConfig
+from valuation.dataset.base import DataPrepSingleOutput
+
+
+# ------------------------------------------------------------------------------------------------ #
+@dataclass
+class ProfileConfig(DataPrepSingleOutputConfig):
+    """Holds all parameters for the profiling process."""
+
+    raw_data_directory: Path
+    category_filenames: Dict[str, str] = Field(default_factory=dict)
+    core_features: list[str] = Field(
+        default_factory=lambda: ["STORE", "UPC", "WEEK", "MOVE", "QTY", "PRICE", "PROFIT", "OK"]
+    )
+
 
 # ------------------------------------------------------------------------------------------------ #
 
 
-class SalesDataProfile(DataPrep):
+class SalesDataProfile(DataPrepSingleOutput):
     """Creates a profile of the Dominick's Fine Foods Dataset."""
 
-    def prepare(self, category_filenames: dict, force: bool = False) -> None:
+    def prepare(self, config: ProfileConfig) -> None:
         """Transforms raw sales data files into a cleaned and aggregated dataset.
 
         This method orchestrates the loading, cleaning, revenue calculation,
@@ -46,47 +61,34 @@ class SalesDataProfile(DataPrep):
         Returns:
             None
         """
-        category_profiles = []
-
-        # Check if output file already exists and not forcing reprocessing
-        if not force and self.exists(filepath=DATASET_PROFILE_FILEPATH):
-            logger.info(
-                f"Profile for the dataset already exists at {DATASET_PROFILE_FILEPATH}.\n \
-                    Skipping the profile. To re-profile, set force=True."
-            )
+        # Check if the output file already exists and not forcing reprocessing
+        if self._use_cache(config=config):
             return
 
-        # If force is True and file exists, log that we are reprocessing and
-        # remove the existing file
-        if force and self.exists(filepath=DATASET_PROFILE_FILEPATH):
-            logger.info(
-                f"Force reprocessing the data profile. \
-                    Existing files will be overwritten."
-            )
-            self.delete(filepath=DATASET_PROFILE_FILEPATH)
-
-        logger.info("Profiling dataset...")
-
         # Set up the progress bar
-        pbar = tqdm(category_filenames.items(), total=len(category_filenames))
+        pbar = tqdm(config.category_filenames.items(), total=len(config.category_filenames))
+
+        category_profiles = []
 
         # Iterate through category sales files
-        for category_id, category_filename in pbar:
+        for _, category_filename in pbar:
             pbar.set_description(
-                f"Processing category: {category_filename['category']} from file: {category_filename['filename']}"
+                f"Processing category: {category_filename['category']} from  {category_filename['filename']}"
             )
 
-            # Load, clean, calculate revenue, and aggregate
-            profile = self._profile_category(category_filename)
+            # Create profile for the category
+            profile = self._profile_category(config=config, category_filename=category_filename)
+
+            # Append to list of profiles
             category_profiles.append(profile)
 
         # Concatenate all datasets
         profile = pd.DataFrame(category_profiles)
 
         # Save processed dataset
-        self.save(df=profile, filepath=DATASET_PROFILE_FILEPATH)
+        self.save(df=profile, filepath=config.output_filepath)
 
-    def _profile_category(self, category_filename: Dict[str, str]) -> Dict:
+    def _profile_category(self, config: ProfileConfig, category_filename: Dict[str, str]) -> Dict:
         """Profiles a single category sales data file.
 
         Args:
@@ -97,21 +99,24 @@ class SalesDataProfile(DataPrep):
         Returns:
             pd.DataFrame: A DataFrame containing the profile of the specified category.
         """
-        filepath = RAW_DATA_DIR / category_filename["filename"]
+        filepath = config.raw_data_directory / category_filename["filename"]
         df = self.load(filepath=filepath)
 
         profile = {
             "filename": category_filename["filename"],
             "category": category_filename["category"],
-            "stores": df["store"].nunique() if "store" in df.columns else 0,
-            "weeks": df["week"].nunique() if "week" in df.columns else 0,
+            "stores": df["STORE"].nunique() if "STORE" in df.columns else 0,
+            "weeks": df["WEEK"].nunique() if "WEEK" in df.columns else 0,
             "num_records": len(df),
             "num_columns": len(df.columns),
-            "missing_values": df.isnull().sum().sum(),
-            "num_duplicates": df.duplicated().sum(),
-            "invalid_records": len(df[df["ok"] == 0]) if "ok" in df.columns else 0,
+            "missing_values": df[config.core_features].isnull().sum().sum(),
+            "missing_values_%": df[config.core_features].isnull().sum().sum() / df.shape[0] * 100,
+            "invalid_records": len(df[df["OK"] == 0]) if "OK" in df.columns else 0,
+            "invalid_records_%": (
+                len(df[df["OK"] == 0]) / df.shape[0] * 100 if "OK" in df.columns else 0
+            ),
             "memory_usage_mb": df.memory_usage(deep=True).sum() / (1024 * 1024),
-            "file_size_mb": filepath.stat().st_size / (1024 * 1024) if filepath.exists() else 0,
+            "file_size_mb": (filepath.stat().st_size / (1024 * 1024) if filepath.exists() else 0),
         }
 
         return profile

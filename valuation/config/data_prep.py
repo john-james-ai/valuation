@@ -4,50 +4,56 @@
 # Project    : Mercor Dominick's Fine Foods Acquisition Analysis                                   #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
-# Filename   : /valuation/dataset/store.py                                                         #
+# Filename   : /valuation/config/data_prep.py                                                      #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
 # URL        : https://github.com/john-james-ai/mercor-dominicks-acquisition-analysis              #
 # ------------------------------------------------------------------------------------------------ #
-# Created    : Friday October 10th 2025 02:27:04 am                                                #
-# Modified   : Saturday October 11th 2025 12:13:08 am                                              #
+# Created    : Wednesday October 8th 2025 02:52:13 pm                                              #
+# Modified   : Saturday October 11th 2025 12:24:55 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
 # ================================================================================================ #
-"""Store Dataset Preparation"""
 from pathlib import Path
 
+from narwhals import Field
+from pydantic import Field
 from pydantic.dataclasses import dataclass
-
-from valuation.config.data_prep import DataPrepSISOConfig
-from valuation.dataset.base import DataPrepSingleOutput
 
 
 # ------------------------------------------------------------------------------------------------ #
 @dataclass
-class StoreDataPrepConfig(DataPrepSISOConfig):
-    """Configuration for Store Data Preparation."""
+class DataPrepCoreConfig:
+    """Core configuration for tasks."""
 
-    input_filepath: Path
-    output_filepath: Path
+    task_name: str
+    force: bool
 
 
-class StoreDataPrep(DataPrepSingleOutput):
-    """Computes Store level KPIs for profitability analysis"""
+# ------------------------------------------------------------------------------------------------ #
 
-    def prepare(self, config: StoreDataPrepConfig) -> None:
-        df = self.load(filepath=config.input_filepath)
 
-        store_kpis = (
-            df.groupby("store")
-            .agg(total_revenue=("revenue", "sum"), total_gross_profit=("gross_profit", "sum"))
-            .reset_index()
-        )
+@dataclass
+class DataPrepBaseConfig:
+    """Base configuration class for tasks."""
 
-        store_kpis["gross_margin_pct"] = (
-            store_kpis["total_gross_profit"] / store_kpis["total_revenue"]
-        )
+    core_config: DataPrepCoreConfig = Field(..., description="Core task configuration.")
 
-        self.save(df=store_kpis, filepath=config.output_filepath)
+
+# ------------------------------------------------------------------------------------------------ #
+@dataclass
+class DataPrepSingleOutputConfig(DataPrepBaseConfig):
+    """Single Output configuration."""
+
+    output_filepath: Path = Field(..., description="Path to the output file.")
+
+
+# ------------------------------------------------------------------------------------------------ #
+@dataclass
+class DataPrepSISOConfig(DataPrepBaseConfig):
+    """Single Input Single Output configuration."""
+
+    input_filepath: Path = Field(..., description="Path to the input file.")
+    output_filepath: Path = Field(..., description="Path to the output file.")

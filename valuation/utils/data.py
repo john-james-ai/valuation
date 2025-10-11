@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/mercor-dominicks-acquisition-analysis              #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 9th 2025 07:11:18 pm                                               #
-# Modified   : Thursday October 9th 2025 09:28:13 pm                                               #
+# Modified   : Friday October 10th 2025 11:09:41 pm                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -60,12 +60,6 @@ class DataFramePartitioner:
 
         # Return the splits as a dictionary
         splits = {
-            "parameters": {
-                "train_size": train_size,
-                "val_size": val_size,
-                "shuffle": shuffle,
-                "random_state": random_state,
-            },
             "meta": {
                 "n_train": len(train_df),
                 "n_validation": len(val_df),
@@ -123,6 +117,7 @@ class DataFramePartitioner:
         # Return the splits as a dictionary
         splits = {
             "parameters": {
+                "val_col": val_col,
                 "train_size": train_size,
                 "val_size": val_size,
             },

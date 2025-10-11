@@ -4,50 +4,51 @@
 # Project    : Mercor Dominick's Fine Foods Acquisition Analysis                                   #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
-# Filename   : /valuation/dataset/store.py                                                         #
+# Filename   : /valuation/config/loggers.py                                                        #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
 # URL        : https://github.com/john-james-ai/mercor-dominicks-acquisition-analysis              #
 # ------------------------------------------------------------------------------------------------ #
-# Created    : Friday October 10th 2025 02:27:04 am                                                #
-# Modified   : Saturday October 11th 2025 12:13:08 am                                              #
+# Created    : Wednesday October 8th 2025 02:52:13 pm                                              #
+# Modified   : Friday October 10th 2025 11:50:59 pm                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
 # ================================================================================================ #
-"""Store Dataset Preparation"""
-from pathlib import Path
+import sys
 
-from pydantic.dataclasses import dataclass
-
-from valuation.config.data_prep import DataPrepSISOConfig
-from valuation.dataset.base import DataPrepSingleOutput
+from loguru import logger
 
 
 # ------------------------------------------------------------------------------------------------ #
-@dataclass
-class StoreDataPrepConfig(DataPrepSISOConfig):
-    """Configuration for Store Data Preparation."""
+# Configure logging
+def configure_logging():
+    """Configures logging for the application."""
 
-    input_filepath: Path
-    output_filepath: Path
+    # Define module names for filtering logs
+    PROFILE_MODULE = "valuation.dataset.profile"
+    SALES_MODULE = "valuation.dataset.sales"
+    SPLIT_MODULE = "valuation.dataset.split"
 
+    try:
+        logger.remove()  # Remove all previously added handlers
 
-class StoreDataPrep(DataPrepSingleOutput):
-    """Computes Store level KPIs for profitability analysis"""
+        # # Configure a specific sink for dataset processing logs
+        # logger.add(
+        #     LOGS_DATASET,
+        #     level="DEBUG",
+        #     # filter=lambda record: record["name"] in [PROFILE_MODULE, SALES_MODULE, SPLIT_MODULE],
+        #     rotation="1 week",
+        # )
 
-    def prepare(self, config: StoreDataPrepConfig) -> None:
-        df = self.load(filepath=config.input_filepath)
-
-        store_kpis = (
-            df.groupby("store")
-            .agg(total_revenue=("revenue", "sum"), total_gross_profit=("gross_profit", "sum"))
-            .reset_index()
+        # Configure log to console.
+        logger.add(
+            sys.stderr,
+            level="INFO",
+            format="{message}",
+            colorize=True,
         )
 
-        store_kpis["gross_margin_pct"] = (
-            store_kpis["total_gross_profit"] / store_kpis["total_revenue"]
-        )
-
-        self.save(df=store_kpis, filepath=config.output_filepath)
+    except ModuleNotFoundError:
+        pass
