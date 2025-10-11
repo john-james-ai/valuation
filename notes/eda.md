@@ -64,3 +64,18 @@ The category-level data is a goldmine for understanding growth drivers.
 
 #### Category Profitability
 For the last year in the training data, produce a st
+
+
+## Analysis Implementation
+Develop a base class Dataset from which StoreDataset and CategoryDataset descend.  The base class will have methods to support both tabular and graphical analysis. Behaviors to implement include:
+### Tabular Analysis
+For tabular analysis, build:
+
+
+### Store Analysis
+- KPIs
+    - Inventory Turnover
+- Gross Margin
+- EBITDA Margin
+- Same Store Sales (Aggregate)
+- YoY Sales Growth (Store Level)

@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
 # ================================================================================================ #
-# Project    : Mercor Dominick's Fine Foods Acquisition Analysis                                   #
+# Project    : Company Valuation                                                                   #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
 # Filename   : /valuation/dataset/kpi.py                                                           #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
-# URL        : https://github.com/john-james-ai/mercor-dominicks-acquisition-analysis              #
+# URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday October 10th 2025 02:27:04 am                                                #
-# Modified   : Saturday October 11th 2025 02:05:56 am                                              #
+# Modified   : Saturday October 11th 2025 11:41:45 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -43,12 +43,10 @@ class KPIDataPrep(DataPrepSingleOutput):
 
         store_kpis = (
             df.groupby(config.groupby)
-            .agg(total_revenue=("revenue", "sum"), total_gross_profit=("gross_profit", "sum"))
+            .agg(revenue=("revenue", "sum"), gross_profit=("gross_profit", "sum"))
             .reset_index()
         )
 
-        store_kpis["gross_margin_pct"] = (
-            store_kpis["total_gross_profit"] / store_kpis["total_revenue"]
-        )
+        store_kpis["gross_margin_pct"] = store_kpis["gross_profit"] / store_kpis["revenue"]
 
         self.save(df=store_kpis, filepath=config.output_filepath)

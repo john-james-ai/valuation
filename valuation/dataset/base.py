@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday October 10th 2025 02:27:30 am                                                #
-# Modified   : Saturday October 11th 2025 10:38:14 am                                              #
+# Modified   : Saturday October 11th 2025 10:44:48 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -25,10 +25,6 @@ import pandas as pd
 
 from valuation.config.data_prep import (
     DTYPES,
-    NUMERIC_COLUMNS,
-    NUMERIC_PLACEHOLDER,
-    STRING_COLUMNS,
-    STRING_PLACEHOLDER,
     DataPrepBaseConfig,
     DataPrepSingleOutputConfig,
     DataPrepSISOConfig,
@@ -54,8 +50,8 @@ class DataPrep(ABC):
         """
 
         df = self._io.read(filepath=filepath)
-
-        return df
+        # Ensure correct data types
+        return df.astype({k: v for k, v in DTYPES.items() if k in df.columns})
 
     def save(self, df: pd.DataFrame, filepath: Path) -> None:
         """Saves a DataFrame to the processed data directory.
@@ -93,24 +89,6 @@ class DataPrep(ABC):
     @abstractmethod
     def _use_cache(self, config: DataPrepBaseConfig) -> bool:
         """Abstract method that controls the use of cache in alignment on a force flag."""
-
-    def _normalize_dtypes(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Normalizes the data types of a DataFrame according to predefined DTYPES.
-
-        Args:
-            df (pd.DataFrame): The DataFrame whose data types need to be normalized.
-
-        Returns:
-            pd.DataFrame: The DataFrame with normalized data types.
-        """
-        # Replace NAN in existing numeric columns with a placeholder
-        numeric_columns = [k for k in NUMERIC_COLUMNS if k in df.columns]
-        df[numeric_columns] = df[numeric_columns].fillna(NUMERIC_PLACEHOLDER, inplace=False)
-        # Replace NAN in existing string columns with a placeholder
-        string_columns = [k for k in STRING_COLUMNS if k in df.columns]
-        df[string_columns] = df[string_columns].fillna(STRING_PLACEHOLDER, inplace=False)
-        # Cast to appropriate dtypes
-        return df.astype({k: v for k, v in DTYPES.items() if k in df.columns})
 
 
 # ------------------------------------------------------------------------------------------------ #

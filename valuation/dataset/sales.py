@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Wednesday October 8th 2025 02:52:13 pm                                              #
-# Modified   : Saturday October 11th 2025 10:15:05 am                                              #
+# Modified   : Saturday October 11th 2025 11:43:54 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -25,7 +25,7 @@ from pydantic import Field
 from pydantic.dataclasses import dataclass
 from tqdm import tqdm
 
-from valuation.config.data_prep import PLACEHOLDER_STORE_ID, DataPrepSingleOutputConfig
+from valuation.config.data_prep import DataPrepSingleOutputConfig
 from valuation.dataset.base import DataPrepSingleOutput
 
 
@@ -70,17 +70,16 @@ class SalesDataPrep(DataPrepSingleOutput):
             QTY >= 1
         """
         # 1. Remove records with missing critical values
-        df_clean = df_clean.query(query_string).copy()
+        df_clean = df_clean.query(
+            query_string, engine="python"
+        ).copy()  # Python engine required for compatability betweeen numexpr and pandas
 
-        # 2. Drop records with invalid STORE values
-        df_clean = df_clean[df_clean["STORE"] != PLACEHOLDER_STORE_ID].copy()
-
-        # 3. Rename columns for clarity and drop unneeded ones.
+        # 2. Rename columns for clarity and drop unneeded ones.
         df_clean = (
             df_clean.rename(columns={"PROFIT": "GROSS_MARGIN_PCT"}).drop(columns=["SALE"])
         ).copy()
 
-        # 4. Standardize column names to lowercase
+        # 3. Standardize column names to lowercase
         df_clean.columns = df_clean.columns.str.lower()
 
         return df_clean
@@ -105,15 +104,9 @@ class SalesDataPrep(DataPrepSingleOutput):
         Returns:
             pd.DataFrame: The week decode DataFrame with standardized column names and types."""
         # Read the week decode table and count number of dates
-        week_dates = self._io.read(filepath=week_decode_filepath)
-        # 1. Standardize column names to lowercase.
+        week_dates = self.load(filepath=week_decode_filepath)
+        # Standardize column names to lowercase.
         week_dates.columns = week_dates.columns.str.lower()
-
-        # 2. Ensure the 'week' column is a non-null integer.
-        week_dates = week_dates.dropna(subset=["week"])
-        week_dates["week"] = week_dates["week"].astype("int64")
-        week_dates["start"] = pd.to_datetime(week_dates["start"])
-        week_dates["end"] = pd.to_datetime(week_dates["end"])
 
         return week_dates
 
@@ -127,7 +120,6 @@ class SalesDataPrep(DataPrepSingleOutput):
             pd.DataFrame: The input DataFrame with added 'start_date' and 'end_date' columns.
         """
 
-        # Now that the keys are consistent, the merge will work reliably.
         df = df.merge(week_dates, on="week", how="left")
 
         return df
@@ -178,10 +170,16 @@ class SalesDataPrep(DataPrepSingleOutput):
                 gross margin percent for each store, category, and week.
         """
         # 1: Group by store, category, and week, summing revenue and gross profit
-        aggregated = df.groupby(["store", "category", "week"], as_index=False).agg(
-            {"revenue": "sum", "gross_profit": "sum"}
+        aggregated = (
+            df.groupby(["store", "category", "week"])
+            .agg(
+                revenue=("revenue", "sum"),
+                gross_profit=("gross_profit", "sum"),
+                start=("start", "first"),
+                end=("end", "first"),
+            )
+            .reset_index()
         )
-
         # Step 2: Calculate the true margin from the summed totals
         # We add a small epsilon to avoid division by zero if revenue is 0
         aggregated["gross_margin_pct"] = aggregated["gross_profit"] / (
