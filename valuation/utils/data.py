@@ -1,24 +1,127 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
 # ================================================================================================ #
-# Project    : Mercor Dominick's Fine Foods Acquisition Analysis                                   #
+# Project    : Valuation of Dominick's Fine Foods, Inc. 1997-2003                                  #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
 # Filename   : /valuation/utils/data.py                                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
-# URL        : https://github.com/john-james-ai/mercor-dominicks-acquisition-analysis              #
+# URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 9th 2025 07:11:18 pm                                               #
-# Modified   : Friday October 10th 2025 11:09:41 pm                                                #
+# Modified   : Saturday October 11th 2025 05:25:57 pm                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
 # ================================================================================================ #
-from typing import Dict, Union
+from __future__ import annotations
 
+from abc import ABC
+from dataclasses import dataclass
+from datetime import datetime
+from typing import Any, Dict, Tuple, Union
+
+import numpy as np
 import pandas as pd
+
+# ------------------------------------------------------------------------------------------------ #
+# mypy: allow-any-generics
+# ------------------------------------------------------------------------------------------------ #
+IMMUTABLE_TYPES: Tuple = (
+    str,
+    int,
+    float,
+    bool,
+    type(None),
+    np.int16,
+    np.int32,
+    np.int64,
+    np.int8,
+    np.float16,
+    np.float32,
+    np.float64,
+    np.float128,
+)
+SEQUENCE_TYPES: Tuple = (
+    list,
+    tuple,
+)
+# ------------------------------------------------------------------------------------------------ #
+NUMERICS = [
+    "int16",
+    "int32",
+    "int64",
+    "float16",
+    "float32",
+    "float64",
+    np.int16,
+    np.int32,
+    np.int64,
+    np.int8,
+    np.float16,
+    np.float32,
+    np.float64,
+    np.float128,
+]
+
+
+# ------------------------------------------------------------------------------------------------ #
+@dataclass
+class DataClass(ABC):  # noqa
+    """Base Class for Data Transfer Objects"""
+
+    def __repr__(self) -> str:
+        return "{}({})".format(
+            self.__class__.__name__,
+            ", ".join(
+                "{}={!r}".format(k, v)
+                for k, v in self.__dict__.items()
+                if type(v) in IMMUTABLE_TYPES
+            ),
+        )
+
+    def __str__(self) -> str:
+        width = 32
+        breadth = width * 2
+        s = f"\n\n{self.__class__.__name__.center(breadth, ' ')}"
+        d = self.as_dict()
+        for k, v in d.items():
+            if type(v) in IMMUTABLE_TYPES:
+                s += f"\n{k.rjust(width,' ')} | {v}"
+        s += "\n\n"
+        return s
+
+    def as_dict(self) -> Dict[str, Union[str, int, float, datetime, None]]:
+        """Returns a dictionary representation of the the Config object."""
+        return {
+            k: self._export_config(v) for k, v in self.__dict__.items() if not k.startswith("_")
+        }
+
+    @classmethod
+    def _export_config(
+        cls,
+        v: Any,
+    ) -> Any:  # pragma: no cover
+        """Returns v with Configs converted to dicts, recursively."""
+        if isinstance(v, IMMUTABLE_TYPES):
+            return v
+        elif isinstance(v, SEQUENCE_TYPES):
+            return type(v)(map(cls._export_config, v))
+        elif isinstance(v, dict):
+            return v
+        elif hasattr(v, "as_dict"):
+            return v.as_dict()
+        elif isinstance(v, datetime):
+            return v.isoformat()
+        else:
+            return dict()
+
+    def as_df(self) -> Any:
+        """Returns the project in DataFrame format"""
+        d = self.as_dict()
+        return pd.DataFrame(data=d, index=[0])
 
 
 # ------------------------------------------------------------------------------------------------ #

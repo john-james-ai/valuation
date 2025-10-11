@@ -9,11 +9,12 @@
 
         ["projectCreationYear", "2025"],
         ["url", "https://github.com/john-james-ai/valuation"],
-        ["projectname", "Company Valuation"],
+        ["projectname", "Valuation of Dominick's Fine Foods, Inc. 1997-2003"],
         ["version", "0.1.0"],
         ["pythonversion","3.12.11"]
     ],
     "psi-header.config": {
+
 
     }
     }
