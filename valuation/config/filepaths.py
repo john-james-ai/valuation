@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Wednesday October 8th 2025 02:52:13 pm                                              #
-# Modified   : Saturday October 11th 2025 09:10:54 am                                              #
+# Modified   : Saturday October 11th 2025 03:44:13 pm                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -41,7 +41,8 @@ LOGS_MODELING = LOGS_DIR / "modeling.log"
 LOGS_VALUATION = LOGS_DIR / "valuation.log"
 
 # Reference Filepaths
-WEEK_DECODE_TABLE_FILEPATH = REFERENCES_DIR / "week_decode_table.csv"
+WEEK_DECODE_TABLE_FILEPATH = EXTERNAL_DATA_DIR / "week_decode_table.csv"
+FINANCIALS_BENCHMARKS = EXTERNAL_DATA_DIR / "financials_benchmarks.yaml"
 
 # Configuration file and keys
 CONFIG_FILEPATH = PROJ_ROOT / "config.yaml"
