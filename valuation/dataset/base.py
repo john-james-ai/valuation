@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/mercor-dominicks-acquisition-analysis              #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday October 10th 2025 02:27:30 am                                                #
-# Modified   : Saturday October 11th 2025 12:13:49 am                                              #
+# Modified   : Saturday October 11th 2025 01:31:12 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -19,8 +19,8 @@
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Union
-from venv import logger
 
+from loguru import logger
 import pandas as pd
 
 from valuation.config.data_prep import (
@@ -106,7 +106,7 @@ class DataPrepSingleOutput(DataPrep):
             bool: True if cached data should be used, False otherwise.
 
         """
-        print("Inside _use_cache of DataPrepSingleOutput")
+
         if config.core_config.force:
             self.delete(filepath=config.output_filepath)
             use_cache = False
@@ -117,8 +117,8 @@ class DataPrepSingleOutput(DataPrep):
 
         if use_cache:
             logger.info(
-                f"\n{config.core_config.task_name} - Output file already exists. Using cached data."
+                f"{config.core_config.task_name} - Output file already exists. Using cached data."
             )
         else:
-            logger.info(f"\n{config.core_config.task_name}  - Starting")
+            logger.info(f"{config.core_config.task_name}  - Starting")
         return use_cache

@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/mercor-dominicks-acquisition-analysis              #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday October 10th 2025 06:45:03 pm                                                #
-# Modified   : Friday October 10th 2025 11:58:48 pm                                                #
+# Modified   : Saturday October 11th 2025 01:39:09 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -70,13 +70,13 @@ class DatasetSplitter(DataPrep):
 
     def __init__(
         self,
-        splitter: DataFramePartitioner = DataFramePartitioner,
+        splitter: type[DataFramePartitioner] = DataFramePartitioner,
         printer: Printer = Printer,
-        io: IOService = ...,
+        io: IOService = IOService,
     ) -> None:
         super().__init__(io)
         self._printer = printer
-        self._splitter = splitter
+        self._splitter = splitter()
         self._splits = None
 
     @property
@@ -92,6 +92,9 @@ class DatasetSplitter(DataPrep):
         Args:
             config (SplitterConfig): Configuration parameters for the splitter.
         """
+        if self._use_cache(config=config):
+            return
+
         df = self.load(filepath=config.paths.input_filepath)
         self._splits = self._splitter.split_by_proportion_of_values(
             df=df,
@@ -134,8 +137,8 @@ class DatasetSplitter(DataPrep):
 
         if use_cache:
             logger.info(
-                f"\n{config.core_config.task_name} - Output file already exists. Using cached data."
+                f"{config.core_config.task_name} - Output file already exists. Using cached data."
             )
         else:
-            logger.info(f"\n{config.core_config.task_name}  - Starting")
+            logger.info(f"{config.core_config.task_name}  - Starting")
         return use_cache

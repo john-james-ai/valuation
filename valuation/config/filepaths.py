@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/mercor-dominicks-acquisition-analysis              #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Wednesday October 8th 2025 02:52:13 pm                                              #
-# Modified   : Friday October 10th 2025 11:41:56 pm                                                #
+# Modified   : Saturday October 11th 2025 12:47:06 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -20,7 +20,7 @@ from pathlib import Path
 
 # ------------------------------------------------------------------------------------------------ #
 # --- 1. Directories and Filepaths ---
-PROJ_ROOT = Path(__file__).resolve().parents[1]
+PROJ_ROOT = Path(__file__).resolve().parents[2]
 
 # Define directories
 DATA_DIR = PROJ_ROOT / "data"

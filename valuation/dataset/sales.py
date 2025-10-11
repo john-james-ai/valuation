@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/mercor-dominicks-acquisition-analysis              #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Wednesday October 8th 2025 02:52:13 pm                                              #
-# Modified   : Saturday October 11th 2025 12:08:47 am                                              #
+# Modified   : Saturday October 11th 2025 01:33:47 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -25,13 +25,13 @@ import pandas as pd
 from pydantic.dataclasses import dataclass
 from tqdm import tqdm
 
-from valuation.config.data_prep import DataPrepBaseConfig
+from valuation.config.data_prep import DataPrepSingleOutputConfig
 from valuation.dataset.base import DataPrepSingleOutput
 
 
 # ------------------------------------------------------------------------------------------------ #
 @dataclass
-class SalesDataPrepConfig(DataPrepBaseConfig):
+class SalesDataPrepConfig(DataPrepSingleOutputConfig):
     """Holds all parameters for the sales data preparation process."""
 
     raw_data_directory: Path

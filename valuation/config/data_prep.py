@@ -11,15 +11,13 @@
 # URL        : https://github.com/john-james-ai/mercor-dominicks-acquisition-analysis              #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Wednesday October 8th 2025 02:52:13 pm                                              #
-# Modified   : Saturday October 11th 2025 12:24:55 am                                              #
+# Modified   : Saturday October 11th 2025 01:05:04 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
 # ================================================================================================ #
 from pathlib import Path
 
-from narwhals import Field
-from pydantic import Field
 from pydantic.dataclasses import dataclass
 
 
@@ -39,7 +37,7 @@ class DataPrepCoreConfig:
 class DataPrepBaseConfig:
     """Base configuration class for tasks."""
 
-    core_config: DataPrepCoreConfig = Field(..., description="Core task configuration.")
+    core_config: DataPrepCoreConfig
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -47,7 +45,7 @@ class DataPrepBaseConfig:
 class DataPrepSingleOutputConfig(DataPrepBaseConfig):
     """Single Output configuration."""
 
-    output_filepath: Path = Field(..., description="Path to the output file.")
+    output_filepath: Path
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -55,5 +53,5 @@ class DataPrepSingleOutputConfig(DataPrepBaseConfig):
 class DataPrepSISOConfig(DataPrepBaseConfig):
     """Single Input Single Output configuration."""
 
-    input_filepath: Path = Field(..., description="Path to the input file.")
-    output_filepath: Path = Field(..., description="Path to the output file.")
+    input_filepath: Path
+    output_filepath: Path

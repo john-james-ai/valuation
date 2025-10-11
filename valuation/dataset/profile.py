@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/mercor-dominicks-acquisition-analysis              #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Wednesday October 8th 2025 02:52:13 pm                                              #
-# Modified   : Saturday October 11th 2025 12:43:55 am                                              #
+# Modified   : Saturday October 11th 2025 12:47:55 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -35,7 +35,7 @@ class ProfileConfig(DataPrepSingleOutputConfig):
     """Holds all parameters for the profiling process."""
 
     raw_data_directory: Path
-    category_filenames: Dict[str, str] = Field(default_factory=dict)
+    category_filenames: Dict[str, Dict[str, str]] = Field(default_factory=dict)
     core_features: list[str] = Field(
         default_factory=lambda: ["STORE", "UPC", "WEEK", "MOVE", "QTY", "PRICE", "PROFIT", "OK"]
     )

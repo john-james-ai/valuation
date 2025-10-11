@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/mercor-dominicks-acquisition-analysis              #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Wednesday October 8th 2025 02:52:13 pm                                              #
-# Modified   : Friday October 10th 2025 11:50:59 pm                                                #
+# Modified   : Saturday October 11th 2025 01:23:02 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -20,9 +20,16 @@ import sys
 
 from loguru import logger
 
+LOG_MESSAGES_RECORDED = []
+
 
 # ------------------------------------------------------------------------------------------------ #
 # Configure logging
+def spy_sink(message):
+    """A simple sink that just records messages to our global list."""
+    LOG_MESSAGES_RECORDED.append(message.strip())
+
+
 def configure_logging():
     """Configures logging for the application."""
 
@@ -50,5 +57,6 @@ def configure_logging():
             colorize=True,
         )
 
+        logger.add(spy_sink, level="INFO")
     except ModuleNotFoundError:
         pass

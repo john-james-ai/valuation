@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/mercor-dominicks-acquisition-analysis              #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 9th 2025 11:01:16 pm                                               #
-# Modified   : Friday October 10th 2025 11:48:38 pm                                                #
+# Modified   : Saturday October 11th 2025 01:36:16 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -122,10 +122,10 @@ def main(
     """Main entry point for the Valuation package."""
     # Configure logging
     configure_logging()
-    # Obtain categories and filenames from config
+    # Read category filenames from configuration
     config_reader = ConfigReader()
     category_filenames = config_reader.read(CONFIG_CATEGORY_FILEPATH)
-    # Create profiling dataset
+    # Run Pipeline
     profile(category_filenames=category_filenames, force=force)
     prepare_sales_data(category_filenames=category_filenames, force=force)
     split_sales_data(force=force)
