@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
 # ================================================================================================ #
-# Project    : Mercor Dominick's Fine Foods Acquisition Analysis                                   #
+# Project    : Company Valuation                                                                   #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
 # Filename   : /valuation/config/filepaths.py                                                      #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
-# URL        : https://github.com/john-james-ai/mercor-dominicks-acquisition-analysis              #
+# URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Wednesday October 8th 2025 02:52:13 pm                                              #
-# Modified   : Saturday October 11th 2025 12:47:06 am                                              #
+# Modified   : Saturday October 11th 2025 09:10:54 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -50,7 +50,6 @@ CONFIG_CATEGORY_FILEPATH = "category_filenames"
 # FILEPATHs
 DATASET_PROFILE_FILEPATH = PROCESSED_DATA_DIR / "profile.csv"
 SALES_DATA_FILEPATH = PROCESSED_DATA_DIR / "sales.csv"
-SAME_STORE_SALES_DATA_FILEPATH = PROCESSED_DATA_DIR / "same_store_sales.csv"
 CATEGORY_DATA_FILEPATH = PROCESSED_DATA_DIR / "category.csv"
 STORE_DATA_FILEPATH = PROCESSED_DATA_DIR / "store.csv"
 TRAIN_DATA_FILEPATH = PROCESSED_DATA_DIR / "train.csv"

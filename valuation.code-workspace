@@ -8,10 +8,13 @@
         "psi-header.variables": [
 
         ["projectCreationYear", "2025"],
-        ["url", "https://github.com/john-james-ai/mercor-dominicks-acquisition-analysis"],
-        ["projectname", "Mercor Dominick's Fine Foods Acquisition Analysis"],
+        ["url", "https://github.com/john-james-ai/valuation"],
+        ["projectname", "Company Valuation"],
         ["version", "0.1.0"],
         ["pythonversion","3.12.11"]
-    ]  
+    ],
+    "psi-header.config": {
+
+    }
     }
 }

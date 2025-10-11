@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
 # ================================================================================================ #
-# Project    : Mercor Dominick's Fine Foods Acquisition Analysis                                   #
+# Project    : Company Valuation                                                                   #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
 # Filename   : /valuation/__main__.py                                                              #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
-# URL        : https://github.com/john-james-ai/mercor-dominicks-acquisition-analysis              #
+# URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 9th 2025 11:01:16 pm                                               #
-# Modified   : Saturday October 11th 2025 02:11:22 am                                              #
+# Modified   : Saturday October 11th 2025 04:00:46 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -181,7 +181,7 @@ def main(
     config_reader = ConfigReader()
     category_filenames = config_reader.read(CONFIG_CATEGORY_FILEPATH)
     # Run Pipelines
-    profile(category_filenames=category_filenames, force=force)
+    profile(category_filenames=category_filenames, force=False)
     prepare_sales_data(category_filenames=category_filenames, force=force)
     split_sales_data(force=force)
     prepare_store_kpi_data(force=force)

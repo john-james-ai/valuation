@@ -1,31 +1,31 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
 # ================================================================================================ #
-# Project    : Mercor Dominick's Fine Foods Acquisition Analysis                                   #
+# Project    : Company Valuation                                                                   #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
 # Filename   : /valuation/dataset/sales.py                                                         #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
-# URL        : https://github.com/john-james-ai/mercor-dominicks-acquisition-analysis              #
+# URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Wednesday October 8th 2025 02:52:13 pm                                              #
-# Modified   : Saturday October 11th 2025 02:01:10 am                                              #
+# Modified   : Saturday October 11th 2025 10:15:05 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
 # ================================================================================================ #
 """Sales Dataset Preparation"""
-from dataclasses import field
 from pathlib import Path
 from typing import Any, Dict
 
 import pandas as pd
+from pydantic import Field
 from pydantic.dataclasses import dataclass
 from tqdm import tqdm
 
-from valuation.config.data_prep import DataPrepSingleOutputConfig
+from valuation.config.data_prep import PLACEHOLDER_STORE_ID, DataPrepSingleOutputConfig
 from valuation.dataset.base import DataPrepSingleOutput
 
 
@@ -37,7 +37,7 @@ class SalesDataPrepConfig(DataPrepSingleOutputConfig):
     raw_data_directory: Path
     output_filepath: Path
     week_decode_filepath: Path
-    category_filenames: Dict[str, Any] = field(default_factory=dict)
+    category_filenames: Dict[str, Any] = Field(default_factory=dict)
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -72,11 +72,8 @@ class SalesDataPrep(DataPrepSingleOutput):
         # 1. Remove records with missing critical values
         df_clean = df_clean.query(query_string).copy()
 
-        # 2. Convert data types to appropriate formats
-        int_cols = ["WEEK", "STORE", "UPC", "MOVE", "QTY", "OK"]
-        df_clean[int_cols] = df_clean[int_cols].astype("int64")
-        float_cols = ["PRICE", "PROFIT"]
-        df_clean[float_cols] = df_clean[float_cols].astype("float64")
+        # 2. Drop records with invalid STORE values
+        df_clean = df_clean[df_clean["STORE"] != PLACEHOLDER_STORE_ID].copy()
 
         # 3. Rename columns for clarity and drop unneeded ones.
         df_clean = (
@@ -101,7 +98,26 @@ class SalesDataPrep(DataPrepSingleOutput):
         df["category"] = category
         return df
 
-    def add_dates(self, df: pd.DataFrame, week_decode_filepath: Path) -> pd.DataFrame:
+    def get_dates(self, week_decode_filepath: Path) -> pd.DataFrame:
+        """Reads the week decode table and normalizes the data types.
+        Args:
+            week_decode_filepath (Path): The path to the week decode CSV file.
+        Returns:
+            pd.DataFrame: The week decode DataFrame with standardized column names and types."""
+        # Read the week decode table and count number of dates
+        week_dates = self._io.read(filepath=week_decode_filepath)
+        # 1. Standardize column names to lowercase.
+        week_dates.columns = week_dates.columns.str.lower()
+
+        # 2. Ensure the 'week' column is a non-null integer.
+        week_dates = week_dates.dropna(subset=["week"])
+        week_dates["week"] = week_dates["week"].astype("int64")
+        week_dates["start"] = pd.to_datetime(week_dates["start"])
+        week_dates["end"] = pd.to_datetime(week_dates["end"])
+
+        return week_dates
+
+    def add_dates(self, df: pd.DataFrame, week_dates: pd.DataFrame) -> pd.DataFrame:
         """Adds start and end dates to the DataFrame based on the week number.
         Args:
             df (pd.DataFrame): The DataFrame to which dates will be added. Must contain
@@ -110,10 +126,8 @@ class SalesDataPrep(DataPrepSingleOutput):
         Returns:
             pd.DataFrame: The input DataFrame with added 'start_date' and 'end_date' columns.
         """
-        # Read the week decode table and count number of dates
-        week_dates = self._io.read(filepath=week_decode_filepath)
 
-        # Merge start and end dates into the original DataFrame
+        # Now that the keys are consistent, the merge will work reliably.
         df = df.merge(week_dates, on="week", how="left")
 
         return df
@@ -186,6 +200,9 @@ class SalesDataPrep(DataPrepSingleOutput):
         if self._use_cache(config=config):
             return
 
+        # Obtain week decode data for date mapping
+        week_dates = self.get_dates(week_decode_filepath=config.week_decode_filepath)
+
         # Set up the progress bar
         pbar = tqdm(config.category_filenames.items(), total=len(config.category_filenames))
 
@@ -201,7 +218,7 @@ class SalesDataPrep(DataPrepSingleOutput):
                 self.load(filepath=filepath)
                 .pipe(self.add_category, category=category)
                 .pipe(self.clean_dataset)
-                .pipe(self.add_dates, week_decode_filepath=config.week_decode_filepath)
+                .pipe(self.add_dates, week_dates=week_dates)
                 .pipe(self.calculate_revenue)
                 .pipe(self.calculate_gross_profit)
                 .pipe(self.aggregate)
