@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/mercor-dominicks-acquisition-analysis              #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Wednesday October 8th 2025 02:52:13 pm                                              #
-# Modified   : Saturday October 11th 2025 01:33:47 am                                              #
+# Modified   : Saturday October 11th 2025 02:01:10 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -72,10 +72,11 @@ class SalesDataPrep(DataPrepSingleOutput):
         # 1. Remove records with missing critical values
         df_clean = df_clean.query(query_string).copy()
 
-        # 2. Convert to consistent numeric types
-        numeric_cols = ["QTY", "PRICE", "PROFIT"]
-        for col in numeric_cols:
-            df_clean[col] = df_clean[col].astype("float64")
+        # 2. Convert data types to appropriate formats
+        int_cols = ["WEEK", "STORE", "UPC", "MOVE", "QTY", "OK"]
+        df_clean[int_cols] = df_clean[int_cols].astype("int64")
+        float_cols = ["PRICE", "PROFIT"]
+        df_clean[float_cols] = df_clean[float_cols].astype("float64")
 
         # 3. Rename columns for clarity and drop unneeded ones.
         df_clean = (

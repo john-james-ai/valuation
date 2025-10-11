@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/mercor-dominicks-acquisition-analysis              #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 9th 2025 11:01:16 pm                                               #
-# Modified   : Saturday October 11th 2025 01:36:16 am                                              #
+# Modified   : Saturday October 11th 2025 02:11:22 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -23,10 +23,12 @@ import typer
 
 from valuation.config.data_prep import DataPrepCoreConfig
 from valuation.config.filepaths import (
+    CATEGORY_DATA_FILEPATH,
     CONFIG_CATEGORY_FILEPATH,
     DATASET_PROFILE_FILEPATH,
     RAW_DATA_DIR,
     SALES_DATA_FILEPATH,
+    STORE_DATA_FILEPATH,
     TEST_DATA_FILEPATH,
     TRAIN_DATA_FILEPATH,
     VALIDATION_DATA_FILEPATH,
@@ -34,6 +36,7 @@ from valuation.config.filepaths import (
 )
 from valuation.config.loggers import configure_logging
 from valuation.config.reader import ConfigReader
+from valuation.dataset.kpi import KPIDataPrep, KPIDataPrepConfig
 from valuation.dataset.profile import ProfileConfig, SalesDataProfile
 from valuation.dataset.sales import SalesDataPrep, SalesDataPrepConfig
 from valuation.dataset.split import DatasetSplitter, PathsConfig, SplitterConfig
@@ -42,8 +45,57 @@ from valuation.dataset.split import DatasetSplitter, PathsConfig, SplitterConfig
 app = typer.Typer()
 
 
+# ------------------------------------------------------------------------------------------------ #
+def prepare_category_kpi_data(force: bool) -> None:
+    """Prepares, cleans and aggregates the category data.
+    Args:
+        force (bool): Whether to force reprocessing if the file already exists.
+    """
+
+    # Create configuration for category data processing
+    core_config = DataPrepCoreConfig(task_name="Category KPI Data Preparation", force=force)
+    config = KPIDataPrepConfig(
+        core_config=core_config,
+        input_filepath=TRAIN_DATA_FILEPATH,
+        output_filepath=CATEGORY_DATA_FILEPATH,
+        groupby="category",
+    )
+    # Instantiate the KPI data processor
+    processor = KPIDataPrep()
+
+    # Run the category kpi data preparation pipeline
+    processor.prepare(config=config)
+
+
+# ------------------------------------------------------------------------------------------------ #
+def prepare_store_kpi_data(force: bool) -> None:
+    """Prepares, cleans and aggregates the store data.
+    Args:
+        force (bool): Whether to force reprocessing if the file already exists.
+    """
+
+    # Create configuration for category data processing
+    core_config = DataPrepCoreConfig(task_name="Store KPI Data Preparation", force=force)
+    config = KPIDataPrepConfig(
+        core_config=core_config,
+        input_filepath=TRAIN_DATA_FILEPATH,
+        output_filepath=STORE_DATA_FILEPATH,
+        groupby="store",
+    )
+    # Instantiate the KPI data processor
+    processor = KPIDataPrep()
+
+    # Run the category kpi data preparation pipeline
+    processor.prepare(config=config)
+
+
+# ------------------------------------------------------------------------------------------------ #
 def split_sales_data(force: bool) -> None:
-    """Splits the sales data into training, validation, and test sets."""
+    """Splits the sales data into training, validation and test datasets.
+
+    Args:
+        force (bool): Whether to force reprocessing if the file already exists.
+    """
     core_config = DataPrepCoreConfig(task_name="Sales Data Splitting", force=force)
     paths_config = PathsConfig(
         input_filepath=SALES_DATA_FILEPATH,
@@ -65,6 +117,7 @@ def split_sales_data(force: bool) -> None:
     splitter.prepare(config=split_config)
 
 
+# ------------------------------------------------------------------------------------------------ #
 def prepare_sales_data(category_filenames: Dict, force: bool) -> None:
     """Prepares, cleans and aggregates the sales data.
 
@@ -89,6 +142,7 @@ def prepare_sales_data(category_filenames: Dict, force: bool) -> None:
     processor.prepare(config=config)
 
 
+# ------------------------------------------------------------------------------------------------ #
 def profile(category_filenames: Dict, force: bool) -> None:
     """Creates the sales data profiling dataset.
     Args:
@@ -109,6 +163,7 @@ def profile(category_filenames: Dict, force: bool) -> None:
     processor.prepare(config=config)
 
 
+# ------------------------------------------------------------------------------------------------ #
 @app.command()
 def main(
     force: bool = typer.Option(
@@ -125,10 +180,12 @@ def main(
     # Read category filenames from configuration
     config_reader = ConfigReader()
     category_filenames = config_reader.read(CONFIG_CATEGORY_FILEPATH)
-    # Run Pipeline
+    # Run Pipelines
     profile(category_filenames=category_filenames, force=force)
     prepare_sales_data(category_filenames=category_filenames, force=force)
     split_sales_data(force=force)
+    prepare_store_kpi_data(force=force)
+    prepare_category_kpi_data(force=force)
 
 
 if __name__ == "__main__":
