@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Saturday October 11th 2025 05:32:44 pm                                              #
-# Modified   : Saturday October 11th 2025 07:13:56 pm                                              #
+# Modified   : Saturday October 11th 2025 09:10:38 pm                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -47,7 +47,7 @@ class BalanceSheet:
     inventory: float  # Inventory
     prepaid_expenses: float  # Prepaid Expenses
     other_current_assets: float  # Other Current Assets
-    total_current_assets: float  # Total Current Assets
+    current_assets: float  # Total Current Assets
     property_plant_equipment: float  # Property, Plant & Equipment (PP&E)
     total_assets: float  # Total Assets
     accounts_payable: float  # Accounts Payable
@@ -98,7 +98,6 @@ class FinancialRatios:
     # Efficiency Ratios
     inventory_turnover: float  # Inventory Turnover
     dio: float  # Days Inventory Outstanding (DIO)
-    dso: float  # Days Sales Outstanding (DSO)
     dpo: float  # Days Payables Outstanding (DPO)
     sga_percentage: float  # Selling, General & Administrative Expenses as a Percentage of Sales
     cogs_growth_rate: float  # Cost of Goods Sold Growth Rate

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
 # ================================================================================================ #
-# Project    : Company Valuation                                                                   #
+# Project    : Valuation of Dominick's Fine Foods, Inc. 1997-2003                                  #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
 # Filename   : /valuation/dataset/sales.py                                                         #
@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Wednesday October 8th 2025 02:52:13 pm                                              #
-# Modified   : Saturday October 11th 2025 11:43:54 am                                              #
+# Modified   : Saturday October 11th 2025 09:22:13 pm                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -121,6 +121,8 @@ class SalesDataPrep(DataPrepSingleOutput):
         """
 
         df = df.merge(week_dates, on="week", how="left")
+        # Add year column for trend analysis
+        df["year"] = df["end"].dt.year
 
         return df
 
@@ -175,6 +177,7 @@ class SalesDataPrep(DataPrepSingleOutput):
             .agg(
                 revenue=("revenue", "sum"),
                 gross_profit=("gross_profit", "sum"),
+                year=("year", "first"),
                 start=("start", "first"),
                 end=("end", "first"),
             )
