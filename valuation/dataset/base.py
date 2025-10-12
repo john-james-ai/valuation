@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Saturday October 11th 2025 05:20:43 pm                                              #
-# Modified   : Sunday October 12th 2025 07:39:07 am                                                #
+# Modified   : Sunday October 12th 2025 09:56:07 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -19,7 +19,7 @@
 """Module for base operational analysis class."""
 from abc import ABC
 from dataclasses import dataclass, field
-from typing import List
+from typing import List, Union
 
 import pandas as pd
 
@@ -52,7 +52,7 @@ class Dataset(ABC):
         # 1. Group by year and count the number of unique weeks in each group
         weeks_per_year = self._sales.groupby("year")["week"].nunique()
 
-        # 2. Filter to get a list of years that have more than min_weeks of data
+        # 2. Filter to get a sorted list of years that have more than min_weeks of data
         years = weeks_per_year[weeks_per_year >= self._min_weeks].index.tolist()
 
         # 3. Filter the original DataFrame to include only rows from the full years
@@ -61,3 +61,21 @@ class Dataset(ABC):
         # 4. Load the weeks in the dataset into the container
         self._data = DatasetContainer(years=years, data=data)
         return self._data
+
+
+# ------------------------------------------------------------------------------------------------ #
+class DataAggregator:
+
+    def aggregate(self, data: pd.DataFrame, groupby: Union[str, List[str]]) -> pd.DataFrame:
+        """Gets the data for only full years."""
+
+        aggregated = (
+            data.groupby(groupby)
+            .agg(
+                revenue=("revenue", "sum"),
+                gross_profit=("gross_profit", "sum"),
+            )
+            .reset_index()
+        )
+        aggregated["gross_margin_pct"] = aggregated["gross_profit"] / aggregated["revenue"]
+        return aggregated

@@ -11,47 +11,107 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday October 12th 2025 03:17:59 am                                                #
-# Modified   : Sunday October 12th 2025 06:50:29 am                                                #
+# Modified   : Sunday October 12th 2025 10:10:07 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
 # ================================================================================================ #
-from pandas import DataFrame
-from valuation.dataset.base import Dataset
+from loguru import logger
+import numpy as np
+import pandas as pd
+
+from valuation.dataset.base import DataAggregator, Dataset
 
 # ------------------------------------------------------------------------------------------------ #
-GROUPBY='store'
+GROUPBY = "store"
+
+
 class StoreDataset(Dataset):
-    def __init__(self, sales: DataFrame) -> None:
-        super().__init__(sales, groupby=GROUPBY)
-        self._store_analysis = None
-        
-    def store_analysis(self) -> DataFrame:
-        if self._store_analysis is None:
-            self._compute_store_analysis()
-        return self._store_analysis if self._store_analysis is not None else DataFrame()    
-    
-    def _compute_store_analysis(self) -> None:
-        full_df = self.get_full_years_data()
-        if full_df.empty:
-            self._store_analysis = DataFrame()
-            return  
-        
-        df = full_df.groupby(self._groupby).agg(
-            year=('year')
-            total_sales=('revenue', 'sum'),
-            total_transactions=('transactions', 'sum'),
-            total_units_sold=('movement', 'sum'),
-            average_price=('price', 'mean'),
-            average_basket_size=('basket_size', 'mean'),
-            number_of_years=('year', 'nunique')
-        ).reset_index()
-        
-        df['average_annual_sales'] = df['total_sales'] / df['number_of_years']
-        df['average_annual_transactions'] = df['total_transactions'] / df['number_of_years']
-        df['average_annual_units_sold'] = df['total_units_sold'] / df['number_of_years']
-        
-        self._store_analysis = df
-        
-    
-        
+    def __init__(
+        self,
+        sales: pd.DataFrame,
+        min_weeks: int = 50,
+        aggregator_cls: type[DataAggregator] = DataAggregator,
+    ) -> None:
+        super().__init__(sales=sales, min_weeks=min_weeks)
+        self._aggregator = aggregator_cls()
+        self._store_kpis = None
+        self._sales_growth = None
+
+    @property
+    def store_kpis(self) -> pd.DataFrame:
+        """Gets the store level KPIs."""
+        self._store_kpis = self._compute_store_kpis()
+        return self._store_kpis
+
+    @property
+    def sales_growth(self) -> pd.DataFrame:
+        """Gets the store level sales growth."""
+        self._sales_growth = self._compute_sales_growth()
+        return self._sales_growth
+
+    def _compute_store_kpis(self) -> pd.DataFrame:
+        """Computes store level KPIs."""
+        if self._store_kpis is not None:
+            return self._store_kpis
+
+        logger.info(f"Computing store KPIs for {self.__class__.__name__}")
+
+        # Aggregate data to store level
+        dataset = self.dataset
+        return self._aggregator.aggregate(data=dataset.data.copy(), groupby=["store"])
+
+    def _compute_sales_growth(self) -> pd.DataFrame:
+        """Returns a DataFrame containing sales growth by store."""
+        if self._sales_growth is not None:
+            return self._sales_growth
+
+        dataset = self.dataset
+
+        aggregated = self._aggregator.aggregate(
+            data=dataset.data.copy(), groupby=["store", "year"]
+        )
+        logger.debug(f"Aggregated Data Shape: {aggregated.shape}")
+
+        previous_year = dataset.years[-2] if len(dataset.years) > 1 else None
+        current_year = dataset.years[-1] if len(dataset.years) > 0 else None
+
+        logger.debug(f"Previous Year: {previous_year}, Current Year: {current_year}")
+
+        # 1. Identify stores that are present in both years
+        stores_previous = set(aggregated[aggregated["year"] == previous_year]["store"].unique())
+        stores_current = set(aggregated[aggregated["year"] == current_year]["store"].unique())
+        comp_stores = stores_previous.intersection(stores_current)
+
+        logger.debug(f"Comparable Stores: {len(comp_stores)}")
+
+        # 2. Filter for only the comparable stores and the two relevant years
+        comp_stores_data = aggregated[
+            aggregated["store"].isin(comp_stores)
+            & aggregated["year"].isin([previous_year, current_year])
+        ]
+
+        logger.debug(f"Comparable Stores Data Shape: {comp_stores_data.shape}")
+
+        # 3. Calculate sales growth for each store
+        revenue_prev = comp_stores_data[comp_stores_data["year"] == previous_year]
+        revenue_curr = comp_stores_data[comp_stores_data["year"] == current_year]
+        logger.debug(
+            f"Revenue Previous Shape: {revenue_prev.shape}, Revenue Current Shape: {revenue_curr.shape}"
+        )
+
+        #  4. Merge the two DataFrames on 'store' to align previous and current year revenues
+        comp_stores_data = pd.merge(
+            revenue_prev[["store", "revenue"]],
+            revenue_curr[["store", "revenue"]],
+            on="store",
+            suffixes=("_prev", "_curr"),
+        )
+
+        comp_stores_data["sales_growth_rate"] = np.where(
+            comp_stores_data["revenue_prev"] > 0,
+            ((comp_stores_data["revenue_curr"] / comp_stores_data["revenue_prev"]) - 1) * 100,
+            0,
+        )
+
+        return comp_stores_data
