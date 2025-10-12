@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Saturday October 11th 2025 05:32:44 pm                                              #
-# Modified   : Sunday October 12th 2025 03:04:57 am                                                #
+# Modified   : Sunday October 12th 2025 03:42:23 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -221,6 +221,11 @@ class Financials(DataClass):
         return self.sga / self.revenue * 100 if self.revenue else 0.0
 
     @property
+    def dna_to_sales(self) -> float:
+        """Calculates Depreciation & Amortization as a Percentage of Sales."""
+        return self.deprecated_and_amortization / self.revenue * 100 if self.revenue else 0.0
+
+    @property
     def cogs_growth_rate(self) -> float:
         """Calculates COGS Growth Rate."""
         return (self.cogs - self.prior_cogs) / self.prior_cogs * 100 if self.prior_cogs else 0.0
@@ -241,8 +246,13 @@ class Financials(DataClass):
         )
 
     @property
-    def capex_percentage(self) -> float:
+    def capex_to_sales(self) -> float:
         """Calculates Capital Expenditures as a Percentage of Sales."""
+        return self.capital_expenditures / self.revenue * 100 if self.revenue else 0.0
+
+    @property
+    def nwc_to_sales(self) -> float:
+        """Calculates Net Working Capital as a Percentage of Sales."""
         return self.capital_expenditures / self.revenue * 100 if self.revenue else 0.0
 
     # Liquidity Metrics

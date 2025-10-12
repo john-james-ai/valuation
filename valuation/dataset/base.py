@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
 # ================================================================================================ #
-# Project    : Company Valuation                                                                   #
+# Project    : Valuation of Dominick's Fine Foods, Inc. 1997-2003                                  #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
 # Filename   : /valuation/dataset/base.py                                                          #
@@ -10,117 +10,54 @@
 # Email      : john.james.ai.studio@gmail.com                                                      #
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
-# Created    : Friday October 10th 2025 02:27:30 am                                                #
-# Modified   : Saturday October 11th 2025 10:44:48 am                                              #
+# Created    : Saturday October 11th 2025 05:20:43 pm                                              #
+# Modified   : Sunday October 12th 2025 07:39:07 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
 # ================================================================================================ #
-from abc import ABC, abstractmethod
-from pathlib import Path
-from typing import Union
+"""Module for base operational analysis class."""
+from abc import ABC
+from dataclasses import dataclass, field
+from typing import List
 
-from loguru import logger
 import pandas as pd
 
-from valuation.config.data_prep import (
-    DTYPES,
-    DataPrepBaseConfig,
-    DataPrepSingleOutputConfig,
-    DataPrepSISOConfig,
-)
-from valuation.utils.io import IOService
+
+# ------------------------------------------------------------------------------------------------ #
+@dataclass
+class DatasetContainer:
+
+    data: pd.DataFrame
+    years: List[int] = field(default_factory=list)
 
 
 # ------------------------------------------------------------------------------------------------ #
-class DataPrep(ABC):
-    """Abstract base class for data preparation."""
+class Dataset(ABC):
+    def __init__(self, sales: pd.DataFrame, min_weeks: int = 50) -> None:
+        self._sales = sales
+        self._min_weeks = min_weeks
+        self._data = None
 
-    def __init__(self, io: IOService = IOService) -> None:
-        self._io = io
+    @property
+    def dataset(self) -> DatasetContainer:
+        """Gets the data and its metadata in a container."""
+        self._data = self._filter_partial_years()
+        return self._data
 
-    def load(self, filepath: Path) -> pd.DataFrame:
-        """Loads a single data file from the raw data directory.
+    def _filter_partial_years(self) -> DatasetContainer:
+        """Returns a DataFrame containing only full years of data."""
+        if self._data is not None and isinstance(self._data, DatasetContainer):
+            return self._data
+        # 1. Group by year and count the number of unique weeks in each group
+        weeks_per_year = self._sales.groupby("year")["week"].nunique()
 
-        Args:
-            filepath(Path): The path to the file to be loaded.
+        # 2. Filter to get a list of years that have more than min_weeks of data
+        years = weeks_per_year[weeks_per_year >= self._min_weeks].index.tolist()
 
-        Returns:
-            pd.DataFrame: A DataFrame containing the loaded data.
-        """
+        # 3. Filter the original DataFrame to include only rows from the full years
+        data = self._sales[self._sales["year"].isin(years)].copy()
 
-        df = self._io.read(filepath=filepath)
-        # Ensure correct data types
-        return df.astype({k: v for k, v in DTYPES.items() if k in df.columns})
-
-    def save(self, df: pd.DataFrame, filepath: Path) -> None:
-        """Saves a DataFrame to the processed data directory.
-
-        Args:
-            df (pd.DataFrame): The DataFrame to save.
-            filepath (Path): The path to the file to be saved.
-        """
-        self._io.write(data=df, filepath=filepath)
-
-    def delete(self, filepath: Path) -> None:
-        """Deletes a file from the processed data directory.
-
-        Args:
-            filepath (Path): The path of the file to delete
-        """
-        filepath.unlink(missing_ok=True)
-
-    def exists(self, filepath: Path) -> bool:
-        """Checks if a file exists in the processed data directory.
-
-        Args:
-            filepath (Path): The path to a file for the existence check
-
-        Returns:
-            bool: True if the file exists, False otherwise.
-        """
-        return filepath.exists()
-
-    @abstractmethod
-    def prepare(self, config: DataPrepBaseConfig) -> None:
-        """Abstract method to be implemented by subclasses for data preparation."""
-        pass
-
-    @abstractmethod
-    def _use_cache(self, config: DataPrepBaseConfig) -> bool:
-        """Abstract method that controls the use of cache in alignment on a force flag."""
-
-
-# ------------------------------------------------------------------------------------------------ #
-class DataPrepSingleOutput(DataPrep):
-
-    @abstractmethod
-    def prepare(self, config: Union[DataPrepSISOConfig, DataPrepSingleOutputConfig]) -> None:
-        """Abstract method to be implemented by subclasses for data preparation."""
-        pass
-
-    def _use_cache(self, config: Union[DataPrepSISOConfig, DataPrepSingleOutputConfig]) -> bool:
-        """Determines whether to use cached data based on file existence and force flag.
-
-        Args:
-            config (DataPrepSISOConfig): Configuration object containing core settings.
-        Returns:
-            bool: True if cached data should be used, False otherwise.
-
-        """
-
-        if config.core_config.force:
-            self.delete(filepath=config.output_filepath)
-            use_cache = False
-        else:
-            use_cache = (
-                self.exists(filepath=config.output_filepath) and not config.core_config.force
-            )
-
-        if use_cache:
-            logger.info(
-                f"{config.core_config.task_name} - Output file already exists. Using cached data."
-            )
-        else:
-            logger.info(f"{config.core_config.task_name}  - Starting")
-        return use_cache
+        # 4. Load the weeks in the dataset into the container
+        self._data = DatasetContainer(years=years, data=data)
+        return self._data

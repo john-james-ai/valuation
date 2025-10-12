@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Saturday October 11th 2025 08:17:34 pm                                              #
-# Modified   : Sunday October 12th 2025 03:07:14 am                                                #
+# Modified   : Sunday October 12th 2025 06:51:45 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -24,8 +24,8 @@ from loguru import logger
 import pandas as pd
 import pytest
 
-from valuation.analysis.company import Company
-from valuation.analysis.financials import (
+from valuation.dataset.company import CompanyDataset
+from valuation.dataset.financials import (
     BalanceSheet,
     CashflowStatement,
     Financials,
@@ -43,7 +43,7 @@ single_line = f"\n{100 * '-'}"
 
 
 @pytest.mark.company
-class TestCompany:  # pragma: no cover
+class TestCompanyDataset:  # pragma: no cover
     # ============================================================================================ #
     def test_financials(self, financials, caplog) -> None:
         start = datetime.now()
@@ -88,7 +88,7 @@ class TestCompany:  # pragma: no cover
         assert math.isclose(fin.net_income, -6932.00)
         assert math.isclose(fin.sales_growth, 78238.00)
         assert math.isclose(fin.sales_growth_rate, 3.214, rel_tol=0.05)
-        assert math.isclose(fin.capex_percentage, -1.97, rel_tol=0.05)
+        assert math.isclose(fin.capex_to_sales, -1.97, rel_tol=0.05)
         assert math.isclose(fin.net_working_capital_change, 481.00)
         assert math.isclose(fin.gross_profit_margin, 23.05, rel_tol=0.05)
         assert math.isclose(fin.operating_margin, 3.07, rel_tol=0.05)
@@ -134,7 +134,7 @@ class TestCompany:  # pragma: no cover
         logger.info(double_line)
         # ---------------------------------------------------------------------------------------- #
         fin = Financials.from_dict(financials)
-        company = Company(financials=fin, sales=sales)
+        company = CompanyDataset(financials=fin, sales=sales)
         assert isinstance(company.financials, Financials)
         assert isinstance(company.annual_sales, pd.DataFrame)
         annual_sales = company.annual_sales
@@ -207,7 +207,7 @@ class TestCompany:  # pragma: no cover
         logger.info(double_line)
         # ---------------------------------------------------------------------------------------- #
         fin = Financials.from_dict(financials)
-        company = Company(financials=fin, sales=sales)
+        company = CompanyDataset(financials=fin, sales=sales)
         assert isinstance(company.financials, Financials)
         # Check that sss_growth is a DataFrame and has the expected structure
         assert isinstance(company.sss_growth, pd.DataFrame)

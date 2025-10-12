@@ -4,37 +4,49 @@
 # Project    : Valuation of Dominick's Fine Foods, Inc. 1997-2003                                  #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
-# Filename   : /tests/conftest.py                                                                  #
+# Filename   : /valuation/pipeline/aggregate.py                                                    #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
-# Created    : Saturday October 11th 2025 08:23:13 pm                                              #
-# Modified   : Sunday October 12th 2025 07:20:28 am                                                #
+# Created    : Friday October 10th 2025 02:27:04 am                                                #
+# Modified   : Sunday October 12th 2025 05:59:02 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
 # ================================================================================================ #
-import pytest
+"""Store Dataset Preparation"""
 
-from valuation.config.data import DTYPES
-from valuation.config.filepaths import TRAIN_DATA_FILEPATH
-from valuation.utils.io import IOService
+from pydantic.dataclasses import dataclass
 
-# ------------------------------------------------------------------------------------------------ #
-FINANCIALS_FILEPATH = "data/external/financials.yaml"
-SALES_FILEPATH = "data/processed/train.csv"
+from valuation.pipeline.base import DataPrepSingleOutput
+from valuation.pipeline.config import DataPrepSISOConfig
 
 
 # ------------------------------------------------------------------------------------------------ #
-@pytest.fixture(scope="session", autouse=False)
-def financials():
-    return IOService.read(filepath=FINANCIALS_FILEPATH)["financials"]
+@dataclass
+class KPIDataPrepConfig(DataPrepSISOConfig):
+    """Configuration for Store Data Preparation."""
+
+    groupby: str
 
 
-# ------------------------------------------------------------------------------------------------ #
-@pytest.fixture(scope="session", autouse=False)
-def sales():
-    df = IOService.read(filepath=TRAIN_DATA_FILEPATH)
-    return df.astype({k: v for k, v in DTYPES.items() if k in df.columns})
+class KPIDataPrep(DataPrepSingleOutput):
+    """Computes Store level KPIs for profitability analysis"""
+
+    def prepare(self, config: KPIDataPrepConfig) -> None:
+        if self._use_cache(config=config):
+            return
+
+        df = self.load(filepath=config.input_filepath)
+
+        store_kpis = (
+            df.groupby(config.groupby)
+            .agg(revenue=("revenue", "sum"), gross_profit=("gross_profit", "sum"))
+            .reset_index()
+        )
+
+        store_kpis["gross_margin_pct"] = store_kpis["gross_profit"] / store_kpis["revenue"]
+
+        self.save(df=store_kpis, filepath=config.output_filepath)

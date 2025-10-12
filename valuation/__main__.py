@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
 # ================================================================================================ #
-# Project    : Company Valuation                                                                   #
+# Project    : Valuation of Dominick's Fine Foods, Inc. 1997-2003                                  #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
 # Filename   : /valuation/__main__.py                                                              #
@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 9th 2025 11:01:16 pm                                               #
-# Modified   : Saturday October 11th 2025 04:00:46 am                                              #
+# Modified   : Sunday October 12th 2025 05:59:02 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -21,7 +21,6 @@ from typing import Dict
 
 import typer
 
-from valuation.config.data_prep import DataPrepCoreConfig
 from valuation.config.filepaths import (
     CATEGORY_DATA_FILEPATH,
     CONFIG_CATEGORY_FILEPATH,
@@ -36,10 +35,11 @@ from valuation.config.filepaths import (
 )
 from valuation.config.loggers import configure_logging
 from valuation.config.reader import ConfigReader
-from valuation.dataset.kpi import KPIDataPrep, KPIDataPrepConfig
-from valuation.dataset.profile import ProfileConfig, SalesDataProfile
-from valuation.dataset.sales import SalesDataPrep, SalesDataPrepConfig
-from valuation.dataset.split import DatasetSplitter, PathsConfig, SplitterConfig
+from valuation.pipeline.aggregate import KPIDataPrep, KPIDataPrepConfig
+from valuation.pipeline.config import DataPrepCoreConfig
+from valuation.pipeline.ingest import SalesDataPrep, SalesDataPrepConfig
+from valuation.pipeline.profile import ProfileConfig, SalesDataProfile
+from valuation.pipeline.split import DatasetSplitter, PathsConfig, SplitterConfig
 
 # ------------------------------------------------------------------------------------------------ #
 app = typer.Typer()

@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
 # ================================================================================================ #
-# Project    : Mercor Dominick's Fine Foods Acquisition Analysis                                   #
+# Project    : Valuation of Dominick's Fine Foods, Inc. 1997-2003                                  #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
-# Filename   : /valuation/dataset/profile.py                                                       #
+# Filename   : /valuation/pipeline/profile.py                                                      #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
-# URL        : https://github.com/john-james-ai/mercor-dominicks-acquisition-analysis              #
+# URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Wednesday October 8th 2025 02:52:13 pm                                              #
-# Modified   : Saturday October 11th 2025 12:47:55 am                                              #
+# Modified   : Sunday October 12th 2025 05:59:02 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -25,8 +25,8 @@ from pydantic import Field
 from pydantic.dataclasses import dataclass
 from tqdm import tqdm
 
-from valuation.config.data_prep import DataPrepSingleOutputConfig
-from valuation.dataset.base import DataPrepSingleOutput
+from valuation.pipeline.base import DataPrepSingleOutput
+from valuation.pipeline.config import DataPrepSingleOutputConfig
 
 
 # ------------------------------------------------------------------------------------------------ #

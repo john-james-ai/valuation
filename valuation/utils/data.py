@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 9th 2025 07:11:18 pm                                               #
-# Modified   : Saturday October 11th 2025 05:25:57 pm                                              #
+# Modified   : Sunday October 12th 2025 07:22:23 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -19,12 +19,12 @@
 from __future__ import annotations
 
 from abc import ABC
-from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Dict, Tuple, Union
 
 import numpy as np
 import pandas as pd
+from pydantic.dataclasses import dataclass
 
 # ------------------------------------------------------------------------------------------------ #
 # mypy: allow-any-generics

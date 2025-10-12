@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
 # ================================================================================================ #
-# Project    : Mercor Dominick's Fine Foods Acquisition Analysis                                   #
+# Project    : Valuation of Dominick's Fine Foods, Inc. 1997-2003                                  #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
-# Filename   : /valuation/dataset/split.py                                                         #
+# Filename   : /valuation/pipeline/split.py                                                        #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
-# URL        : https://github.com/john-james-ai/mercor-dominicks-acquisition-analysis              #
+# URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday October 10th 2025 06:45:03 pm                                                #
-# Modified   : Saturday October 11th 2025 01:39:09 am                                              #
+# Modified   : Sunday October 12th 2025 05:58:27 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -22,8 +22,8 @@ from pathlib import Path
 from loguru import logger
 from pydantic.dataclasses import dataclass
 
-from valuation.config.data_prep import DataPrepBaseConfig, DataPrepCoreConfig
-from valuation.dataset.base import DataPrep
+from valuation.pipeline.base import DataPrep
+from valuation.pipeline.config import DataPrepBaseConfig
 from valuation.utils.data import DataFramePartitioner
 from valuation.utils.io import IOService
 from valuation.utils.print import Printer
@@ -45,7 +45,6 @@ class PathsConfig:
 class SplitterConfig(DataPrepBaseConfig):
     """Holds all parameters for the data splitter."""
 
-    core_config: DataPrepCoreConfig
     paths: PathsConfig
     val_col: str
     train_size: float
@@ -127,18 +126,16 @@ class DatasetSplitter(DataPrep):
             and self.exists(filepath=config.paths.test_filepath)
         )
 
-        if config.core_config.force or not all_files_exist:
+        if config.force or not all_files_exist:
             self.delete(filepath=config.paths.train_filepath)
             self.delete(filepath=config.paths.validation_filepath)
             self.delete(filepath=config.paths.test_filepath)
             use_cache = False
         else:
-            use_cache = all_files_exist and not config.core_config.force
+            use_cache = all_files_exist and not config.force
 
         if use_cache:
-            logger.info(
-                f"{config.core_config.task_name} - Output file already exists. Using cached data."
-            )
+            logger.info(f"{config.task_name} - Output file already exists. Using cached data.")
         else:
-            logger.info(f"{config.core_config.task_name}  - Starting")
+            logger.info(f"{config.task_name}  - Starting")
         return use_cache
