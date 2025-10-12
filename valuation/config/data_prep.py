@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
 # ================================================================================================ #
-# Project    : Company Valuation                                                                   #
+# Project    : Valuation of Dominick's Fine Foods, Inc. 1997-2003                                  #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
 # Filename   : /valuation/config/data_prep.py                                                      #
@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Wednesday October 8th 2025 02:52:13 pm                                              #
-# Modified   : Saturday October 11th 2025 10:43:59 am                                              #
+# Modified   : Saturday October 11th 2025 09:37:19 pm                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -35,6 +35,7 @@ DTYPES = {
     "store": "Int64",
     "upc": "Int64",
     "week": "Int64",
+    "year": "Int64",
     "qty": "Int64",
     "move": "Int64",
     "ok": "Int64",

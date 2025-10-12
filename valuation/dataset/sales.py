@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Wednesday October 8th 2025 02:52:13 pm                                              #
-# Modified   : Saturday October 11th 2025 09:22:13 pm                                              #
+# Modified   : Saturday October 11th 2025 09:37:34 pm                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -123,6 +123,7 @@ class SalesDataPrep(DataPrepSingleOutput):
         df = df.merge(week_dates, on="week", how="left")
         # Add year column for trend analysis
         df["year"] = df["end"].dt.year
+        df["year"] = df["year"].astype("Int64")
 
         return df
 

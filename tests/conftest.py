@@ -11,13 +11,15 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Saturday October 11th 2025 08:23:13 pm                                              #
-# Modified   : Saturday October 11th 2025 08:58:48 pm                                              #
+# Modified   : Saturday October 11th 2025 09:51:11 pm                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
 # ================================================================================================ #
 import pytest
 
+from valuation.config.data_prep import DTYPES
+from valuation.config.filepaths import TRAIN_DATA_FILEPATH
 from valuation.utils.io import IOService
 
 # ------------------------------------------------------------------------------------------------ #
@@ -34,4 +36,5 @@ def financials():
 # ------------------------------------------------------------------------------------------------ #
 @pytest.fixture(scope="session", autouse=False)
 def sales():
-    return IOService.read(filepath=SALES_FILEPATH)
+    df = IOService.read(filepath=TRAIN_DATA_FILEPATH)
+    return df.astype({k: v for k, v in DTYPES.items() if k in df.columns})
