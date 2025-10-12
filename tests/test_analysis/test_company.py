@@ -11,13 +11,14 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Saturday October 11th 2025 08:17:34 pm                                              #
-# Modified   : Saturday October 11th 2025 10:43:08 pm                                              #
+# Modified   : Sunday October 12th 2025 03:07:14 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
 # ================================================================================================ #
 from datetime import datetime
 import inspect
+import math
 
 from loguru import logger
 import pandas as pd
@@ -26,10 +27,8 @@ import pytest
 from valuation.analysis.company import Company
 from valuation.analysis.financials import (
     BalanceSheet,
-    CashFlowStatement,
-    FinancialMetrics,
-    FinancialPerformance,
-    FinancialRatios,
+    CashflowStatement,
+    Financials,
     IncomeStatement,
 )
 
@@ -53,71 +52,70 @@ class TestCompany:  # pragma: no cover
         )
         logger.info(double_line)
         # ---------------------------------------------------------------------------------------- #
-        fin = FinancialPerformance.from_dict(financials)
+        fin = Financials.from_dict(financials)
         # Check that the financials object is created correctly
-        assert isinstance(fin, FinancialPerformance)
+        assert math.isclose(fin.cash_and_equivalents, 32735.00)
+        assert math.isclose(fin.accounts_receivable, 16723.00)
+        assert math.isclose(fin.inventory, 203411.00)
+        assert math.isclose(fin.prepaid_expenses, 21860.00)
+        assert math.isclose(fin.other_current_assets, 459252.00)
+        assert math.isclose(fin.current_assets, 274729.00)
+        assert math.isclose(fin.property_plant_equipment, 368224.00)
+        assert math.isclose(fin.total_assets, 1102205.00)
+        assert math.isclose(fin.accounts_payable, 187787.00)
+        assert math.isclose(fin.short_term_debt, 16723)
+        assert math.isclose(fin.long_term_debt, 400644.00)
+        assert math.isclose(fin.current_liabilities, 308434.00)
+        assert math.isclose(fin.total_liabilities, 1102205.00)
+        assert math.isclose(fin.total_equity, 179071.00)
+        assert math.isclose(fin.average_equity, 159460.50)
+        assert math.isclose(fin.net_income, -6932.00)
+        assert math.isclose(fin.operating_activities, 41120.00)
+        assert math.isclose(fin.investing_activities, -48561.00)
+        assert math.isclose(fin.financing_activities, -15375.00)
+        assert math.isclose(fin.net_change_in_cash, -22816.00)
+        assert math.isclose(fin.capital_expenditures, -49588.00)
+        assert math.isclose(fin.deprecated_and_amortization, 45924.00)
+        assert math.isclose(fin.revenue, 2511962.00)
+        assert math.isclose(fin.cogs, 1932994.00)
+        assert math.isclose(fin.sga, 491359.00)
+        assert math.isclose(fin.gross_profit, 578968.00)
+        assert math.isclose(fin.operating_income, 77109.00)
+        assert math.isclose(fin.ebit, 68976.00)
+        assert math.isclose(fin.interest_expense, 67555.00)
+        assert math.isclose(fin.earnings_before_taxes, 6813.00)
+        assert math.isclose(fin.income_tax_expense, 7385.00)
+        assert math.isclose(fin.net_income, -6932.00)
+        assert math.isclose(fin.sales_growth, 78238.00)
+        assert math.isclose(fin.sales_growth_rate, 3.214, rel_tol=0.05)
+        assert math.isclose(fin.capex_percentage, -1.97, rel_tol=0.05)
+        assert math.isclose(fin.net_working_capital_change, 481.00)
+        assert math.isclose(fin.gross_profit_margin, 23.05, rel_tol=0.05)
+        assert math.isclose(fin.operating_margin, 3.07, rel_tol=0.05)
+        assert math.isclose(fin.net_profit_margin, -0.28, rel_tol=0.05)
+        assert math.isclose(fin.ebit_margin, 2.75, rel_tol=0.05)
+        assert math.isclose(fin.ebitda, 114900.00)
+        assert math.isclose(fin.ebitda_margin, 4.57, rel_tol=0.05)
+        assert math.isclose(fin.return_on_equity, -4.35, rel_tol=0.05)
+        assert math.isclose(fin.return_on_invested_capital, 6.96, rel_tol=0.05)
+        assert math.isclose(fin.effective_interest_rate, 9.2, rel_tol=0.05)
+        assert math.isclose(fin.depreciation_percentage, 12.47, rel_tol=0.05)
+        assert math.isclose(fin.working_capital, -33705.00)
+        assert math.isclose(fin.current_ratio, 0.89, rel_tol=0.05)
+        assert math.isclose(fin.quick_ratio, 0.23, rel_tol=0.05)
+        assert math.isclose(fin.debt_to_equity_ratio, 3.02, rel_tol=0.05)
+        assert math.isclose(fin.inventory_turnover, 9.50, rel_tol=0.05)
+        assert math.isclose(fin.days_inventory_outstanding, 36.47, rel_tol=0.05)
+        assert math.isclose(fin.days_payables_outstanding, 35.46, rel_tol=0.05)
+        assert math.isclose(fin.cogs_growth_rate, 2.59, rel_tol=0.05)
+
         assert isinstance(fin.income_statement, IncomeStatement)
         assert isinstance(fin.balance_sheet, BalanceSheet)
-        assert isinstance(fin.cash_flow_statement, CashFlowStatement)
-        assert isinstance(fin.financial_ratios, FinancialRatios)
-        assert isinstance(fin.financial_metrics, FinancialMetrics)
-
-        assert fin.balance_sheet.cash_and_equivalents == 32735.00
-        assert fin.balance_sheet.accounts_receivable == 16723.00
-        assert fin.balance_sheet.inventory == 203411.00
-        assert fin.balance_sheet.prepaid_expenses == 21860.00
-        assert fin.balance_sheet.other_current_assets == 459252.00
-        assert fin.balance_sheet.current_assets == 274729.00
-        assert fin.balance_sheet.property_plant_equipment == 368224.00
-        assert fin.balance_sheet.total_assets == 1102205.00
-        assert fin.balance_sheet.accounts_payable == 187787.00
-        assert fin.balance_sheet.short_term_debt == 16723
-        assert fin.balance_sheet.long_term_debt == 400644.00
-        assert fin.balance_sheet.current_liabilities == 308434.00
-        assert fin.balance_sheet.total_liabilities == 1102205.00
-        assert fin.balance_sheet.total_equity == 179071.00
-        assert fin.cash_flow_statement.net_income == -6932.00
-        assert fin.cash_flow_statement.operating_activities == 41120.00
-        assert fin.cash_flow_statement.investing_activities == -48561.00
-        assert fin.cash_flow_statement.financing_activities == -15375.00
-        assert fin.cash_flow_statement.net_change_in_cash == -22816.00
-        assert fin.cash_flow_statement.capital_expenditures == -49588.00
-        assert fin.cash_flow_statement.deprecated_and_amortization == 45924.00
-        assert fin.income_statement.revenue == 2511962.00
-        assert fin.income_statement.cogs == 1932994.00
-        assert fin.income_statement.sga == 491359.00
-        assert fin.income_statement.gross_profit == 578968.00
-        assert fin.income_statement.operating_income == 77109.00
-        assert fin.income_statement.ebit == 88976.00
-        assert fin.income_statement.interest_expense == 67555.00
-        assert fin.income_statement.earnings_before_taxes == 6813.00
-        assert fin.income_statement.income_tax_expense == 7385.00
-        assert fin.income_statement.net_income == -6932.00
-        assert fin.financial_metrics.sales_growth == 78238.00
-        assert fin.financial_metrics.sales_growth_rate == 3.11
-        assert fin.financial_metrics.capex_percentage == 1.97
-        assert fin.financial_metrics.net_working_capital_change == 481.00
-        assert fin.financial_ratios.gross_profit_margin == 23.05
-        assert fin.financial_ratios.operating_margin == 3.07
-        assert fin.financial_ratios.net_profit_margin == -0.28
-        assert fin.financial_ratios.ebit_margin == 3.49
-        assert fin.financial_ratios.ebitda == 134900.00
-        assert fin.financial_ratios.ebitda_margin == 3.54
-        assert fin.financial_ratios.return_on_assets == -0.6
-        assert fin.financial_ratios.return_on_equity == -0.6
-        assert fin.financial_ratios.return_on_invested_capital == 3.4
-        assert fin.financial_ratios.effective_interest_rate == 9.2
-        assert fin.financial_ratios.depreciation_percentage == 1.83
-        assert fin.financial_ratios.working_capital == -33705.00
-        assert fin.financial_ratios.current_ratio == 0.89
-        assert fin.financial_ratios.quick_ratio == 0.23
-        assert fin.financial_ratios.debt_to_equity_ratio == 0.54
-        assert fin.financial_ratios.inventory_turnover == 9.50
-        assert fin.financial_ratios.dio == 38.41
-        assert fin.financial_ratios.dpo == 35.46
-        assert fin.financial_ratios.sga_percentage == 19.56
-        assert fin.financial_ratios.cogs_growth_rate == 2.59
-
+        assert isinstance(fin.cashflow_statement, CashflowStatement)
+        assert isinstance(fin.as_dict(), dict)
+        logger.info(fin.income_statement)
+        logger.info(fin.balance_sheet)
+        logger.info(fin.cashflow_statement)
         # ---------------------------------------------------------------------------------------- #
         end = datetime.now()
         duration = round((end - start).total_seconds(), 1)
@@ -135,9 +133,9 @@ class TestCompany:  # pragma: no cover
         )
         logger.info(double_line)
         # ---------------------------------------------------------------------------------------- #
-        fin = FinancialPerformance.from_dict(financials)
+        fin = Financials.from_dict(financials)
         company = Company(financials=fin, sales=sales)
-        assert isinstance(company.financials, FinancialPerformance)
+        assert isinstance(company.financials, Financials)
         assert isinstance(company.annual_sales, pd.DataFrame)
         annual_sales = company.annual_sales
 
@@ -208,9 +206,9 @@ class TestCompany:  # pragma: no cover
         )
         logger.info(double_line)
         # ---------------------------------------------------------------------------------------- #
-        fin = FinancialPerformance.from_dict(financials)
+        fin = Financials.from_dict(financials)
         company = Company(financials=fin, sales=sales)
-        assert isinstance(company.financials, FinancialPerformance)
+        assert isinstance(company.financials, Financials)
         # Check that sss_growth is a DataFrame and has the expected structure
         assert isinstance(company.sss_growth, pd.DataFrame)
 

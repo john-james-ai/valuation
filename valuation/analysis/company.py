@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Saturday October 11th 2025 07:04:50 pm                                              #
-# Modified   : Saturday October 11th 2025 10:46:58 pm                                              #
+# Modified   : Sunday October 12th 2025 01:39:34 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -19,21 +19,21 @@
 
 import pandas as pd
 
-from valuation.analysis.financials import FinancialPerformance
+from valuation.analysis.financials import Financials
 
 
 # ------------------------------------------------------------------------------------------------ #
 class Company:
     """Class for storing company information."""
 
-    def __init__(self, financials: FinancialPerformance, sales: pd.DataFrame) -> None:
+    def __init__(self, financials: Financials, sales: pd.DataFrame) -> None:
         self._financials = financials
         self._sales = sales
         self._annual_sales = None
         self._sss_growth = None
 
     @property
-    def financials(self) -> FinancialPerformance:
+    def financials(self) -> Financials:
         """Gets the financial performance data."""
         return self._financials
 
