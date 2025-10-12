@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Saturday October 11th 2025 05:20:43 pm                                              #
-# Modified   : Sunday October 12th 2025 09:56:07 am                                                #
+# Modified   : Sunday October 12th 2025 10:20:26 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -27,6 +27,7 @@ import pandas as pd
 # ------------------------------------------------------------------------------------------------ #
 @dataclass
 class DatasetContainer:
+    """Container for dataset and its metadata."""
 
     data: pd.DataFrame
     years: List[int] = field(default_factory=list)
@@ -34,6 +35,15 @@ class DatasetContainer:
 
 # ------------------------------------------------------------------------------------------------ #
 class Dataset(ABC):
+    """Abstract base class for datasets.
+
+    Filters out partial years of data based on a minimum number of weeks.
+
+    Args:
+        sales (pd.DataFrame): Sales data.
+        min_weeks (int, optional): Minimum number of weeks a year must have to be included. Defaults to 50.
+    """
+
     def __init__(self, sales: pd.DataFrame, min_weeks: int = 50) -> None:
         self._sales = sales
         self._min_weeks = min_weeks
@@ -65,9 +75,16 @@ class Dataset(ABC):
 
 # ------------------------------------------------------------------------------------------------ #
 class DataAggregator:
+    """Class for aggregating data."""
 
     def aggregate(self, data: pd.DataFrame, groupby: Union[str, List[str]]) -> pd.DataFrame:
-        """Gets the data for only full years."""
+        """Aggregates data by the specified groupby columns.
+        Args:
+            data (pd.DataFrame): Data to aggregate.
+            groupby (Union[str, List[str]]): Column(s) to group by.
+        Returns:
+            pd.DataFrame: Aggregated data.
+        """
 
         aggregated = (
             data.groupby(groupby)

@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday October 12th 2025 03:17:59 am                                                #
-# Modified   : Sunday October 12th 2025 10:10:07 am                                                #
+# Modified   : Sunday October 12th 2025 10:18:15 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -23,10 +23,18 @@ import pandas as pd
 from valuation.dataset.base import DataAggregator, Dataset
 
 # ------------------------------------------------------------------------------------------------ #
-GROUPBY = "store"
 
 
 class StoreDataset(Dataset):
+    """Class for storing store information.
+    Computes store level KPIs and sales growth.
+
+    Args:
+        sales (pd.DataFrame): Sales data.
+        min_weeks (int, optional): Minimum number of weeks a store must be open to be included. Defaults to 50.
+        aggregator_cls (type[DataAggregator], optional): Aggregator class to use for data aggregation. Defaults to DataAggregator.
+    """
+
     def __init__(
         self,
         sales: pd.DataFrame,
@@ -55,8 +63,6 @@ class StoreDataset(Dataset):
         if self._store_kpis is not None:
             return self._store_kpis
 
-        logger.info(f"Computing store KPIs for {self.__class__.__name__}")
-
         # Aggregate data to store level
         dataset = self.dataset
         return self._aggregator.aggregate(data=dataset.data.copy(), groupby=["store"])
@@ -66,34 +72,29 @@ class StoreDataset(Dataset):
         if self._sales_growth is not None:
             return self._sales_growth
 
+        # Obtain the dataset from the base class
         dataset = self.dataset
 
         aggregated = self._aggregator.aggregate(
             data=dataset.data.copy(), groupby=["store", "year"]
         )
-        logger.debug(f"Aggregated Data Shape: {aggregated.shape}")
 
+        # Identify the previous and current years
         previous_year = dataset.years[-2] if len(dataset.years) > 1 else None
         current_year = dataset.years[-1] if len(dataset.years) > 0 else None
 
-        logger.debug(f"Previous Year: {previous_year}, Current Year: {current_year}")
-
-        # 1. Identify stores that are present in both years
+        # Identify stores that were open in both years
         stores_previous = set(aggregated[aggregated["year"] == previous_year]["store"].unique())
         stores_current = set(aggregated[aggregated["year"] == current_year]["store"].unique())
         comp_stores = stores_previous.intersection(stores_current)
 
-        logger.debug(f"Comparable Stores: {len(comp_stores)}")
-
-        # 2. Filter for only the comparable stores and the two relevant years
+        # Filter for only the comparable stores and the two relevant years
         comp_stores_data = aggregated[
             aggregated["store"].isin(comp_stores)
             & aggregated["year"].isin([previous_year, current_year])
         ]
 
-        logger.debug(f"Comparable Stores Data Shape: {comp_stores_data.shape}")
-
-        # 3. Calculate sales growth for each store
+        # Calculate sales growth for each store
         revenue_prev = comp_stores_data[comp_stores_data["year"] == previous_year]
         revenue_curr = comp_stores_data[comp_stores_data["year"] == current_year]
         logger.debug(
@@ -107,7 +108,7 @@ class StoreDataset(Dataset):
             on="store",
             suffixes=("_prev", "_curr"),
         )
-
+        # 5. Calculate the sales growth rate
         comp_stores_data["sales_growth_rate"] = np.where(
             comp_stores_data["revenue_prev"] > 0,
             ((comp_stores_data["revenue_curr"] / comp_stores_data["revenue_prev"]) - 1) * 100,
