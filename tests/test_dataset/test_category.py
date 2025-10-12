@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday October 12th 2025 09:10:58 am                                                #
-# Modified   : Sunday October 12th 2025 10:25:45 am                                                #
+# Modified   : Sunday October 12th 2025 10:35:16 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -57,6 +57,36 @@ class TestCategory:  # pragma: no cover
 
         logger.info(category_kpis.head(3).to_string())
         logger.info(f"Category KPIs shape: {category_kpis.shape}")
+
+        # ---------------------------------------------------------------------------------------- #
+        end = datetime.now()
+        duration = round((end - start).total_seconds(), 1)
+
+        logger.info(
+            f"\n\nCompleted {self.__class__.__name__} {inspect.stack()[0][3]} in {duration} seconds at {start.strftime('%I:%M:%S %p')} on {start.strftime('%m/%d/%Y')}"
+        )
+        logger.info(single_line)
+
+    # ============================================================================================ #
+    def test_sales_growth(self, sales, caplog) -> None:
+        start = datetime.now()
+        logger.info(
+            f"\n\nStarted {self.__class__.__name__} {inspect.stack()[0][3]} at {start.strftime('%I:%M:%S %p')} on {start.strftime('%m/%d/%Y')}"
+        )
+        logger.info(double_line)
+        # ---------------------------------------------------------------------------------------- #
+        category_dataset = CategoryDataset(sales=sales, min_weeks=50)
+        sales_growth = category_dataset.sales_growth
+        assert isinstance(sales_growth, pd.DataFrame)
+        assert not sales_growth.empty
+        assert "category" in list(sales_growth.columns)
+        assert "revenue_prev" in list(sales_growth.columns)
+        assert "revenue_curr" in list(sales_growth.columns)
+        assert "sales_growth_rate" in list(sales_growth.columns)
+        assert sales_growth.shape[0] == 28
+
+        logger.info(f"\n{sales_growth.head(3)}")
+        logger.info(f"Sales Growth shape: {sales_growth.shape}")
 
         # ---------------------------------------------------------------------------------------- #
         end = datetime.now()
