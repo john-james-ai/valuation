@@ -11,16 +11,17 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday October 12th 2025 11:51:12 pm                                                #
-# Modified   : Monday October 13th 2025 06:22:50 am                                                #
+# Modified   : Monday October 13th 2025 10:41:20 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
 # ================================================================================================ #
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any, Union
+from tqdm import tqdm
 
 import pandas as pd
-from tqdm import tqdm
 from valuation.dataprep.base import Task, TaskConfig
 
 # ------------------------------------------------------------------------------------------------ #
@@ -29,7 +30,7 @@ CONFIG_CATEGORY_INFO_KEY = "category_filenames"
 
 # ------------------------------------------------------------------------------------------------ #
 @dataclass
-class IngestTaskConfig(TaskConfig):
+class IngestSalesDataTaskConfig(TaskConfig):
     """Holds all parameters for the sales data ingestion process."""
 
     week_decode_table_filepath: Path
@@ -37,7 +38,7 @@ class IngestTaskConfig(TaskConfig):
 
 
 # ------------------------------------------------------------------------------------------------ #
-class IngestTask(Task):
+class IngestSalesDataTask(Task):
     """Ingests a raw sales data file.
 
     The ingestion adds category and date information to the raw sales data.
@@ -48,55 +49,51 @@ class IngestTask(Task):
 
     """
 
-    def __init__(self, config: IngestTaskConfig) -> None:
+    def __init__(self, config: IngestSalesDataTaskConfig) -> None:
         super().__init__(config=config)
 
-    def _execute(self) -> pd.DataFrame:
-        """Runs the ingestion process on the provided DataFrame.
+    def _execute(self, data: Union[pd.DataFrame, Any]) -> pd.DataFrame:
+        """Runs the ingestion process the dictionary containing category filenames and categories.
+
         Args:
-            data (pd.DataFrame): The raw sales data DataFrame.
-            category (str): The category name to assign to all records in the DataFrame.
+            data (Dict[str,str]): Dictionary containing category filenames and categories.
 
         Returns:
             pd.DataFrame: The processed sales data with added category and date information.
-
         """
+
+        config = data  # Rename for clarity
 
         sales_datasets = []
 
         # Obtain week decode data for date mapping
-        week_dates = self._load(filepath=self._config.week_decode_filepath)  # type: ignore
-
-        # Obtain the list of category files
-        config = self._load(filepath=self._config.input_location)  # type: ignore
+        week_dates = self._load(filepath=self._config.week_decode_table_filepath)  # type: ignore
 
         # Set up the progress bar
-        pbar = tqdm(config.category_filenames.items(), total=len(config.category_filenames))
+        pbar = tqdm(config["category_filenames"].items(), total=len(config["category_filenames"]))
 
         # Iterate through category sales files
         for _, category_info in pbar:
             filename = category_info["filename"]
-            filepath = config.raw_data_directory / filename
+            filepath = self._config.raw_data_directory / filename  # type: ignore
             category = category_info["category"]
             pbar.set_description(f"Processing category: {category} from file: {filename}")
 
             # Load, clean, calculate revenue, and aggregate
             processed_df = (
                 self._load(filepath=filepath)
-                .pipe(self.add_category, category=category)
-                .pipe(self.add_dates, week_dates=week_dates)
+                .pipe(self._add_category, category=category)
+                .pipe(self._add_dates, week_dates=week_dates)
             )
             sales_datasets.append(processed_df)
+            self._update_record_count(data=processed_df)
 
         # Concatenate all datasets
         full_dataset = pd.concat(sales_datasets, ignore_index=True)
 
-        # Save processed dataset
-        self._save(df=full_dataset, filepath=config.output_location)
-
         return full_dataset
 
-    def validate(self, data: pd.DataFrame) -> bool:
+    def _validate(self, data: pd.DataFrame) -> bool:
         super()._validate(data=data)
         return (
             data["CATEGORY"].notnull().all()
@@ -105,7 +102,10 @@ class IngestTask(Task):
             and data["END"].notnull().all()
         )
 
-    def add_category(self, df: pd.DataFrame, category: str) -> pd.DataFrame:
+    def _update_record_count(self, data: pd.DataFrame) -> None:
+        self._task_report.records_in += len(data)
+
+    def _add_category(self, df: pd.DataFrame, category: str) -> pd.DataFrame:
         """Adds a category column to the DataFrame.
 
         Args:
@@ -118,7 +118,7 @@ class IngestTask(Task):
         df["CATEGORY"] = category
         return df
 
-    def add_dates(self, df: pd.DataFrame, week_dates: pd.DataFrame) -> pd.DataFrame:
+    def _add_dates(self, df: pd.DataFrame, week_dates: pd.DataFrame) -> pd.DataFrame:
         """Adds year, start and end dates to the DataFrame based on the week number.
 
         Args:
@@ -135,3 +135,51 @@ class IngestTask(Task):
         df["YEAR"] = df["YEAR"].astype("Int64")
 
         return df
+
+
+# ------------------------------------------------------------------------------------------------ #
+class IngestCustomerDataTask(Task):
+    """Ingests a raw customer data file.
+
+    Args:
+        config (TaskConfig): Configuration for the ingestion process.
+    """
+
+    def __init__(self, config: TaskConfig) -> None:
+        super().__init__(config=config)
+
+    def _execute(self, data: Union[pd.DataFrame, Any]) -> pd.DataFrame:
+
+        return data
+
+    def _validate(self, data: pd.DataFrame) -> bool:
+        super()._validate(data=data)
+        return (
+            data["DATA"].notnull().all()
+            and data["WEEK"].notnull().all()
+            and data["STORE"].notnull().all()
+        )
+
+
+# ------------------------------------------------------------------------------------------------ #
+class IngestStoreDemoDataTask(Task):
+    """Ingests a raw store demographic data file.
+
+    Args:
+        config (TaskConfig): Configuration for the ingestion process.
+    """
+
+    def __init__(self, config: TaskConfig) -> None:
+        super().__init__(config=config)
+
+    def _execute(self, data: Union[pd.DataFrame, Any]) -> pd.DataFrame:
+
+        return data
+
+    def _validate(self, data: pd.DataFrame) -> bool:
+        super()._validate(data=data)
+        return (
+            data["age9"].notnull().all()
+            and data["unemp"].notnull().all()
+            and data["wrkch"].notnull().all()
+        )

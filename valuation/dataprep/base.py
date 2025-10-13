@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday October 10th 2025 02:27:30 am                                                #
-# Modified   : Monday October 13th 2025 06:11:52 am                                                #
+# Modified   : Monday October 13th 2025 10:42:59 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -24,7 +24,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Optional, Union
+from typing import Any, Optional, Union
 
 from loguru import logger
 import pandas as pd
@@ -36,29 +36,22 @@ from valuation.utils.io import IOService
 
 # ------------------------------------------------------------------------------------------------ #
 @dataclass
-class TaskConfig:
+class TaskConfig(DataClass):
     """Base configuration class for tasks."""
 
-    force: bool
-    input_location: Union[Path, Dict[str, Path]]
-    output_location: Union[Path, Dict[str, Path]]
+    dataset_name: str
+    input_location: Path
+    output_location: Path
 
 
 # ------------------------------------------------------------------------------------------------ #
 class TaskStatus(Enum):
     """Enumeration of possible task statuses."""
 
-    SUCCESS = (0, "Success")
-    FAILURE = (1, "Failure")
-    WARNING = (2, "Warning")
-    SKIPPED = (3, "Existing File - Skipped")
-
-    @classmethod
-    def __new__(cls, code: int, result: str) -> TaskStatus:
-        obj = object.__new__(cls)
-        obj._value_ = code
-        obj.display = result  # type: ignore
-        return obj
+    SUCCESS = "Success"
+    FAILURE = "Failure"
+    WARNING = "Warning"
+    SKIPPED = "Existing File - Skipped"
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -72,9 +65,19 @@ class TaskReport(DataClass):
     # The Engine manages this state
     ended: Optional[datetime] = field(default=None)  # Optional until teardown
     elapsed: Optional[float] = field(default=None)  # Optional until teardown
-    records_in: Optional[int] = field(default=None)  # Only known after initial load
-    records_out: Optional[int] = field(default=None)  # Only known after execute
-    status: TaskStatus = TaskStatus.WARNING  # Set an initial state
+    records_in: int = 0  # Known at beginning of execute
+    records_out: int = 0  # Only known after execute
+    pct_change: Optional[float] = field(default=None)  # Only known after execute
+    status: Optional[str] = field(default=None)  # Only known after execute
+
+    def finalize(self) -> Optional[float]:
+        """Calculates the percentage change in records from input to output."""
+        if self.records_in is None or self.records_out is None or self.records_in == 0:
+            self.pct_change = None
+        else:
+            self.pct_change = round(
+                ((self.records_out - self.records_in) / self.records_in) * 100, 2
+            )
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -83,7 +86,7 @@ class Task(ABC):
         self._config = config
         self._io = io
         self._task_result: Optional[Union[pd.DataFrame, Any]] = None
-        self._task_report = TaskReport(task_name=self.__name__, config=self._config)
+        self._task_report = TaskReport(task_name=self.__class__.__name__, config=self._config)
 
     @property
     def config(self) -> TaskConfig:
@@ -105,8 +108,8 @@ class Task(ABC):
         self._setup()
 
         if self._output_exists(force=force):
-            self._task_report.status = TaskStatus.SKIPPED
-            self._task_report.records_out = None
+            self._task_report.status = TaskStatus.SKIPPED.value
+            self._task_report.records_out = 0
             self._teardown()
             return
 
@@ -119,10 +122,13 @@ class Task(ABC):
 
         # Validate the output
         if not self._validate(data=self._task_result):
-            self._task_report.status = TaskStatus.FAILURE
+            self._task_report.status = TaskStatus.FAILURE.value
             self._task_report.records_out = 0
+            msg = f"{self.__class__.__name__} - Validation Failed"
+            logger.error(msg)
+            raise RuntimeError(msg)
         else:
-            self._task_report.status = TaskStatus.SUCCESS
+            self._task_report.status = TaskStatus.SUCCESS.value
             self._task_report.records_out = len(self._task_result)
             # Save the output data
             self._save(df=output_data, filepath=self._config.output_location)  # type: ignore
@@ -130,7 +136,7 @@ class Task(ABC):
         self._teardown()
 
     @abstractmethod
-    def _execute(self, *args, **kwargs) -> Union[pd.DataFrame, Any]:
+    def _execute(self, data=Union[pd.DataFrame, Any]) -> Union[pd.DataFrame, Any]:
         """Executes the core logic of the task."""
         pass
 
@@ -149,6 +155,7 @@ class Task(ABC):
         self._task_report.elapsed = (
             self._task_report.ended - self._task_report.started
         ).total_seconds()  # type: ignore
+        self._task_report.finalize()
         logger.info(self._task_report)
 
     def _load(self, filepath: Path) -> pd.DataFrame:
@@ -161,9 +168,11 @@ class Task(ABC):
             pd.DataFrame: A DataFrame containing the loaded data.
         """
 
-        df = self._io.read(filepath=filepath)
+        data = self._io.read(filepath=filepath)
         # Ensure correct data types
-        return df.astype({k: v for k, v in DTYPES.items() if k in df.columns})
+        if isinstance(data, pd.DataFrame):
+            data = data.astype({k: v for k, v in DTYPES.items() if k in data.columns})
+        return data
 
     def _save(self, df: pd.DataFrame, filepath: Path) -> None:
         """Saves a DataFrame to the processed data directory.

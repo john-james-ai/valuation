@@ -11,109 +11,109 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 9th 2025 11:01:16 pm                                               #
-# Modified   : Monday October 13th 2025 01:23:48 am                                                #
+# Modified   : Monday October 13th 2025 10:28:55 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
 # ================================================================================================ #
 """Main module for the Valuation package."""
-from typing import Dict
 
 import typer
 
 from valuation.config.filepaths import (
-    CONFIG_CATEGORY_FILEPATH,
-    DATASET_PROFILE_FILEPATH,
+    CONFIG_FILEPATH,
+    FILEPATH_CUSTOMER_INGEST,
+    FILEPATH_CUSTOMER_RAW,
+    FILEPATH_SALES_INGEST,
+    FILEPATH_STORE_DEMO_INGEST,
+    FILEPATH_STORE_DEMO_RAW,
     RAW_DATA_DIR,
-    SALES_DATA_FILEPATH,
-    TEST_DATA_FILEPATH,
-    TRAIN_DATA_FILEPATH,
-    VALIDATION_DATA_FILEPATH,
     WEEK_DECODE_TABLE_FILEPATH,
 )
 from valuation.config.loggers import configure_logging
-from valuation.config.reader import ConfigReader
-from valuation.dataprep.ingest2 import SalesDataPrep, SalesDataPrepConfig
-from valuation.dataprep.profile import ProfileConfig, SalesDataProfile
-from valuation.dataprep.split import DatasetSplitter, PathsConfig, SplitterConfig
+from valuation.dataprep.base import TaskConfig
+from valuation.dataprep.clean import CleanTask, CleanTaskConfig
+from valuation.dataprep.ingest import (
+    IngestCustomerDataTask,
+    IngestSalesDataTask,
+    IngestSalesDataTaskConfig,
+    IngestStoreDemoDataTask,
+)
 
 # ------------------------------------------------------------------------------------------------ #
 app = typer.Typer()
 
 
 # ------------------------------------------------------------------------------------------------ #
-def split_sales_data(force: bool) -> None:
-    """Splits the sales data into training, validation and test datasets.
+def clean(force: bool) -> None:
 
-    Args:
-        force (bool): Whether to force reprocessing if the file already exists.
-    """
-    paths_config = PathsConfig(
-        input_location=SALES_DATA_FILEPATH,
-        train_filepath=TRAIN_DATA_FILEPATH,
-        validation_filepath=VALIDATION_DATA_FILEPATH,
-        test_filepath=TEST_DATA_FILEPATH,
-    )
+    # Create configuration for sales data processing
 
-    split_config = SplitterConfig(
-        task_name="Sales Data Splitting",
-        force=force,
-        paths=paths_config,
-        val_col="week",
-        train_size=0.7,
-        val_size=0.15,
-        shuffle=False,
-        random_state=42,
+    config = CleanTaskConfig(
+        dataset_name="Dominick's Sales Data - Ingestion",
+        input_location=CONFIG_FILEPATH,
+        output_location=FILEPATH_SALES_INGEST,
     )
-    splitter = DatasetSplitter()
-    splitter.prepare(config=split_config)
+    # Run the sales data processing task
+    task = CleanTask(config=config)
+    task.run(force=force)
 
 
 # ------------------------------------------------------------------------------------------------ #
-def prepare_sales_data(category_filenames: Dict, force: bool) -> None:
-    """Prepares, cleans and aggregates the sales data.
-
+def ingest_store_demo_data(force: bool) -> None:
+    """Ingests raw store demographic data file.
     Args:
-        category_filenames (Dict): A dictionary mapping category names to their respective file
-            paths.
+        force (bool): Whether to force reprocessing if the file already exists.
+    """
+    # Create configuration for store demographic data processing
+
+    config = TaskConfig(
+        dataset_name="Dominick's Store Demo Data - Ingestion",
+        input_location=FILEPATH_STORE_DEMO_RAW,
+        output_location=FILEPATH_STORE_DEMO_INGEST,
+    )
+    # Run the sales data processing task
+    task = IngestStoreDemoDataTask(config=config)
+    task.run(force=force)
+
+
+# ------------------------------------------------------------------------------------------------ #
+def ingest_customer_data(force: bool) -> None:
+    """Ingests raw customer data files.
+    Args:
         force (bool): Whether to force reprocessing if the file already exists.
     """
     # Create configuration for sales data processing
-    config = SalesDataPrepConfig(
-        task_name="Sales Data Preparation",
-        force=force,
-        week_decode_filepath=WEEK_DECODE_TABLE_FILEPATH,
-        output_location=SALES_DATA_FILEPATH,
-        category_filenames=category_filenames,
-        raw_data_directory=RAW_DATA_DIR,
-    )
-    # Instantiate the sales data processor
-    processor = SalesDataPrep()
 
-    # Run the sales data preparation pipeline
-    processor.prepare(config=config)
+    config = TaskConfig(
+        dataset_name="Dominick's Customer Data - Ingestion",
+        input_location=FILEPATH_CUSTOMER_RAW,
+        output_location=FILEPATH_CUSTOMER_INGEST,
+    )
+    # Run the sales data processing task
+    task = IngestCustomerDataTask(config=config)
+    task.run(force=force)
 
 
 # ------------------------------------------------------------------------------------------------ #
-def profile(category_filenames: Dict, force: bool) -> None:
-    """Creates the sales data profiling dataset.
+def ingest_sales(force: bool) -> None:
+    """Ingests raw sales data files.
+
     Args:
-        category_filenames (Dict): A dictionary mapping category names to their respective file paths.
         force (bool): Whether to force reprocessing if the file already exists.
     """
-    # Configure the profiler
+    # Create configuration for sales data processing
 
-    config = ProfileConfig(
-        task_name="Sales Data Profiling",
-        force=force,
-        output_location=DATASET_PROFILE_FILEPATH,
-        category_filenames=category_filenames,
+    config = IngestSalesDataTaskConfig(
+        dataset_name="Dominick's Sales Data - Ingestion",
+        input_location=CONFIG_FILEPATH,
+        output_location=FILEPATH_SALES_INGEST,
+        week_decode_table_filepath=WEEK_DECODE_TABLE_FILEPATH,
         raw_data_directory=RAW_DATA_DIR,
     )
-    # Instantiate the processor
-    processor = SalesDataProfile()
-    # Run the processor pipeline
-    processor.prepare(config=config)
+    # Run the sales data processing task
+    task = IngestSalesDataTask(config=config)
+    task.run(force=force)
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -130,13 +130,11 @@ def main(
     """Main entry point for the Valuation package."""
     # Configure logging
     configure_logging()
-    # Read category filenames from configuration
-    config_reader = ConfigReader()
-    category_filenames = config_reader.read(CONFIG_CATEGORY_FILEPATH)
     # Run Pipelines
-    profile(category_filenames=category_filenames, force=force)
-    prepare_sales_data(category_filenames=category_filenames, force=force)
-    split_sales_data(force=force)
+    ingest_sales(force=force)
+    ingest_customer_data(force=force)
+    ingest_store_demo_data(force=force)
+    clean(force=force)
 
 
 if __name__ == "__main__":

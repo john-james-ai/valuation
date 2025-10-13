@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Wednesday October 8th 2025 04:41:21 pm                                              #
-# Modified   : Monday October 13th 2025 02:15:11 am                                                #
+# Modified   : Monday October 13th 2025 10:20:08 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -66,7 +66,7 @@ class IO(ABC):  # pragma: no cover
 
 
 # ------------------------------------------------------------------------------------------------ #
-#                                      ZIPFILE   IO                                                #
+#                                    ZIPFILE CSV IO                                                #
 # ------------------------------------------------------------------------------------------------ #
 class ZipFileCSVIO(IO):  # pragma: no cover
 
@@ -169,6 +169,116 @@ class ZipFileCSVIO(IO):  # pragma: no cover
 
             # Write the CSV string to the specified path within the zip archive
             zip_ref.writestr(internal_csv_path, csv_buffer)
+
+
+# ------------------------------------------------------------------------------------------------ #
+#                                   ZIPFILE STATA IO                                               #
+# ------------------------------------------------------------------------------------------------ #
+class ZipFileStataIO(IO):  # pragma: no cover
+
+    @classmethod
+    def _read(
+        cls,
+        filepath: str,
+        index_col: Union[str, None] = None,
+        convert_dates: bool = True,
+        preserve_dtypes: bool = True,
+        columns: Union[List[str], None] = None,
+        **kwargs,
+    ) -> pd.DataFrame:
+        """
+        Reads a single STATA (.dta) file from a ZIP archive into a Pandas DataFrame.
+
+        This function opens a ZIP file in memory, finds the first file with a
+        .dta extension, and reads it without extracting any files to disk.
+
+        Args:
+            filepath: The file path to the .zip archive.
+            index_col: Column to set as index.
+            convert_dates: If True, attempts to convert Stata's date formats to datetime.
+            preserve_dtypes: If True, uses the original Stata data types.
+            columns: List of columns to read from the DTA file.
+
+        Returns:
+            A Pandas DataFrame containing the data from the STATA file.
+
+        Raises:
+            FileNotFoundError: If no .dta file is found inside the ZIP archive.
+        """
+        try:
+            with zipfile.ZipFile(filepath, "r") as zip_ref:
+                # Find the first file in the zip that ends with .dta
+                dta_filepath = next(
+                    (name for name in zip_ref.namelist() if name.endswith(".dta")), None
+                )
+
+                if dta_filepath is None:
+                    raise FileNotFoundError(f"No STATA (.dta) file found in {filepath}")
+
+                # Open the DTA file from the archive as a file-like object
+                with zip_ref.open(dta_filepath) as dta_file:
+                    # Read the file-like object directly into pandas using read_stata
+                    return pd.read_stata(
+                        dta_file,
+                        index_col=index_col,
+                        convert_dates=convert_dates,
+                        preserve_dtypes=preserve_dtypes,
+                        columns=columns,
+                        **kwargs,
+                    )
+        except FileNotFoundError as e:
+            # Print the error for logging purposes and then re-raise
+            print(e)
+            raise
+        except Exception as e:
+            print(f"An error occurred while processing {filepath}: {e}")
+            raise
+
+    @classmethod
+    def _write(
+        cls,
+        filepath: Path,
+        data: pd.DataFrame,
+        write_index: bool = False,
+        version: Union[int, None] = 117,
+        **kwargs,
+    ) -> None:
+        """
+        Writes a DataFrame to a STATA (.dta) file and places it inside a structured ZIP archive.
+
+        The ZIP archive will contain a directory named after the zip file (sans
+        extension), and inside that directory will be a DTA file of the same name.
+
+        Args:
+            filepath: The destination path for the .zip archive.
+            data: The Pandas DataFrame to save.
+            write_index: Whether to write the DataFrame index to the DTA file.
+            version: The STATA file format version (e.g., 117 for Stata 13/14).
+        """
+        # Get the base name of the zip file, without its .zip extension
+        basename_no_ext = os.path.splitext(os.path.basename(filepath))[0]
+
+        # Construct the full path for the DTA file inside the zip archive
+        # e.g., "my_data/my_data.dta"
+        internal_dta_path = f"{basename_no_ext}/{basename_no_ext}.dta"
+
+        # 1. Convert the DataFrame to a STATA file in memory (required because to_stata
+        #    writes the file, not a string)
+        from io import BytesIO
+
+        dta_buffer = BytesIO()
+        data.to_stata(
+            dta_buffer,
+            write_index=write_index,
+            version=version,
+            **kwargs,
+        )  # type: ignore
+        dta_buffer.seek(0)  # Rewind the buffer to the beginning
+
+        # 2. Open the zip file in write mode with compression
+        with zipfile.ZipFile(filepath, "w", compression=zipfile.ZIP_DEFLATED) as zip_ref:
+            # 3. Write the DTA file (from the buffer) to the specified path within the zip
+            zip_ref.writestr(internal_dta_path, dta_buffer.getvalue())
 
 
 # ------------------------------------------------------------------------------------------------ #

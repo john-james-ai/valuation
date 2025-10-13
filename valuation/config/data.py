@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Wednesday October 8th 2025 02:52:13 pm                                              #
-# Modified   : Sunday October 12th 2025 06:00:02 am                                                #
+# Modified   : Monday October 13th 2025 09:34:46 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -30,6 +30,10 @@ DTYPES = {
     "OK": "Int64",
     "PRICE": "float64",
     "PROFIT": "float64",
+    "YEAR": "Int64",
+    "START": "datetime64[ns]",
+    "END": "datetime64[ns]",
+    "GROSS_MARGIN_PCT": "float64",
     # New column names
     "store": "Int64",
     "upc": "Int64",
