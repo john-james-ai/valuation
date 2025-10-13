@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
 # ================================================================================================ #
-# Project    : Mercor Dominick's Fine Foods Acquisition Analysis                                   #
+# Project    : Valuation of Dominick's Fine Foods, Inc. 1997-2003                                  #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
-# Filename   : /valuation/io.py                                                                    #
+# Filename   : /valuation/utils/io.py                                                              #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
-# URL        : https://github.com/john-james-ai/mercor-dominicks-acquisition-analysis              #
+# URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Wednesday October 8th 2025 04:41:21 pm                                              #
-# Modified   : Thursday October 9th 2025 02:00:24 am                                               #
+# Modified   : Monday October 13th 2025 02:15:11 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -22,6 +22,7 @@ import csv
 import json
 import logging
 import os
+from pathlib import Path
 import pickle
 from typing import Any, List, Union, cast
 import zipfile
@@ -168,6 +169,52 @@ class ZipFileCSVIO(IO):  # pragma: no cover
 
             # Write the CSV string to the specified path within the zip archive
             zip_ref.writestr(internal_csv_path, csv_buffer)
+
+
+# ------------------------------------------------------------------------------------------------ #
+#                                         STATA IO                                                 #
+# ------------------------------------------------------------------------------------------------ #
+
+
+class StataIO(IO):  # pragma: no cover
+    """A class for handling I/O operations for Stata files."""
+
+    @classmethod
+    def _read(
+        cls,
+        filepath: Union[Path, str],
+        columns: List[str] = None,
+        index_col: str = None,
+        convert_dates: bool = True,
+        **kwargs,
+    ) -> pd.DataFrame:
+        """Reads a Stata file into a pandas DataFrame."""
+        data = pd.read_stata(
+            filepath_or_buffer=filepath,
+            columns=columns,
+            index_col=index_col,
+            convert_dates=convert_dates,
+            **kwargs,
+        )
+
+        return cast(pd.DataFrame, data)
+
+    @classmethod
+    def _write(
+        cls,
+        filepath: Union[Path, str],
+        data: pd.DataFrame,
+        write_index: bool = False,
+        version: int = 114,
+        **kwargs,
+    ) -> None:
+        """Writes a pandas DataFrame to a Stata file."""
+        data.to_stata(
+            filepath_or_buffer=filepath,  # type: ignore
+            write_index=write_index,
+            version=version,
+            **kwargs,
+        )
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -465,6 +512,7 @@ class IOService:  # pragma: no cover
         "xls": ExcelIO,
         "parquet": ParquetIO,
         "zip": ZipFileCSVIO,
+        "dta": StataIO,
     }
     _logger = logging.getLogger(
         f"{__module__}.{__name__}",

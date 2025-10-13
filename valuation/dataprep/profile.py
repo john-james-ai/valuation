@@ -4,14 +4,14 @@
 # Project    : Valuation of Dominick's Fine Foods, Inc. 1997-2003                                  #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
-# Filename   : /valuation/pipeline/profile.py                                                      #
+# Filename   : /valuation/dataprep/profile.py                                                      #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Wednesday October 8th 2025 02:52:13 pm                                              #
-# Modified   : Sunday October 12th 2025 05:59:02 am                                                #
+# Modified   : Monday October 13th 2025 01:23:49 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -22,11 +22,11 @@ from typing import Dict
 
 import pandas as pd
 from pydantic import Field
-from pydantic.dataclasses import dataclass
+from dataclasses import dataclass
 from tqdm import tqdm
 
-from valuation.pipeline.base import DataPrepSingleOutput
-from valuation.pipeline.config import DataPrepSingleOutputConfig
+from valuation.dataprep.base import DataPrepSingleOutput
+from valuation.dataprep.config import DataPrepSingleOutputConfig
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -62,7 +62,7 @@ class SalesDataProfile(DataPrepSingleOutput):
             None
         """
         # Check if the output file already exists and not forcing reprocessing
-        if self._use_cache(config=config):
+        if self._output_exists(config=config):
             return
 
         # Set up the progress bar
@@ -86,7 +86,7 @@ class SalesDataProfile(DataPrepSingleOutput):
         profile = pd.DataFrame(category_profiles)
 
         # Save processed dataset
-        self.save(df=profile, filepath=config.output_filepath)
+        self.save(df=profile, filepath=config.output_location)
 
     def _profile_category(self, config: ProfileConfig, category_filename: Dict[str, str]) -> Dict:
         """Profiles a single category sales data file.

@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Wednesday October 8th 2025 02:52:13 pm                                              #
-# Modified   : Saturday October 11th 2025 09:27:23 pm                                              #
+# Modified   : Monday October 13th 2025 01:25:59 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -40,9 +40,9 @@ LOGS_DATASET = LOGS_DIR / "dataset.log"
 LOGS_MODELING = LOGS_DIR / "modeling.log"
 LOGS_VALUATION = LOGS_DIR / "valuation.log"
 
-# Configuration file and keys
+# Configuration filepath
 CONFIG_FILEPATH = PROJ_ROOT / "config.yaml"
-CONFIG_CATEGORY_FILEPATH = "category_filenames"
+
 
 # DATA FILEPATHS
 # External data files

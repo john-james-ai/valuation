@@ -4,14 +4,14 @@
 # Project    : Valuation of Dominick's Fine Foods, Inc. 1997-2003                                  #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
-# Filename   : /valuation/pipeline/ingest.py                                                       #
+# Filename   : /valuation/dataprep/ingest2.py                                                      #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Wednesday October 8th 2025 02:52:13 pm                                              #
-# Modified   : Sunday October 12th 2025 05:59:02 am                                                #
+# Modified   : Monday October 13th 2025 01:23:48 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -22,11 +22,11 @@ from typing import Any, Dict
 
 import pandas as pd
 from pydantic import Field
-from pydantic.dataclasses import dataclass
+from dataclasses import dataclass
 from tqdm import tqdm
 
-from valuation.pipeline.base import DataPrepSingleOutput
-from valuation.pipeline.config import DataPrepSingleOutputConfig
+from valuation.dataprep.base import DataPrepSingleOutput
+from valuation.dataprep.config import DataPrepSingleOutputConfig
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -35,7 +35,7 @@ class SalesDataPrepConfig(DataPrepSingleOutputConfig):
     """Holds all parameters for the sales data preparation process."""
 
     raw_data_directory: Path
-    output_filepath: Path
+    output_location: Path
     week_decode_filepath: Path
     category_filenames: Dict[str, Any] = Field(default_factory=dict)
 
@@ -199,7 +199,7 @@ class SalesDataPrep(DataPrepSingleOutput):
 
         sales_datasets = []
 
-        if self._use_cache(config=config):
+        if self._output_exists(config=config):
             return
 
         # Obtain week decode data for date mapping
@@ -231,4 +231,4 @@ class SalesDataPrep(DataPrepSingleOutput):
         full_dataset = pd.concat(sales_datasets, ignore_index=True)
 
         # Save processed dataset
-        self.save(df=full_dataset, filepath=config.output_filepath)
+        self.save(df=full_dataset, filepath=config.output_location)

@@ -4,14 +4,14 @@
 # Project    : Valuation of Dominick's Fine Foods, Inc. 1997-2003                                  #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
-# Filename   : /valuation/analysis/financials.py                                                   #
+# Filename   : /valuation/dataset/financials.py                                                    #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Saturday October 11th 2025 05:32:44 pm                                              #
-# Modified   : Sunday October 12th 2025 03:42:23 am                                                #
+# Modified   : Sunday October 12th 2025 11:17:16 pm                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -19,7 +19,7 @@
 """Module for company financial analysis class."""
 from __future__ import annotations
 
-from pydantic.dataclasses import dataclass
+from dataclasses import dataclass
 
 from valuation.utils.data import DataClass
 

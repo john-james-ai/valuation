@@ -4,14 +4,14 @@
 # Project    : Valuation of Dominick's Fine Foods, Inc. 1997-2003                                  #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
-# Filename   : /valuation/pipeline/split.py                                                        #
+# Filename   : /valuation/dataprep/split.py                                                        #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday October 10th 2025 06:45:03 pm                                                #
-# Modified   : Sunday October 12th 2025 05:58:27 am                                                #
+# Modified   : Monday October 13th 2025 01:23:12 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -20,10 +20,10 @@
 from pathlib import Path
 
 from loguru import logger
-from pydantic.dataclasses import dataclass
+from dataclasses import dataclass
 
-from valuation.pipeline.base import DataPrep
-from valuation.pipeline.config import DataPrepBaseConfig
+from valuation.dataprep.base import DataPrep
+from valuation.dataprep.config import DataPrepBaseConfig
 from valuation.utils.data import DataFramePartitioner
 from valuation.utils.io import IOService
 from valuation.utils.print import Printer
@@ -35,7 +35,7 @@ from valuation.utils.print import Printer
 class PathsConfig:
     """Holds all file paths for the splitting process."""
 
-    input_filepath: Path
+    input_location: Path
     train_filepath: Path
     validation_filepath: Path
     test_filepath: Path
@@ -91,10 +91,10 @@ class DatasetSplitter(DataPrep):
         Args:
             config (SplitterConfig): Configuration parameters for the splitter.
         """
-        if self._use_cache(config=config):
+        if self._output_exists(config=config):
             return
 
-        df = self.load(filepath=config.paths.input_filepath)
+        df = self.load(filepath=config.paths.input_location)
         self._splits = self._splitter.split_by_proportion_of_values(
             df=df,
             val_col=config.val_col,
@@ -111,7 +111,7 @@ class DatasetSplitter(DataPrep):
             logger.error(f"Error saving split datasets: {e}")
             raise
 
-    def _use_cache(self, config: SplitterConfig) -> bool:
+    def _output_exists(self, config: SplitterConfig) -> bool:
         """Determines whether to use cached data based on file existence and force flag.
 
         Args:
