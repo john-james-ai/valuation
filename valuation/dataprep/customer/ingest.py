@@ -4,42 +4,44 @@
 # Project    : Valuation of Dominick's Fine Foods, Inc. 1997-2003                                  #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
-# Filename   : /valuation/dataprep/pipeline.py                                                     #
+# Filename   : /valuation/dataprep/customer/ingest.py                                              #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
-# Created    : Tuesday October 14th 2025 10:53:05 pm                                               #
-# Modified   : Wednesday October 15th 2025 02:24:57 am                                             #
+# Created    : Sunday October 12th 2025 11:51:12 pm                                                #
+# Modified   : Wednesday October 15th 2025 01:38:18 am                                             #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
 # ================================================================================================ #
-class DataPrepPipeline:
-    """A class to manage the data preparation pipeline."""
+from typing import Any, Union
 
-    def __init__(self):
-        """Initializes the DataPrepPipeline."""
-        self._tasks = []
+import pandas as pd
 
-    def add_task(self, task):
-        """Adds a task to the pipeline.
+from valuation.dataprep.base import Task, TaskConfig, Validation
 
-        Args:
-            task: An instance of a data preparation task.
-        """
-        self._tasks.append(task)
 
-    def run(self, force: bool = False):
-        """Runs all tasks in the pipeline.
+# ------------------------------------------------------------------------------------------------ #
+class IngestCustomerDataTask(Task):
+    """Ingests a raw customer data file.
 
-        Args:
-            force (bool): If True, forces re-execution of all tasks.
-        """
-        df = None
-        for task in self._tasks:
-            df = task.run(data=df, force=force)
-            if not task.is_valid:
-                print(f"Pipeline halted. Task {task.__class__.__name__} failed validation.")
-                return
+    Args:
+        config (TaskConfig): Configuration for the ingestion process.
+    """
+
+    def __init__(self, config: TaskConfig) -> None:
+        super().__init__(config=config)
+
+    def _execute(self, data: Union[pd.DataFrame, Any]) -> pd.DataFrame:
+
+        return data
+
+    def _validate(self, data: pd.DataFrame) -> Validation:
+        validation = Validation()
+        COLUMNS = ["WEEK", "STORE"]
+        validation = self._validate_columns(
+            validation=validation, data=data, required_columns=COLUMNS
+        )
+        return validation

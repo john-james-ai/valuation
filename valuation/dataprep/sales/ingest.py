@@ -4,14 +4,14 @@
 # Project    : Valuation of Dominick's Fine Foods, Inc. 1997-2003                                  #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
-# Filename   : /valuation/dataprep/ingest.py                                                       #
+# Filename   : /valuation/dataprep/sales/ingest.py                                                 #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday October 12th 2025 11:51:12 pm                                                #
-# Modified   : Tuesday October 14th 2025 07:16:53 pm                                               #
+# Modified   : Wednesday October 15th 2025 01:26:30 am                                             #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -64,6 +64,8 @@ class IngestSalesDataTask(Task):
         """
 
         config = data  # Rename for clarity
+
+        self._task_report.records_in = 0  # Initialize record count to zero for accurate tracking
 
         sales_datasets = []
 
@@ -126,20 +128,19 @@ class IngestSalesDataTask(Task):
             "OK",
         ]
 
-        # Check for mandatory columns
-        for col in COLUMNS:
-            if col not in data.columns:
-                validation.add_message(f"Missing {col} column.")
-
         # Check for zero input records
         if self._task_report.records_in == 0:
             validation.add_message("No records were processed.")
-
-        # Check for consistent record count
-        if self._task_report.records_in != len(data):
-            validation.add_message(
-                f"Number of input records {self._task_report.records_in} does not match number of output records {len(data)}."
+        else:
+            # Check presence and types of mandatory columns
+            validation = self._validate_columns(
+                validation=validation, data=data, required_columns=COLUMNS
             )
+            # Check for consistent record count
+            if self._task_report.records_in != len(data):
+                validation.add_message(
+                    f"Number of input records {self._task_report.records_in} does not match number of output records {len(data)}."
+                )
 
         return validation
 
@@ -176,43 +177,3 @@ class IngestSalesDataTask(Task):
         df["YEAR"] = df["YEAR"].astype("Int64")
 
         return df
-
-
-# ------------------------------------------------------------------------------------------------ #
-class IngestCustomerDataTask(Task):
-    """Ingests a raw customer data file.
-
-    Args:
-        config (TaskConfig): Configuration for the ingestion process.
-    """
-
-    def __init__(self, config: TaskConfig) -> None:
-        super().__init__(config=config)
-
-    def _execute(self, data: Union[pd.DataFrame, Any]) -> pd.DataFrame:
-
-        return data
-
-    def _validate(self, data: pd.DataFrame) -> bool:
-        super()._validate(data=data)
-        return "DATE" in data.columns and "WEEK" in data.columns and "STORE" in data.columns
-
-
-# ------------------------------------------------------------------------------------------------ #
-class IngestStoreDemoDataTask(Task):
-    """Ingests a raw store demographic data file.
-
-    Args:
-        config (TaskConfig): Configuration for the ingestion process.
-    """
-
-    def __init__(self, config: TaskConfig) -> None:
-        super().__init__(config=config)
-
-    def _execute(self, data: Union[pd.DataFrame, Any]) -> pd.DataFrame:
-
-        return data
-
-    def _validate(self, data: pd.DataFrame) -> bool:
-        super()._validate(data=data)
-        return "age9" in data.columns and "unemp" in data.columns and "wrkch" in data.columns

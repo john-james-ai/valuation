@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Wednesday October 8th 2025 02:52:13 pm                                              #
-# Modified   : Monday October 13th 2025 09:34:46 am                                                #
+# Modified   : Wednesday October 15th 2025 12:55:53 am                                             #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -20,8 +20,9 @@
 
 
 # ------------------------------------------------------------------------------------------------ #
+DTYPES = {}
 DTYPES = {
-    # Original column names
+    "CATEGORY": "str",
     "STORE": "Int64",
     "UPC": "Int64",
     "WEEK": "Int64",
@@ -29,29 +30,20 @@ DTYPES = {
     "MOVE": "Int64",
     "OK": "Int64",
     "PRICE": "float64",
+    "REVENUE": "float64",
     "PROFIT": "float64",
     "YEAR": "Int64",
     "START": "datetime64[ns]",
     "END": "datetime64[ns]",
     "GROSS_MARGIN_PCT": "float64",
-    # New column names
-    "store": "Int64",
-    "upc": "Int64",
-    "week": "Int64",
-    "year": "Int64",
-    "qty": "Int64",
-    "move": "Int64",
-    "ok": "Int64",
-    "price": "float64",
-    "profit": "float64",
-    "start": "datetime64[ns]",
-    "end": "datetime64[ns]",
-    "gross_profit": "float64",
-    "gross_margin_pct": "float64",
-    "gross_margin": "float64",
-    "revenue": "float64",
-    "category": "str",
+    "GROSS_MARGIN": "float64",
+    "GROSS_PROFIT": "float64",
+    "OK": "Int64",
 }
+DTYPES_CAPITAL = {k.capitalize(): v for k, v in DTYPES.items()}
+DTYPES_LOWER = {k.lower(): v for k, v in DTYPES.items()}
+DTYPES.update(DTYPES_CAPITAL)
+DTYPES.update(DTYPES_LOWER)
 
 NUMERIC_COLUMNS = [k for k, v in DTYPES.items() if v in ("Int64", "float64")]
 DATETIME_COLUMNS = [k for k, v in DTYPES.items() if v == "datetime64[ns]"]

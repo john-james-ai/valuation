@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday October 10th 2025 02:27:30 am                                                #
-# Modified   : Tuesday October 14th 2025 10:45:52 pm                                               #
+# Modified   : Wednesday October 15th 2025 02:24:37 am                                             #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -125,6 +125,7 @@ class Validation:
         to specific records. This always indicates a failure.
         """
         self.is_valid = False
+        self.num_failures += 1
         self._messages.append(message)
         # Note: We do NOT increment num_failures here, as this typically
         # represents a structural failure, not a record-level failure count.
@@ -210,6 +211,16 @@ class Task(ABC):
             The TaskReport object containing execution status, metrics, and logs.
         """
         return self._task_report
+
+    @property
+    def is_valid(self) -> bool:
+        """
+        Gets the validation status of the task result.
+
+        Returns:
+            True if the task result passed validation, False otherwise.
+        """
+        return self._task_report.validation.is_valid if self._task_report.validation else False
 
     def run(
         self, data: Optional[pd.DataFrame] = None, force: bool = False
@@ -301,6 +312,28 @@ class Task(ABC):
         """
         pass
 
+    def _validate_columns(
+        self, validation: Validation, data: pd.DataFrame, required_columns: List[str]
+    ) -> Validation:
+        """
+        Validates that the DataFrame contains all required columns with correct data types.
+
+        Args:
+            validation: The Validation object to update with any issues found.
+            data: The DataFrame to validate.
+            required_columns: List of column names that must be present in the DataFrame.
+
+        Returns:
+            The updated Validation object.
+        """
+        for col in required_columns:
+            if col not in data.columns:
+                validation.add_message(f"Missing {col} column.")
+            else:
+                if not str(data[col].dtype) == DTYPES[col]:
+                    validation.add_message(f"{col} column is not of type {DTYPES[col]}.")
+        return validation
+
     def _setup(self) -> None:
         """
         Sets up the task environment and records the start time in the report.
@@ -364,8 +397,12 @@ class Task(ABC):
         data = self._io.read(filepath=filepath)
         # Ensure correct data types
         if isinstance(data, pd.DataFrame):
-            # Assumes DTYPES is defined and applies dtypes if columns exist
+            logger.debug(f"Applying data types to loaded DataFrame")
             data = data.astype({k: v for k, v in DTYPES.items() if k in data.columns})
+        else:
+            logger.debug(
+                f"Loaded data is type {type(data)} and not a DataFrame. Skipping dtype application."
+            )
         return data
 
     def _save(self, df: pd.DataFrame, filepath: Path) -> None:

@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday October 12th 2025 11:51:12 pm                                                #
-# Modified   : Tuesday October 14th 2025 09:38:19 pm                                               #
+# Modified   : Wednesday October 15th 2025 12:26:37 am                                             #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -26,14 +26,14 @@ from valuation.dataprep.base import Task, TaskConfig, Validation
 
 # ------------------------------------------------------------------------------------------------ #
 @dataclass
-class CleanTaskConfig(TaskConfig):
+class CleanSalesDataTaskConfig(TaskConfig):
     """Holds all parameters for the sales data cleaning process."""
 
     pass
 
 
 # ------------------------------------------------------------------------------------------------ #
-class CleanTask(Task):
+class CleanSalesDataTask(Task):
     """Cleans a raw sales data file.
 
     The ingestion adds category and date information to the raw sales data.
@@ -44,7 +44,7 @@ class CleanTask(Task):
 
     """
 
-    def __init__(self, config: CleanTaskConfig) -> None:
+    def __init__(self, config: CleanSalesDataTaskConfig) -> None:
         super().__init__(config=config)
 
     def _execute(self) -> pd.DataFrame:

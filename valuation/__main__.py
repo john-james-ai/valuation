@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 9th 2025 11:01:16 pm                                               #
-# Modified   : Tuesday October 14th 2025 11:00:18 pm                                               #
+# Modified   : Wednesday October 15th 2025 01:58:45 am                                             #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -33,14 +33,14 @@ from valuation.config.filepaths import (
 )
 from valuation.config.loggers import configure_logging
 from valuation.dataprep.base import Task, TaskConfig
-from valuation.dataprep.clean import CleanTask, CleanTaskConfig
-from valuation.dataprep.ingest import (
-    IngestCustomerDataTask,
+from valuation.dataprep.customer.ingest import IngestCustomerDataTask
+from valuation.dataprep.pipeline import DataPrepPipeline
+from valuation.dataprep.sales.clean import CleanSalesDataTask, CleanSalesDataTaskConfig
+from valuation.dataprep.sales.ingest import (
     IngestSalesDataTask,
     IngestSalesDataTaskConfig,
-    IngestStoreDemoDataTask,
 )
-from valuation.dataprep.pipeline import DataPrepPipeline
+from valuation.dataprep.store.ingest import IngestStoreDemoDataTask
 
 # ------------------------------------------------------------------------------------------------ #
 app = typer.Typer()
@@ -51,13 +51,13 @@ def get_clean_sales_data_task() -> Task:
 
     # Create configuration for sales data processing
 
-    config = CleanTaskConfig(
+    config = CleanSalesDataTaskConfig(
         dataset_name="Dominick's Sales Data - Clean",
         input_location=FILEPATH_SALES_INGEST,
         output_location=FILEPATH_SALES_CLEAN,
     )
     # Run the sales data processing task
-    return CleanTask(config=config)
+    return CleanSalesDataTask(config=config)
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -134,14 +134,18 @@ def main(
     ingest_customer_data_task = get_ingest_customer_data_task()
     ingest_store_demo_data_task = get_ingest_store_demo_data_task()
 
-    # Create and populate the data preparation pipeline
+    # Create and run the sales data pipeline
     pipeline = DataPrepPipeline()
     pipeline.add_task(ingest_sales_data_task)
     pipeline.add_task(clean_sales_data_task)
+    pipeline.run(force=force)
+    # Create and run the customer data pipeline
+    pipeline = DataPrepPipeline()
     pipeline.add_task(ingest_customer_data_task)
+    pipeline.run(force=force)
+    # Create and run the store demo data pipeline
+    pipeline = DataPrepPipeline()
     pipeline.add_task(ingest_store_demo_data_task)
-
-    # Run the data preparation pipeline
     pipeline.run(force=force)
 
 
