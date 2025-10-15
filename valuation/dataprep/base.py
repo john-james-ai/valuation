@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday October 10th 2025 02:27:30 am                                                #
-# Modified   : Wednesday October 15th 2025 02:24:37 am                                             #
+# Modified   : Wednesday October 15th 2025 03:23:58 am                                             #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -331,7 +331,9 @@ class Task(ABC):
                 validation.add_message(f"Missing {col} column.")
             else:
                 if not str(data[col].dtype) == DTYPES[col]:
-                    validation.add_message(f"{col} column is not of type {DTYPES[col]}.")
+                    validation.add_message(
+                        f"{col} column is not of type {DTYPES[col]}. It is type {data[col].dtype}."
+                    )
         return validation
 
     def _setup(self) -> None:

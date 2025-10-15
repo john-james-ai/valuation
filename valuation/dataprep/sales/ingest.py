@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday October 12th 2025 11:51:12 pm                                                #
-# Modified   : Wednesday October 15th 2025 01:26:30 am                                             #
+# Modified   : Wednesday October 15th 2025 03:44:39 am                                             #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -23,6 +23,7 @@ from typing import Any, Union
 import pandas as pd
 from tqdm import tqdm
 
+from valuation.config.data import DTYPES
 from valuation.dataprep.base import Task, TaskConfig, Validation
 
 # ------------------------------------------------------------------------------------------------ #
@@ -158,6 +159,9 @@ class IngestSalesDataTask(Task):
             pd.DataFrame: The input DataFrame with an added 'category' column.
         """
         df["CATEGORY"] = category
+
+        # Correct dtype
+        df["CATEGORY"] = df["CATEGORY"].astype(DTYPES["CATEGORY"])  # type: ignore
         return df
 
     def _add_dates(self, df: pd.DataFrame, week_dates: pd.DataFrame) -> pd.DataFrame:
