@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Wednesday October 8th 2025 04:41:21 pm                                              #
-# Modified   : Monday October 13th 2025 10:20:08 am                                                #
+# Modified   : Tuesday October 14th 2025 10:08:50 pm                                               #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -19,14 +19,15 @@
 from abc import ABC, abstractmethod
 import codecs
 import csv
+import io
 import json
-import logging
 import os
 from pathlib import Path
 import pickle
-from typing import Any, List, Union, cast
+from typing import Any, Callable, Dict, List, Optional, Set, Union, cast
 import zipfile
 
+from loguru import logger
 import pandas as pd
 import yaml
 
@@ -40,9 +41,6 @@ import yaml
 
 
 class IO(ABC):  # pragma: no cover
-    _logger = logging.getLogger(
-        f"{__module__}.{__name__}",
-    )
 
     @classmethod
     def read(cls, filepath: str, *args, **kwargs) -> Any:
@@ -66,219 +64,193 @@ class IO(ABC):  # pragma: no cover
 
 
 # ------------------------------------------------------------------------------------------------ #
-#                                    ZIPFILE CSV IO                                                #
+#                                      ZIPFILE IO                                                  #
 # ------------------------------------------------------------------------------------------------ #
-class ZipFileCSVIO(IO):  # pragma: no cover
+class ZipFileIO(IO):  # pragma: no cover
+
+    # Valid kwargs for read and write methods of the ZipFileIO class for pandas as of version 2.3.3
+    VALID_KWARGS: Dict[str, Dict[str, Set[str]]] = {
+        "csv": {
+            # Valid arguments for pandas.read_csv (expanded for performance/data selection)
+            "read": {
+                "sep",
+                "header",
+                "names",
+                "index_col",
+                "dtype",
+                "parse_dates",
+                "encoding",
+                "usecols",
+                "skiprows",
+                "nrows",
+                "na_values",
+                "engine",
+                "on_bad_lines",  # Added crucial performance/data quality parameters
+            },
+            # Valid arguments for pandas.to_csv (expanded for formatting control)
+            "write": {
+                "sep",
+                "header",
+                "index",
+                "encoding",
+                "compression",
+                "date_format",
+                "float_format",
+                "index_label",
+                "columns",  # Added crucial formatting parameters
+            },
+        },
+        "dta": {
+            # Valid arguments for pandas.read_stata (expanded for categorical data)
+            "read": {
+                "index_col",
+                "convert_dates",
+                "convert_missing",
+                "preserve_dtypes",
+                "convert_categoricals",
+                "columns",
+                "chunksize",  # Added key Stata parameters
+            },
+            # Valid arguments for pandas.to_stata (expanded for metadata and types)
+            "write": {
+                "time_stamp",
+                "write_index",
+                "data_label",
+                "version",
+                "convert_dates",
+                "variable_labels",
+                "value_labels",  # Added key Stata metadata/type parameters
+            },
+        },
+    }
+
+    # Mapping extensions to their corresponding pandas reader functions
+    READERS: Dict[str, Callable] = {
+        ".csv": pd.read_csv,
+        ".dta": pd.read_stata,
+    }
+
+    # Mapping extensions to their corresponding pandas DataFrame writer method names
+    WRITERS: Dict[str, str] = {
+        ".csv": "to_csv",
+        ".dta": "to_stata",
+    }
 
     @classmethod
     def _read(
         cls,
         filepath: str,
-        sep: str = ",",
-        header: Union[int, None] = 0,
-        index_col: Union[int, str] = None,
-        usecols: List[str] = None,
-        escapechar: str = None,
-        low_memory: bool = False,
-        encoding: str = "utf-8",
         **kwargs,
     ) -> pd.DataFrame:
-        """
-        Reads a single CSV file from a ZIP archive into a Pandas DataFrame.
+        output = []
+        unsupported_files = []
 
-        This function opens a ZIP file in memory, finds the first file with a
-        .csv extension, and reads it without extracting any files to disk.
+        with zipfile.ZipFile(filepath, "r") as zip_ref:
 
-        Args:
-            zip_path: The file path to the .zip archive.
-
-        Returns:
-            A Pandas DataFrame containing the data from the CSV file.
-
-        Raises:
-            FileNotFoundError: If no .csv file is found inside the ZIP archive.
-        """
-        try:
-            with zipfile.ZipFile(filepath, "r") as zip_ref:
-                # Find the first file in the zip that ends with .csv
-                csv_filepath = next(
-                    (name for name in zip_ref.namelist() if name.endswith(".csv")), None
-                )
-
-                if csv_filepath is None:
-                    raise FileNotFoundError(f"No CSV file found in {filepath}")
-
-                # Open the CSV file from the archive as a file-like object
-                with zip_ref.open(csv_filepath) as csv_file:
-                    # Read the file-like object directly into pandas
-                    return pd.read_csv(
-                        csv_file,
-                        sep=sep,
-                        header=header,
-                        index_col=index_col,
-                        usecols=usecols,
-                        escapechar=escapechar,
-                        low_memory=low_memory,
-                        encoding=encoding,
+            # Iterate through the files in the zip reading from files with supported filetypes
+            for internal_filepath in zip_ref.namelist():
+                # Ensure filetype is supported
+                ext = os.path.splitext(internal_filepath)[1].lower()
+                if ext not in cls.READERS:
+                    unsupported_files.append(internal_filepath)
+                else:
+                    # Obtain kwargs for the specific file extension reader
+                    read_kwargs = cls._build_kwargs(
+                        all_kwargs=kwargs, file_extension=ext, operation="read"
                     )
-        except FileNotFoundError as e:
-            print(e)
-            raise
-        except Exception as e:
-            print(f"An error occurred while processing {filepath}: {e}")
-            raise
+
+                    # Obtain the appropriate reader function
+                    reader = cls.READERS[ext]
+                    # Open the file from the archive as a file-like object
+                    with zip_ref.open(internal_filepath) as internal_file:
+                        df = reader(internal_file, **read_kwargs)
+                        output.append(df)
+        if len(unsupported_files) > 0:
+            unsupported_files_list = "\n".join(unsupported_files)
+            msg = f"The following {len(unsupported_files)} unsupported files were skipped:\n {unsupported_files_list}"
+            logger.warning(msg)
+        return pd.concat(output, ignore_index=True)
 
     @classmethod
     def _write(
         cls,
         filepath: str,
         data: pd.DataFrame,
-        sep: str = ",",
-        index: bool = False,
-        index_label: str = None,
-        encoding: str = "utf-8",
+        internal_filepath: Optional[Union[Path, str]] = None,
         **kwargs,
     ) -> None:
-        """
-        Writes a DataFrame to a CSV and places it inside a structured ZIP archive.
 
-        The ZIP archive will contain a directory named after the zip file (sans
-        extension), and inside that directory will be a CSV file of the same name.
+        # Set default internal_filepath if not provided
+        internal_filepath = str(internal_filepath) if internal_filepath else None
+        internal_filepath = (
+            internal_filepath or f"{os.path.splitext(os.path.basename(filepath))[0]}.csv"
+        )
 
-        Args:
-            filepath: The destination path for the .zip archive.
-            data: The Pandas DataFrame to save.
-            sep: The separator to use for the CSV file.
-            index: Whether to write the DataFrame index to the CSV.
-            index_label: Column label for index column(s) if desired.
-            encoding: The encoding to use for the output CSV file.
-        """
-        # Get the base name of the zip file, without its .zip extension
-        basename_no_ext = os.path.splitext(os.path.basename(filepath))[0]
+        # Confirm the internal_filepath has a supported extension
+        internal_ext = os.path.splitext(internal_filepath)[1].lower()
+        if internal_ext not in cls.WRITERS.keys():
+            msg = f"File extension {internal_ext} is not supported for writing in ZipFileIO."
+            logger.error(msg)
+            raise ValueError(msg)
 
-        # Construct the full path for the CSV file inside the zip archive
-        # e.g., "my_data/my_data.csv"
-        internal_csv_path = f"{basename_no_ext}/{basename_no_ext}.csv"
+        # Get the appropriate write kwargs for the file extension
+        write_kwargs = cls._build_kwargs(
+            all_kwargs=kwargs, file_extension=internal_ext, operation="write"
+        )
 
-        # Open the zip file in write mode with compression
-        with zipfile.ZipFile(filepath, "w", compression=zipfile.ZIP_DEFLATED) as zip_ref:
-            # Convert the DataFrame to a CSV string in memory
-            csv_buffer = data.to_csv(
-                sep=sep, index=index, index_label=index_label, encoding=encoding
-            )
+        # Choose the appropriate in-memory buffer
+        is_binary = internal_ext not in (".csv", ".json", ".txt")
+        buffer_class = io.BytesIO if is_binary else io.StringIO
 
-            # Write the CSV string to the specified path within the zip archive
-            zip_ref.writestr(internal_csv_path, csv_buffer)
+        writer_method_name = cls.WRITERS[internal_ext]
+        writer_method = getattr(data, writer_method_name)
 
-
-# ------------------------------------------------------------------------------------------------ #
-#                                   ZIPFILE STATA IO                                               #
-# ------------------------------------------------------------------------------------------------ #
-class ZipFileStataIO(IO):  # pragma: no cover
-
-    @classmethod
-    def _read(
-        cls,
-        filepath: str,
-        index_col: Union[str, None] = None,
-        convert_dates: bool = True,
-        preserve_dtypes: bool = True,
-        columns: Union[List[str], None] = None,
-        **kwargs,
-    ) -> pd.DataFrame:
-        """
-        Reads a single STATA (.dta) file from a ZIP archive into a Pandas DataFrame.
-
-        This function opens a ZIP file in memory, finds the first file with a
-        .dta extension, and reads it without extracting any files to disk.
-
-        Args:
-            filepath: The file path to the .zip archive.
-            index_col: Column to set as index.
-            convert_dates: If True, attempts to convert Stata's date formats to datetime.
-            preserve_dtypes: If True, uses the original Stata data types.
-            columns: List of columns to read from the DTA file.
-
-        Returns:
-            A Pandas DataFrame containing the data from the STATA file.
-
-        Raises:
-            FileNotFoundError: If no .dta file is found inside the ZIP archive.
-        """
+        # Write the DataFrame to the in-memory buffer
         try:
-            with zipfile.ZipFile(filepath, "r") as zip_ref:
-                # Find the first file in the zip that ends with .dta
-                dta_filepath = next(
-                    (name for name in zip_ref.namelist() if name.endswith(".dta")), None
-                )
+            with buffer_class() as buffer:
+                writer_method(buffer, **write_kwargs)
+                buffer_content = buffer.getvalue()
 
-                if dta_filepath is None:
-                    raise FileNotFoundError(f"No STATA (.dta) file found in {filepath}")
+                # Ensure content is bytes for zip.writestr
+                if not is_binary and isinstance(buffer_content, str):
+                    buffer_content = buffer_content.encode("utf-8")
 
-                # Open the DTA file from the archive as a file-like object
-                with zip_ref.open(dta_filepath) as dta_file:
-                    # Read the file-like object directly into pandas using read_stata
-                    return pd.read_stata(
-                        dta_file,
-                        index_col=index_col,
-                        convert_dates=convert_dates,
-                        preserve_dtypes=preserve_dtypes,
-                        columns=columns,
-                        **kwargs,
-                    )
-        except FileNotFoundError as e:
-            # Print the error for logging purposes and then re-raise
-            print(e)
-            raise
+                # Write the buffer content to the ZIP archive in **APPEND** mode
+                # mode='a' enables appending to existing zipfiles
+                with zipfile.ZipFile(filepath, "a", compression=zipfile.ZIP_DEFLATED) as zip_ref:
+                    zip_ref.writestr(internal_filepath, buffer_content)
         except Exception as e:
-            print(f"An error occurred while processing {filepath}: {e}")
+            logger.error(f"An error occurred while writing to zip file {filepath}: {e}")
             raise
 
     @classmethod
-    def _write(
-        cls,
-        filepath: Path,
-        data: pd.DataFrame,
-        write_index: bool = False,
-        version: Union[int, None] = 117,
-        **kwargs,
-    ) -> None:
+    def _build_kwargs(
+        cls, all_kwargs: Dict[str, Any], file_extension: str, operation: str = "read"
+    ) -> Dict[str, Any]:
         """
-        Writes a DataFrame to a STATA (.dta) file and places it inside a structured ZIP archive.
-
-        The ZIP archive will contain a directory named after the zip file (sans
-        extension), and inside that directory will be a DTA file of the same name.
-
-        Args:
-            filepath: The destination path for the .zip archive.
-            data: The Pandas DataFrame to save.
-            write_index: Whether to write the DataFrame index to the DTA file.
-            version: The STATA file format version (e.g., 117 for Stata 13/14).
+        Filters a dictionary of all passed keyword arguments down to only
+        those supported by the target pandas reader/writer function for a given
+        extension and operation ('read' or 'write').
         """
-        # Get the base name of the zip file, without its .zip extension
-        basename_no_ext = os.path.splitext(os.path.basename(filepath))[0]
+        # 1. Get the dictionary for the specific file_extension (e.g., {'read': {...}, 'write': {...}})
+        op_kwargs = cls.VALID_KWARGS.get(file_extension, {})
 
-        # Construct the full path for the DTA file inside the zip archive
-        # e.g., "my_data/my_data.dta"
-        internal_dta_path = f"{basename_no_ext}/{basename_no_ext}.dta"
+        # 2. Get the set of valid keys for the specific operation (e.g., 'read')
+        valid_keys = op_kwargs.get(operation, set())
 
-        # 1. Convert the DataFrame to a STATA file in memory (required because to_stata
-        #    writes the file, not a string)
-        from io import BytesIO
+        # Use dictionary comprehension to select only the valid keys
+        filtered_kwargs = {k: v for k, v in all_kwargs.items() if k in valid_keys}
 
-        dta_buffer = BytesIO()
-        data.to_stata(
-            dta_buffer,
-            write_index=write_index,
-            version=version,
-            **kwargs,
-        )  # type: ignore
-        dta_buffer.seek(0)  # Rewind the buffer to the beginning
+        if file_extension == ".csv" and operation == "read":
+            # Special handling for 'on_bad_lines' to ensure performance
+            if "on_bad_lines" not in filtered_kwargs:
+                filtered_kwargs["on_bad_lines"] = "skip"  # Default to 'skip' for performance
+            if "engine" not in filtered_kwargs:
+                filtered_kwargs["engine"] = "c"  # Default to 'c' engine for performance
+            if "low_memory" not in filtered_kwargs:
+                filtered_kwargs["low_memory"] = False  # Default to False for mixed types
 
-        # 2. Open the zip file in write mode with compression
-        with zipfile.ZipFile(filepath, "w", compression=zipfile.ZIP_DEFLATED) as zip_ref:
-            # 3. Write the DTA file (from the buffer) to the specified path within the zip
-            zip_ref.writestr(internal_dta_path, dta_buffer.getvalue())
+        return filtered_kwargs
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -489,7 +461,7 @@ class YamlIO(IO):  # pragma: no cover
             try:
                 return yaml.safe_load(f)
             except yaml.YAMLError as e:  # pragma: no cover
-                cls._logger.exception(e)
+                logger.exception(e)
                 raise IOError(e) from e
             finally:
                 f.close()
@@ -500,7 +472,7 @@ class YamlIO(IO):  # pragma: no cover
             try:
                 yaml.dump(data, f)
             except yaml.YAMLError as e:  # pragma: no cover
-                cls._logger.exception(e)
+                logger.exception(e)
                 raise IOError(e) from e
             finally:
                 f.close()
@@ -518,7 +490,7 @@ class PickleIO(IO):  # pragma: no cover
             try:
                 return pickle.load(f)
             except pickle.PickleError as e:  # pragma: no cover
-                cls._logger.exception(e)
+                logger.exception(e)
                 raise IOError(e) from e
             finally:
                 f.close()
@@ -531,7 +503,7 @@ class PickleIO(IO):  # pragma: no cover
             try:
                 pickle.dump(data, f)
             except pickle.PickleError as e:  # pragma: no cover
-                cls._logger.exception(e)
+                logger.exception(e)
                 raise (e)
             finally:
                 f.close()
@@ -594,13 +566,13 @@ class JsonIO(IO):  # pragma: no cover
                         json.dump(datum, json_file, indent=2)
                     else:
                         msg = "JsonIO supports dictionaries and lists of dictionaries only."
-                        cls._logger.exception(msg)
+                        logger.exception(msg)
                         raise ValueError(msg)
             else:
                 try:
                     json.dump(data, json_file, indent=2)
                 except json.JSONDecodeError as e:
-                    cls._logger.exception(f"Exception of type {type(e)} occurred.\n{e}")
+                    logger.exception(f"Exception of type {type(e)} occurred.\n{e}")
                     raise
 
 
@@ -621,12 +593,8 @@ class IOService:  # pragma: no cover
         "xlsx": ExcelIO,
         "xls": ExcelIO,
         "parquet": ParquetIO,
-        "zip": ZipFileCSVIO,
-        "dta": StataIO,
+        "zip": ZipFileIO,
     }
-    _logger = logging.getLogger(
-        f"{__module__}.{__name__}",
-    )
 
     @classmethod
     def read(cls, filepath: str, **kwargs) -> Any:
@@ -647,10 +615,10 @@ class IOService:  # pragma: no cover
         except TypeError as exc:
             if filepath is None:
                 msg = "Filepath is None"
-                cls._logger.exception(msg)
+                logger.exception(msg)
                 raise ValueError(msg) from exc
             raise
         except KeyError as exc:
             msg = "File type {} is not supported.".format(file_format)
-            cls._logger.exception(msg)
+            logger.exception(msg)
             raise ValueError(msg) from exc

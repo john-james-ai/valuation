@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Wednesday October 8th 2025 02:52:13 pm                                              #
-# Modified   : Monday October 13th 2025 10:21:45 am                                                #
+# Modified   : Tuesday October 14th 2025 09:53:22 pm                                               #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -54,7 +54,7 @@ FINANCIALS_BENCHMARKS = EXTERNAL_DATA_DIR / "financials.yaml"
 FILEPATH_CUSTOMER_RAW = RAW_DATA_DIR / "ccount_stata.zip"
 FILEPATH_STORE_DEMO_RAW = RAW_DATA_DIR / "demo_stata.zip"
 # Ingest Stage
-FILEPATH_SALES_INGEST = INGEST_DATA_DIR / "sales_ingest.csv"
+FILEPATH_SALES_INGEST = INGEST_DATA_DIR / "sales_ingest.parquet"
 FILEPATH_CUSTOMER_INGEST = INGEST_DATA_DIR / "customer_ingest.csv"
 FILEPATH_STORE_DEMO_INGEST = INGEST_DATA_DIR / "store_demo_ingest.csv"
 FILEPATH_SALES_PROFILE = INGEST_DATA_DIR / "sales_profile.csv"

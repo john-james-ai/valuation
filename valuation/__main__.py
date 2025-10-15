@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 9th 2025 11:01:16 pm                                               #
-# Modified   : Monday October 13th 2025 10:28:55 am                                                #
+# Modified   : Tuesday October 14th 2025 11:00:18 pm                                               #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -24,6 +24,7 @@ from valuation.config.filepaths import (
     CONFIG_FILEPATH,
     FILEPATH_CUSTOMER_INGEST,
     FILEPATH_CUSTOMER_RAW,
+    FILEPATH_SALES_CLEAN,
     FILEPATH_SALES_INGEST,
     FILEPATH_STORE_DEMO_INGEST,
     FILEPATH_STORE_DEMO_RAW,
@@ -31,7 +32,7 @@ from valuation.config.filepaths import (
     WEEK_DECODE_TABLE_FILEPATH,
 )
 from valuation.config.loggers import configure_logging
-from valuation.dataprep.base import TaskConfig
+from valuation.dataprep.base import Task, TaskConfig
 from valuation.dataprep.clean import CleanTask, CleanTaskConfig
 from valuation.dataprep.ingest import (
     IngestCustomerDataTask,
@@ -39,28 +40,28 @@ from valuation.dataprep.ingest import (
     IngestSalesDataTaskConfig,
     IngestStoreDemoDataTask,
 )
+from valuation.dataprep.pipeline import DataPrepPipeline
 
 # ------------------------------------------------------------------------------------------------ #
 app = typer.Typer()
 
 
 # ------------------------------------------------------------------------------------------------ #
-def clean(force: bool) -> None:
+def get_clean_sales_data_task() -> Task:
 
     # Create configuration for sales data processing
 
     config = CleanTaskConfig(
-        dataset_name="Dominick's Sales Data - Ingestion",
-        input_location=CONFIG_FILEPATH,
-        output_location=FILEPATH_SALES_INGEST,
+        dataset_name="Dominick's Sales Data - Clean",
+        input_location=FILEPATH_SALES_INGEST,
+        output_location=FILEPATH_SALES_CLEAN,
     )
     # Run the sales data processing task
-    task = CleanTask(config=config)
-    task.run(force=force)
+    return CleanTask(config=config)
 
 
 # ------------------------------------------------------------------------------------------------ #
-def ingest_store_demo_data(force: bool) -> None:
+def get_ingest_store_demo_data_task() -> Task:
     """Ingests raw store demographic data file.
     Args:
         force (bool): Whether to force reprocessing if the file already exists.
@@ -73,12 +74,11 @@ def ingest_store_demo_data(force: bool) -> None:
         output_location=FILEPATH_STORE_DEMO_INGEST,
     )
     # Run the sales data processing task
-    task = IngestStoreDemoDataTask(config=config)
-    task.run(force=force)
+    return IngestStoreDemoDataTask(config=config)
 
 
 # ------------------------------------------------------------------------------------------------ #
-def ingest_customer_data(force: bool) -> None:
+def get_ingest_customer_data_task() -> Task:
     """Ingests raw customer data files.
     Args:
         force (bool): Whether to force reprocessing if the file already exists.
@@ -91,12 +91,11 @@ def ingest_customer_data(force: bool) -> None:
         output_location=FILEPATH_CUSTOMER_INGEST,
     )
     # Run the sales data processing task
-    task = IngestCustomerDataTask(config=config)
-    task.run(force=force)
+    return IngestCustomerDataTask(config=config)
 
 
 # ------------------------------------------------------------------------------------------------ #
-def ingest_sales(force: bool) -> None:
+def get_ingest_sales_data_task() -> Task:
     """Ingests raw sales data files.
 
     Args:
@@ -112,8 +111,7 @@ def ingest_sales(force: bool) -> None:
         raw_data_directory=RAW_DATA_DIR,
     )
     # Run the sales data processing task
-    task = IngestSalesDataTask(config=config)
-    task.run(force=force)
+    return IngestSalesDataTask(config=config)
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -130,11 +128,21 @@ def main(
     """Main entry point for the Valuation package."""
     # Configure logging
     configure_logging()
-    # Run Pipelines
-    ingest_sales(force=force)
-    ingest_customer_data(force=force)
-    ingest_store_demo_data(force=force)
-    clean(force=force)
+    # Construct the data preparation pipeline tasks
+    ingest_sales_data_task = get_ingest_sales_data_task()
+    clean_sales_data_task = get_clean_sales_data_task()
+    ingest_customer_data_task = get_ingest_customer_data_task()
+    ingest_store_demo_data_task = get_ingest_store_demo_data_task()
+
+    # Create and populate the data preparation pipeline
+    pipeline = DataPrepPipeline()
+    pipeline.add_task(ingest_sales_data_task)
+    pipeline.add_task(clean_sales_data_task)
+    pipeline.add_task(ingest_customer_data_task)
+    pipeline.add_task(ingest_store_demo_data_task)
+
+    # Run the data preparation pipeline
+    pipeline.run(force=force)
 
 
 if __name__ == "__main__":
