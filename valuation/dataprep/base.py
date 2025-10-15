@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday October 10th 2025 02:27:30 am                                                #
-# Modified   : Wednesday October 15th 2025 01:33:16 pm                                             #
+# Modified   : Wednesday October 15th 2025 06:49:05 pm                                             #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -31,7 +31,7 @@ import pandas as pd
 
 from valuation.config.data import DTYPES
 from valuation.utils.data import DataClass
-from valuation.utils.io import IOService
+from valuation.utils.io import IOKwargs, IOService
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -42,6 +42,7 @@ class TaskConfig(DataClass):
     dataset_name: str
     input_location: Path
     output_location: Path
+    iokwargs: IOKwargs
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -385,7 +386,7 @@ class Task(ABC):
         # 4. Critical: Raise the exception to halt execution
         raise RuntimeError(msg)
 
-    def _load(self, filepath: Path) -> pd.DataFrame:
+    def _load(self, filepath: Path, **kwargs) -> pd.DataFrame:
         """
         Loads a single data file from the raw data directory using the I/O service.
 
@@ -399,7 +400,7 @@ class Task(ABC):
         """
         logger.debug(f"Loading data from {filepath}")
 
-        data = self._io.read(filepath=filepath)
+        data = self._io.read(filepath=filepath, kwargs=kwargs)
         # Ensure correct data types
         if isinstance(data, pd.DataFrame):
             logger.debug(f"Applying data types to loaded DataFrame")

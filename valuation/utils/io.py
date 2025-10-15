@@ -11,14 +11,18 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Wednesday October 8th 2025 04:41:21 pm                                              #
-# Modified   : Tuesday October 14th 2025 10:08:50 pm                                               #
+# Modified   : Wednesday October 15th 2025 05:52:00 pm                                             #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
 # ================================================================================================ #
+"""Module providing I/O services for various file formats."""
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 import codecs
 import csv
+from dataclasses import dataclass, field
 import io
 import json
 import os
@@ -27,13 +31,217 @@ import pickle
 from typing import Any, Callable, Dict, List, Optional, Set, Union, cast
 import zipfile
 
+import dask.dataframe as dd
 from loguru import logger
 import pandas as pd
 import yaml
 
+from valuation.utils.data import DataClass
+
 # ------------------------------------------------------------------------------------------------ #
 # pylint: disable=missing-class-docstring, unused-argument
+
+
 # ------------------------------------------------------------------------------------------------ #
+#                                       PANDAS STATA KWARGS                                        #
+# ------------------------------------------------------------------------------------------------ #
+@dataclass
+class PandasReadStataKwargs(DataClass):
+    convert_dates: bool = True
+    convert_categoricals: bool = False
+    convert_missing: bool = False
+    preserve_dtypes: bool = True
+    index_col: Optional[str] = None
+    columns: Optional[List[str]] = field(default_factory=list)
+    convert_strl: bool = False
+    chunksize: Optional[int] = None
+    iterator: bool = False
+    compression: Union[str, Dict[str, str]] = "infer"
+
+
+# ------------------------------------------------------------------------------------------------ #
+@dataclass
+class PandasWriteStataKwargs(DataClass):
+    write_index: bool = False
+    version: int = 114
+    convert_dates: bool = True
+    compression: Union[str, Dict[str, str]] = "infer"
+    variable_labels: Optional[Dict[str, str]] = None
+    value_labels: Optional[Dict[str, Dict[Any, str]]] = None
+
+
+# ------------------------------------------------------------------------------------------------ #
+@dataclass
+class PandasStataKwargs(DataClass):
+    read: PandasReadStataKwargs = field(default_factory=PandasReadStataKwargs)
+    write: PandasWriteStataKwargs = field(default_factory=PandasWriteStataKwargs)
+
+
+# ------------------------------------------------------------------------------------------------ #
+#                                         PANDAS CSV KWARGS                                        #
+# ------------------------------------------------------------------------------------------------ #
+@dataclass
+class PandasReadCSVKwargs(DataClass):
+    sep: str = ","
+    header: Union[int, str] = "infer"
+    names: List[str] = field(default_factory=list)
+    index_col: Optional[Union[bool, int, str]] = None  # NOTE: None is the pandas default.
+    usecols: Optional[List[str]] = None
+    mangle_dupe_cols: bool = True
+    dtype: Optional[Dict[str, Any]] = None
+    engine: str = "c"
+    na_values: Any = None
+    keep_default_na: bool = True
+    na_filter: bool = True
+    verbose: bool = False
+    skip_blank_lines: bool = True
+    parse_dates: bool = False
+    infer_datetime_format: bool = False
+    keep_date_col: bool = False
+    day_first: bool = False
+    cache_dates: bool = True
+    compression: Union[str, None] = "infer"
+    thousands: Optional[str] = (
+        None  # CHANGED: Defaulting to ',' is not safe for international data.
+    )
+    lineterminator: Optional[str] = "\n"
+    low_memory: bool = False
+    encoding: str = "utf-8"
+    on_bad_lines: str = "warn"  # CHANGED: Replaces deprecated error_bad_lines and warn_bad_lines.
+    delim_whitespace: bool = False
+
+
+@dataclass
+class PandasWriteCSVKwargs(DataClass):
+    sep: str = ","
+    float_format: Optional[str] = None
+    columns: Optional[List[str]] = None
+    header: bool = True
+    index: bool = False
+    index_label: Optional[str] = None
+    mode: str = "w"
+    encoding: str = "utf-8"
+    compression: Union[str, Dict[str, str], None] = "infer"
+    line_terminator: str = "\n"
+    chunk_size: Optional[int] = None
+    date_format: Optional[str] = None
+    errors: str = "strict"
+
+
+@dataclass
+class PandasCSVKwargs(DataClass):
+    read: PandasReadCSVKwargs = field(default_factory=PandasReadCSVKwargs)
+    write: PandasWriteCSVKwargs = field(default_factory=PandasWriteCSVKwargs)
+
+
+# ------------------------------------------------------------------------------------------------ #
+#                                       PANDAS PARQUET KWARGS                                      #
+# ------------------------------------------------------------------------------------------------ #
+@dataclass
+class PandasReadParquetKwargs(DataClass):
+    engine: str = "pyarrow"
+    dtype_backend: str = "pyarrow"
+    filesystem: Any = None
+
+
+@dataclass
+class PandasWriteParquetKwargs(DataClass):
+    engine: str = "pyarrow"
+    index: bool = False
+    partition_cols: Optional[List[str]] = None
+    compression: str = "zstd"
+
+
+@dataclass
+class PandasParquetKwargs(DataClass):
+    read: PandasReadParquetKwargs = field(default_factory=PandasReadParquetKwargs)
+    write: PandasWriteParquetKwargs = field(default_factory=PandasWriteParquetKwargs)
+
+
+# ------------------------------------------------------------------------------------------------ #
+#                                          DASK CSV KWARGS                                         #
+# ------------------------------------------------------------------------------------------------ #
+@dataclass
+class DaskReadCSVKwargs(DataClass):
+    blocksize: Optional[Union[str, int]] = (
+        "64MB"  # NOTE: A default blocksize is often a good idea.
+    )
+    assume_missing: bool = False
+    # NOTE: Dask will pass any other kwargs down to pandas.read_csv
+    # So we don't need to explicitly nest the pandas kwargs here.
+
+
+@dataclass
+class DaskWriteCSVKwargs(DataClass):
+    single_file: bool = (
+        False  # CHANGED: CRITICAL! True creates a bottleneck and defeats Dask's parallelism.
+    )
+    header_first_partition_only: bool = True  # ADDED: Prevents headers in every partition file.
+    compression: Optional[str] = (
+        "gzip"  # CHANGED: gzip is the standard for compressing text files like CSV.
+    )
+    compute: bool = True
+    mode: str = "w"
+    encoding: str = "utf-8"
+    # NOTE: Other pandas kwargs like `index=False` can be passed directly to ddf.to_csv()
+
+
+@dataclass
+class DaskCSVKwargs(DataClass):
+    read: DaskReadCSVKwargs = field(default_factory=DaskReadCSVKwargs)
+    write: DaskWriteCSVKwargs = field(default_factory=DaskWriteCSVKwargs)
+
+
+# ------------------------------------------------------------------------------------------------ #
+#                                        DASK PARQUET KWARGS                                       #
+# ------------------------------------------------------------------------------------------------ #
+@dataclass
+class DaskReadParquetKwargs(DataClass):
+    index: Union[str, bool, None] = False  # CORRECT: Avoid loading a meaningless index.
+    categories: Optional[Union[List[str], Dict[str, str]]] = None
+    dtype_backend: str = "pyarrow"  # CORRECT: Performant choice.
+    calculate_divisions: bool = False  # NOTE: Correct, as True can be very slow.
+    ignore_metadata_file: bool = (
+        False  # CHANGED: You WANT to use the metadata file if it exists; it's much faster.
+    )
+    split_row_groups: Union[bool, int, str] = "infer"
+    blocksize: Union[int, str] = "256MB"
+    aggregate_files: Optional[bool] = None  # NOTE: Let Dask handle this by default.
+
+
+@dataclass
+class DaskWriteParquetKwargs(DataClass):
+    compression: str = "zstd"  # CHANGED: Consistent with pandas and modern best practice.
+    write_index: bool = False  # CORRECT: Do not write a meaningless index.
+    append: bool = False
+    overwrite: bool = (
+        False  # NOTE: Consider a single 'write_mode' parameter instead of append/overwrite flags.
+    )
+    partition_on: Optional[List[str]] = None
+    write_metadata_file: bool = (
+        True  # CHANGED: Explicitly creating this makes subsequent reads much faster.
+    )
+    compute: bool = True
+    schema: Union[str, Dict[str, Any]] = "infer"
+
+
+@dataclass
+class DaskParquetKwargs(DataClass):
+    read: DaskReadParquetKwargs = field(default_factory=DaskReadParquetKwargs)
+    write: DaskWriteParquetKwargs = field(default_factory=DaskWriteParquetKwargs)
+
+
+# ------------------------------------------------------------------------------------------------ #
+#                                        IO KWARGS                                                 #
+# ------------------------------------------------------------------------------------------------ #
+@dataclass
+class IOKwargs(DataClass):
+    csv: PandasCSVKwargs = field(default_factory=PandasCSVKwargs)
+    parquet: PandasParquetKwargs = field(default_factory=PandasParquetKwargs)
+    stata: PandasStataKwargs = field(default_factory=PandasStataKwargs)
+    dask_csv: DaskCSVKwargs = field(default_factory=DaskCSVKwargs)
+    dask_parquet: DaskParquetKwargs = field(default_factory=DaskParquetKwargs)
+
 
 # ------------------------------------------------------------------------------------------------ #
 #                                           IO                                                     #
@@ -357,45 +565,20 @@ class CSVIO(IO):  # pragma: no cover
     def _read(
         cls,
         filepath: str,
-        sep: str = ",",
-        header: Union[int, None] = 0,
-        index_col: Union[int, str] = None,
-        usecols: List[str] = None,
-        escapechar: str = None,
-        low_memory: bool = False,
-        encoding: str = "utf-8",
         **kwargs,
     ) -> pd.DataFrame:
-        return pd.read_csv(
-            filepath,
-            sep=sep,
-            header=header,
-            index_col=index_col,
-            usecols=usecols,
-            escapechar=escapechar,
-            low_memory=low_memory,
-            encoding=encoding,
-        )
+        return pd.read_csv(filepath, **kwargs)
 
     @classmethod
     def _write(
         cls,
         filepath: str,
         data: pd.DataFrame,
-        sep: str = ",",
-        index: bool = False,
-        index_label: str = None,
-        encoding: str = "utf-8",
         **kwargs,
     ) -> None:
         data.to_csv(
             filepath,
-            sep=sep,
-            index=index,
-            index_label=index_label,
-            encoding=encoding,
-            escapechar="\\",
-            quoting=csv.QUOTE_NONE,
+            **kwargs,
         )
 
 
@@ -514,16 +697,42 @@ class PickleIO(IO):  # pragma: no cover
 # ------------------------------------------------------------------------------------------------ #
 
 
-class ParquetIO(IO):  # pragma: no cover
+class ParquetIO(IO):
+    """Handles reading and writing Parquet files using pandas or Dask.
+
+    This class provides a unified interface to read Parquet files into either
+    an in-memory pandas DataFrame for smaller datasets or a lazy Dask
+    DataFrame for larger-than-memory datasets.
+    """
+
     @classmethod
-    def _read(cls, filepath: str, **kwargs) -> Any:
-        """Reads using pandas API."""
-        return pd.read_parquet(path=filepath)
+    def _read(cls, filepath: str, **kwargs) -> pd.DataFrame:
+        """Reads a Parquet file into a pandas or Dask DataFrame.
+
+        Args:
+            filepath: The path to the Parquet file or directory.
+            **kwargs: Additional keyword arguments passed to the underlying
+                      read_parquet function.
+
+        Returns:
+            A pandas DataFrame.
+        """
+        return pd.read_parquet(path=filepath, **kwargs)
 
     @classmethod
     def _write(cls, filepath: str, data: pd.DataFrame, **kwargs) -> None:
-        """Writes a parquet file using pandas API."""
-        data.to_parquet(path=filepath)
+        """Writes a pandas or Dask DataFrame to a Parquet file.
+
+        The underlying method handles both types correctly. For Dask, this
+        will trigger the computation graph and write the results to disk.
+
+        Args:
+            filepath: The path to the output Parquet file or directory.
+            data: The DataFrame (pandas or Dask) to write.
+            **kwargs: Additional keyword arguments passed to the underlying
+                      to_parquet method.
+        """
+        data.to_parquet(path=filepath, **kwargs)
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -622,3 +831,31 @@ class IOService:  # pragma: no cover
             msg = "File type {} is not supported.".format(file_format)
             logger.exception(msg)
             raise ValueError(msg) from exc
+
+
+# ------------------------------------------------------------------------------------------------ #
+#                                    DaskIOService                                                 #
+# ------------------------------------------------------------------------------------------------ #
+class DaskIOService(IOService):  # pragma: no cover
+    __io = {
+        "html": HtmlIO,
+        "dat": CSVIO,
+        "csv": CSVIO,
+        "tsv": TSVIO,
+        "yaml": YamlIO,
+        "yml": YamlIO,
+        "json": JsonIO,
+        "pkl": PickleIO,
+        "pickle": PickleIO,
+        "xlsx": ExcelIO,
+        "xls": ExcelIO,
+        "parquet": ParquetIO,
+        "zip": ZipFileIO,
+    }
+
+    @classmethod
+    def read(cls, filepath: str, **kwargs) -> Any:
+        io = cls._get_io(filepath)
+        if io == ParquetIO:
+            return dd.read_parquet(filepath, **kwargs)
+        return io.read(filepath, **kwargs)

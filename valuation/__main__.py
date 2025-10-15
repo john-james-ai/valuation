@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 9th 2025 11:01:16 pm                                               #
-# Modified   : Wednesday October 15th 2025 01:58:45 am                                             #
+# Modified   : Wednesday October 15th 2025 06:51:46 pm                                             #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -55,6 +55,7 @@ def get_clean_sales_data_task() -> Task:
         dataset_name="Dominick's Sales Data - Clean",
         input_location=FILEPATH_SALES_INGEST,
         output_location=FILEPATH_SALES_CLEAN,
+        return_dask=True,
     )
     # Run the sales data processing task
     return CleanSalesDataTask(config=config)

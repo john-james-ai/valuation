@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday October 12th 2025 11:51:12 pm                                                #
-# Modified   : Wednesday October 15th 2025 01:13:21 pm                                             #
+# Modified   : Wednesday October 15th 2025 02:21:31 pm                                             #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -29,6 +29,8 @@ from valuation.dataprep.base import Task, TaskConfig, Validation
 @dataclass
 class CleanSalesDataTaskConfig(TaskConfig):
     """Holds all parameters for the sales data cleaning process."""
+
+    return_dask: bool = True
 
     pass
 
@@ -60,7 +62,13 @@ class CleanSalesDataTask(Task):
         """
         logger.debug("Cleaning sales data.")
 
-        data = data if data is not None else self._load(filepath=self.config.input_location)
+        data = (
+            data
+            if data is not None
+            else self._load(
+                filepath=self.config.input_location, return_dask=self.config.return_dask  # type: ignore
+            )
+        )
         return (
             data.pipe(self._remove_invalid_records)
             .pipe(self._normalize_columns)

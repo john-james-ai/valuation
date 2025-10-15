@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 9th 2025 07:11:18 pm                                               #
-# Modified   : Sunday October 12th 2025 11:17:16 pm                                                #
+# Modified   : Wednesday October 15th 2025 06:48:16 pm                                             #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -19,12 +19,11 @@
 from __future__ import annotations
 
 from abc import ABC
-from datetime import datetime
-from typing import Any, Dict, Tuple, Union
+from dataclasses import asdict, dataclass, fields, is_dataclass
+from typing import Any, Dict, List, Tuple, Union
 
 import numpy as np
 import pandas as pd
-from dataclasses import dataclass
 
 # ------------------------------------------------------------------------------------------------ #
 # mypy: allow-any-generics
@@ -67,7 +66,11 @@ NUMERICS = [
 ]
 
 
+from abc import ABC
+
 # ------------------------------------------------------------------------------------------------ #
+
+
 @dataclass
 class DataClass(ABC):  # noqa
     """Base Class for Data Transfer Objects"""
@@ -83,45 +86,78 @@ class DataClass(ABC):  # noqa
         )
 
     def __str__(self) -> str:
+        """Pretty prints the dataclass and all nested dataclasses recursively."""
+        blocks = self._collect_blocks(self)
+        return "\n".join(self._format_block(name, data) for name, data in blocks)
+
+    @staticmethod
+    def _collect_blocks(obj: "DataClass", prefix: str = "") -> List[Tuple[str, Dict[str, Any]]]:
+        """
+        Recursively collects all dataclass blocks for printing.
+        Returns a list of tuples: (display_name, data_dict)
+        """
+        blocks = []
+        current_name = prefix if prefix else obj.__class__.__name__
+        current_block = {}
+
+        # Iterate over fields of the passed object, not self
+        for field in fields(obj):
+            key = field.name
+            value = getattr(obj, key)
+
+            # If the value is a dataclass instance, recursively collect its blocks
+            if is_dataclass(value) and not isinstance(value, type):
+                nested_prefix = f"{current_name}.{key}"
+                blocks.extend(DataClass._collect_blocks(value, prefix=nested_prefix))
+            # If it's a list of dataclasses, handle each one
+            elif isinstance(value, list) and value and is_dataclass(value[0]):
+                for idx, item in enumerate(value):
+                    if is_dataclass(item) and not isinstance(item, type):
+                        nested_prefix = f"{current_name}.{key}[{idx}]"
+                        blocks.extend(DataClass._collect_blocks(item, prefix=nested_prefix))
+            # If it's a dict of dataclasses, handle each one
+            elif isinstance(value, dict) and value:
+                first_val = next(iter(value.values()), None)
+                if is_dataclass(first_val) and not isinstance(first_val, type):
+                    for dict_key, item in value.items():
+                        nested_prefix = f"{current_name}.{key}[{dict_key}]"
+                        blocks.extend(DataClass._collect_blocks(item, prefix=nested_prefix))
+                else:
+                    # Regular dict with immutable values
+                    if type(value) in IMMUTABLE_TYPES or DataClass._is_simple_dict(value):
+                        current_block[key] = value
+            else:
+                # Only add immutable types to current block
+                if type(value) in IMMUTABLE_TYPES:
+                    current_block[key] = value
+
+        # Add current block at the beginning
+        if current_block:
+            blocks.insert(0, (current_name, current_block))
+
+        return blocks
+
+    @staticmethod
+    def _is_simple_dict(value: Any) -> bool:
+        """Check if a dict contains only immutable values."""
+        if not isinstance(value, dict):
+            return False
+        return all(type(v) in IMMUTABLE_TYPES for v in value.values())
+
+    def _format_block(self, name: str, data: Dict[str, Any]) -> str:
+        """Formats a single block for pretty printing."""
         width = 32
         breadth = width * 2
-        s = f"\n\n{self.__class__.__name__.center(breadth, ' ')}"
-        d = self.as_dict()
-        for k, v in d.items():
-            if type(v) in IMMUTABLE_TYPES:
-                s += f"\n{k.rjust(width,' ')} | {v}"
-        s += "\n\n"
+        s = f"\n{name.center(breadth, ' ')}"
+        s += "\n" + "=" * breadth
+        for k, v in data.items():
+            s += f"\n{k.rjust(width, ' ')} | {v}"
+        s += "\n"
         return s
 
-    def as_dict(self) -> Dict[str, Union[str, int, float, datetime, None]]:
-        """Returns a dictionary representation of the the Config object."""
-        return {
-            k: self._export_config(v) for k, v in self.__dict__.items() if not k.startswith("_")
-        }
-
-    @classmethod
-    def _export_config(
-        cls,
-        v: Any,
-    ) -> Any:  # pragma: no cover
-        """Returns v with Configs converted to dicts, recursively."""
-        if isinstance(v, IMMUTABLE_TYPES):
-            return v
-        elif isinstance(v, SEQUENCE_TYPES):
-            return type(v)(map(cls._export_config, v))
-        elif isinstance(v, dict):
-            return v
-        elif hasattr(v, "as_dict"):
-            return v.as_dict()
-        elif isinstance(v, datetime):
-            return v.isoformat()
-        else:
-            return dict()
-
-    def as_df(self) -> Any:
-        """Returns the project in DataFrame format"""
-        d = self.as_dict()
-        return pd.DataFrame(data=d, index=[0])
+    def as_dict(self) -> Dict[str, Any]:
+        """Returns a dictionary representation of the Config object."""
+        return asdict(self)
 
 
 # ------------------------------------------------------------------------------------------------ #
