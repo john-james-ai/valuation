@@ -4,19 +4,20 @@
 # Project    : Valuation of Dominick's Fine Foods, Inc. 1997-2003                                  #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
-# Filename   : /valuation/dataprep/clean.py                                                        #
+# Filename   : /valuation/dataprep/sales/clean.py                                                  #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday October 12th 2025 11:51:12 pm                                                #
-# Modified   : Wednesday October 15th 2025 12:26:37 am                                             #
+# Modified   : Wednesday October 15th 2025 01:13:21 pm                                             #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
 # ================================================================================================ #
 from dataclasses import dataclass
+from typing import Any, Optional, Union
 
 from loguru import logger
 import pandas as pd
@@ -47,7 +48,7 @@ class CleanSalesDataTask(Task):
     def __init__(self, config: CleanSalesDataTaskConfig) -> None:
         super().__init__(config=config)
 
-    def _execute(self) -> pd.DataFrame:
+    def _execute(self, data: Optional[pd.DataFrame] = None) -> Union[pd.DataFrame, Any]:
         """Runs the ingestion process on the provided DataFrame.
         Args:
             data (pd.DataFrame): The raw sales data DataFrame.
@@ -58,9 +59,10 @@ class CleanSalesDataTask(Task):
 
         """
         logger.debug("Cleaning sales data.")
+
+        data = data if data is not None else self._load(filepath=self.config.input_location)
         return (
-            self._load(filepath=self.config.input_location)
-            .pipe(self._remove_invalid_records)
+            data.pipe(self._remove_invalid_records)
             .pipe(self._normalize_columns)
             .pipe(self._calculate_revenue)
             .pipe(self._calculate_gross_profit)
@@ -174,8 +176,8 @@ class CleanSalesDataTask(Task):
         )
         # Step 2: Calculate the true margin from the summed totals
         # We add a small epsilon to avoid division by zero if revenue is 0
-        aggregated["gross_margin_pct"] = aggregated["gross_profit"] / (
-            aggregated["revenue"] + 1e-6
+        aggregated["gross_margin_pct"] = (
+            aggregated["gross_profit"] / (aggregated["revenue"] + 1e-6) * 100
         )
 
         # Sort for reproducibility

@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday October 10th 2025 02:27:30 am                                                #
-# Modified   : Wednesday October 15th 2025 03:23:58 am                                             #
+# Modified   : Wednesday October 15th 2025 01:33:16 pm                                             #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -180,6 +180,7 @@ class Task(ABC):
         """
         self._config = config
         self._io = io
+        self._is_valid: bool = True  # Default to True until validation
         self._task_result: Optional[Union[pd.DataFrame, Any]] = None
         self._task_report = TaskReport(
             task_name=self.__class__.__name__,
@@ -220,7 +221,7 @@ class Task(ABC):
         Returns:
             True if the task result passed validation, False otherwise.
         """
-        return self._task_report.validation.is_valid if self._task_report.validation else False
+        return self._is_valid
 
     def run(
         self, data: Optional[pd.DataFrame] = None, force: bool = False
@@ -246,6 +247,7 @@ class Task(ABC):
             if self._output_exists(force=force):
                 self._task_report.status = TaskStatus.SKIPPED.value
                 self._task_report.records_out = 0
+                self._is_valid = True
                 return  # Triggers the 'finally' block
 
             # Load input data if required and update record count
@@ -260,6 +262,7 @@ class Task(ABC):
 
             # Validate the output and update the report
             validation = self._validate(data=self._task_result)
+            self._is_valid = validation.is_valid
             self._task_report.validation = validation
 
             # if validation fails, handle it (raises RuntimeError)
