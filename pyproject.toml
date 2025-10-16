@@ -86,6 +86,9 @@ testpaths = [
 
 [tool.coverage.run]
 source = ["tests"]
+disable_warnings = [
+    "no-ctracer",
+]
 
 [coverage.paths]
 source = "valuation"

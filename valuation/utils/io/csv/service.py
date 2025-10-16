@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Wednesday October 15th 2025 11:57:38 pm                                             #
-# Modified   : Thursday October 16th 2025 12:07:40 pm                                              #
+# Modified   : Thursday October 16th 2025 12:26:06 pm                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -48,7 +48,6 @@ class CSVIOService(IOService):  # pragma: no cover
 
     @classmethod
     def _get_io_handler(cls, filepath: str, engine: str = "pandas"):
-        ext = filepath.split(".")[-1]
 
         try:
             handler = IO_HANDLERS[engine]

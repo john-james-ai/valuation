@@ -11,15 +11,16 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Wednesday October 15th 2025 10:09:20 pm                                             #
-# Modified   : Thursday October 16th 2025 01:14:20 am                                              #
+# Modified   : Thursday October 16th 2025 03:12:23 pm                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
 # ================================================================================================ #
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
 from typing import Any, List, Optional
+
+from dataclasses import asdict, dataclass
 
 import pandas as pd
 
@@ -61,7 +62,6 @@ class PandasParquetIO:  # pragma: no cover
 
     @classmethod
     def read(cls, filepath: str, **kwargs) -> pd.DataFrame:
-
         read_kwargs = cls.__read_kwargs_class__(**kwargs).kwargs
         return pd.read_parquet(filepath, **read_kwargs)
 

@@ -11,15 +11,17 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Wednesday October 15th 2025 10:08:23 pm                                             #
-# Modified   : Thursday October 16th 2025 01:14:20 am                                              #
+# Modified   : Thursday October 16th 2025 03:10:31 pm                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
 # ================================================================================================ #
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
 from typing import Any, Dict, List, Optional, Union
+
+from dataclasses import asdict, dataclass
+import os
 
 import dask.dataframe as dd
 
@@ -31,16 +33,15 @@ from valuation.utils.io.base import IO, ReadKwargs, WriteKwargs
 # ------------------------------------------------------------------------------------------------ #
 @dataclass
 class DaskReadParquetKwargs(ReadKwargs):
-    index: Union[str, bool, None] = False  # CORRECT: Avoid loading a meaningless index.
-    categories: Optional[Union[List[str], Dict[str, str]]] = None
-    dtype_backend: str = "pyarrow"  # CORRECT: Performant choice.
+    dtype_backend: str = "pyarrow"  # Performant choice.
     calculate_divisions: bool = False  # NOTE: Correct, as True can be very slow.
-    ignore_metadata_file: bool = (
-        False  # CHANGED: You WANT to use the metadata file if it exists; it's much faster.
-    )
+    ignore_metadata_file: bool = False
     split_row_groups: Union[bool, int, str] = "infer"
-    blocksize: Union[int, str] = "256MB"
+    # blocksize: Union[int, str] = "256MB" # NOTE: Not supported when using pyarrow engine.
     aggregate_files: Optional[bool] = None  # NOTE: Let Dask handle this by default.
+    filesystem: str = (
+        "arrow"  # Specifying filesystem="arrow" leverages a complete reimplementation of the Parquet reader that is solely based on PyArrow. It is significantly faster than the legacy implementation, but doesn’t yet support all features.
+    )
 
     @property
     def kwargs(self) -> Dict[str, Any]:
@@ -50,16 +51,12 @@ class DaskReadParquetKwargs(ReadKwargs):
 # ------------------------------------------------------------------------------------------------ #
 @dataclass
 class DaskWriteParquetKwargs(WriteKwargs):
-    compression: str = "zstd"  # CHANGED: Consistent with pandas and modern best practice.
-    write_index: bool = False  # CORRECT: Do not write a meaningless index.
+    compression: str = "zstd"
+    write_index: bool = False
     append: bool = False
-    overwrite: bool = (
-        False  # NOTE: Consider a single 'write_mode' parameter instead of append/overwrite flags.
-    )
+    overwrite: bool = False
     partition_on: Optional[List[str]] = None
-    write_metadata_file: bool = (
-        True  # CHANGED: Explicitly creating this makes subsequent reads much faster.
-    )
+    write_metadata_file: bool = True
     compute: bool = True
     schema: Union[str, Dict[str, Any]] = "infer"
 
@@ -101,7 +98,7 @@ class DaskParquetIO(IO):
             TypeError: If an unsupported keyword argument is provided in `**kwargs`.
         """
         read_kwargs = cls.__read_kwargs_class__(**kwargs).kwargs
-        return dd.read_csv(filepath, **read_kwargs)
+        return dd.read_parquet(os.path.abspath(filepath), **read_kwargs)
 
     @classmethod
     def write(cls, filepath: str, data: dd.DataFrame, **kwargs) -> None:
@@ -121,4 +118,4 @@ class DaskParquetIO(IO):
             TypeError: If an unsupported keyword argument is provided in `**kwargs`.
         """
         write_kwargs = cls.__write_kwargs_class__(**kwargs).kwargs
-        data.to_csv(filepath, **write_kwargs)
+        dd.to_parquet(df=data, path=filepath, **write_kwargs)

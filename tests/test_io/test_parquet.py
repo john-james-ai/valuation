@@ -4,14 +4,14 @@
 # Project    : Valuation of Dominick's Fine Foods, Inc. 1997-2003                                  #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
-# Filename   : /tests/test_io/test_csv.py                                                          #
+# Filename   : /tests/test_io/test_parquet.py                                                      #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 16th 2025 12:31:54 am                                              #
-# Modified   : Thursday October 16th 2025 01:16:11 pm                                              #
+# Modified   : Thursday October 16th 2025 05:35:28 pm                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -22,13 +22,13 @@ import os
 import shutil
 
 import dask.dataframe as dd
-from dask.dataframe.utils import assert_eq
 from loguru import logger
 import pandas as pd
+from pandas.testing import assert_frame_equal
 import pytest
 
-from valuation.utils.io.csv.base import CompressionType
 from valuation.utils.io.csv.service import CSVIOService
+from valuation.utils.io.parquet.service import ParquetIOService
 
 # ------------------------------------------------------------------------------------------------ #
 # pylint: disable=missing-class-docstring, line-too-long
@@ -38,15 +38,12 @@ double_line = f"\n{100 * '='}"
 single_line = f"\n{100 * '-'}"
 # ------------------------------------------------------------------------------------------------ #
 CSV_PANDAS_IN_FILEPATH = "tests/data/wbat.csv"
-CSV_PANDAS_OUT_FILEPATH = "tests/data/test_csv/pandas_out.csv"
-CSV_PANDAS_OUT_FILEPATH_GZIP = "tests/data/test_csv/pandas_out.csv.gz"
-CSV_DASK_IN_FILEPATH = f"tests/data/test_csv/dask_in.csv"
-CSV_DASK_OUT_FILEPATH = "tests/data/test_csv/dask_out.csv"
-CSV_DASK_OUT_FILEPATH_GZIP = "tests/data/test_csv/dask_out.csv.gz"
+PARQUET_PANDAS_FILEPATH = "tests/data/test_parquet/pandas.parquet"
+PARQUET_DASK_FILEPATH = f"tests/data/test_parquet/dask.parquet"
 
 
-@pytest.mark.csv
-class TestCSV:  # pragma: no cover
+@pytest.mark.parquet
+class TestParquet:  # pragma: no cover
     # ============================================================================================ #
     def test_setup(self, caplog) -> None:
         start = datetime.now()
@@ -55,20 +52,11 @@ class TestCSV:  # pragma: no cover
         )
         logger.info(double_line)
         # ---------------------------------------------------------------------------------------- #
-        os.remove(CSV_PANDAS_OUT_FILEPATH) if os.path.exists(CSV_PANDAS_OUT_FILEPATH) else None
-        (
-            os.remove(CSV_PANDAS_OUT_FILEPATH_GZIP)
-            if os.path.exists(CSV_PANDAS_OUT_FILEPATH_GZIP)
-            else None
-        )
-        shutil.rmtree(CSV_DASK_OUT_FILEPATH) if os.path.exists(CSV_DASK_OUT_FILEPATH) else None
-        (
-            os.remove(CSV_DASK_OUT_FILEPATH_GZIP)
-            if os.path.exists(CSV_DASK_OUT_FILEPATH_GZIP)
-            else None
-        )
-        assert not os.path.exists(CSV_PANDAS_OUT_FILEPATH)
-        assert not os.path.exists(CSV_DASK_OUT_FILEPATH)
+
+        os.remove(PARQUET_PANDAS_FILEPATH) if os.path.exists(PARQUET_PANDAS_FILEPATH) else None
+        shutil.rmtree(PARQUET_DASK_FILEPATH) if os.path.exists(PARQUET_DASK_FILEPATH) else None
+        assert not os.path.exists(PARQUET_PANDAS_FILEPATH)
+        assert not os.path.exists(PARQUET_DASK_FILEPATH)
 
         # ---------------------------------------------------------------------------------------- #
         end = datetime.now()
@@ -80,7 +68,7 @@ class TestCSV:  # pragma: no cover
         logger.info(single_line)
 
     # ============================================================================================ #
-    def test_pandas_csv(self, caplog) -> None:
+    def test_pandas_parquet(self, caplog) -> None:
         start = datetime.now()
         logger.info(
             f"\n\nStarted {self.__class__.__name__} {inspect.stack()[0][3]} at {start.strftime('%I:%M:%S %p')} on {start.strftime('%m/%d/%Y')}"
@@ -94,13 +82,13 @@ class TestCSV:  # pragma: no cover
         assert df.shape[0] > 1e4
 
         # Write CSV with Pandas
-        CSVIOService.write(
-            filepath=CSV_PANDAS_OUT_FILEPATH,
+        ParquetIOService.write(
+            filepath=PARQUET_PANDAS_FILEPATH,
             data=df,
             engine="pandas",
         )
-        df_out = CSVIOService.read(filepath=CSV_PANDAS_OUT_FILEPATH, engine="pandas")
-        assert df.equals(df_out)
+        df_out = ParquetIOService.read(filepath=PARQUET_PANDAS_FILEPATH, engine="pandas")
+        assert_frame_equal(df, df_out, check_dtype=False)
 
         # ---------------------------------------------------------------------------------------- #
         end = datetime.now()
@@ -112,66 +100,40 @@ class TestCSV:  # pragma: no cover
         logger.info(single_line)
 
     # ============================================================================================ #
-    def test_pandas_csv_gzip(self, caplog) -> None:
+    def test_dask_parquet(self, caplog) -> None:
         start = datetime.now()
         logger.info(
             f"\n\nStarted {self.__class__.__name__} {inspect.stack()[0][3]} at {start.strftime('%I:%M:%S %p')} on {start.strftime('%m/%d/%Y')}"
         )
         logger.info(double_line)
         # ---------------------------------------------------------------------------------------- #
-        # Read CSV with Pandas
-        df = CSVIOService.read(filepath=CSV_PANDAS_IN_FILEPATH, engine="pandas")
-        assert isinstance(df, pd.DataFrame)
-        assert df.shape[1] == 11
-        assert df.shape[0] > 1e4
+        # Read the CSV into a DataFrame
+        df = ParquetIOService.read(filepath=PARQUET_PANDAS_FILEPATH, engine="pandas")
+        ddf = dd.from_pandas(df, npartitions=4)  # type: ignore
+        assert isinstance(ddf, dd.DataFrame)
+        assert ddf.shape[1] == 11
+        # assert ddf.shape[0].compute() == df.shape[0]
 
-        # Write CSV with Pandas
-        CSVIOService.write(
-            filepath=CSV_PANDAS_OUT_FILEPATH_GZIP,
-            data=df,
-            engine="pandas",
-            compression=CompressionType.GZIP.value,
-        )
-        assert os.path.exists(CSV_PANDAS_OUT_FILEPATH_GZIP)
-        df_out = CSVIOService.read(
-            filepath=CSV_PANDAS_OUT_FILEPATH_GZIP,
-            compression=CompressionType.GZIP.value,
-            engine="pandas",
-        )
-        assert df.equals(df_out)
-
-        # ---------------------------------------------------------------------------------------- #
-        end = datetime.now()
-        duration = round((end - start).total_seconds(), 1)
-
-        logger.info(
-            f"\n\nCompleted {self.__class__.__name__} {inspect.stack()[0][3]} in {duration} seconds at {start.strftime('%I:%M:%S %p')} on {start.strftime('%m/%d/%Y')}"
-        )
-        logger.info(single_line)
-
-    # ============================================================================================ #
-    def test_dask_csv(self, caplog) -> None:
-        start = datetime.now()
-        logger.info(
-            f"\n\nStarted {self.__class__.__name__} {inspect.stack()[0][3]} at {start.strftime('%I:%M:%S %p')} on {start.strftime('%m/%d/%Y')}"
-        )
-        logger.info(double_line)
-        # ---------------------------------------------------------------------------------------- #
-        # Read CSV with Pandas
-        ddf = CSVIOService.read(filepath=CSV_PANDAS_OUT_FILEPATH, engine="dask")
-
-        # Write the Dask DataFrame to CSV files for Dask input
-        CSVIOService.write(
-            filepath=CSV_DASK_OUT_FILEPATH,
+        # Write the dataframe using Dask profile
+        ParquetIOService.write(
+            filepath=PARQUET_DASK_FILEPATH,
             data=ddf,
             engine="dask",
         )
-        ddf2 = CSVIOService.read(filepath=CSV_DASK_OUT_FILEPATH, engine="dask")
+        ddf2 = ParquetIOService.read(filepath=PARQUET_DASK_FILEPATH, engine="dask")
 
         assert isinstance(ddf, dd.DataFrame)
-        assert len(ddf.columns) == 11
-        assert len(ddf) > 1e4
-        assert_eq(ddf, ddf2)
+        assert isinstance(ddf2, dd.DataFrame)
+        assert len(ddf.columns) == len(ddf2.columns)
+
+        df1 = ddf.compute()
+        df2 = ddf2.compute()
+
+        assert isinstance(df1, pd.DataFrame)
+        assert isinstance(df2, pd.DataFrame)
+        assert df1.shape == df2.shape
+
+        assert_frame_equal(df1, df2, check_dtype=False)
 
         # ---------------------------------------------------------------------------------------- #
         end = datetime.now()

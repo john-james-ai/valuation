@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Wednesday October 15th 2025 08:21:32 pm                                             #
-# Modified   : Thursday October 16th 2025 12:06:06 pm                                              #
+# Modified   : Thursday October 16th 2025 01:02:09 pm                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -31,7 +31,7 @@ from valuation.utils.io.csv.base import CompressionType
 # ------------------------------------------------------------------------------------------------ #
 #                                       COMPRESSION TYPES                                          #
 # ------------------------------------------------------------------------------------------------ #
-PANDAS_CSV_WRITE_COMPRESSION = {
+PANDAS_CSV_COMPRESSION = {
     CompressionType.NONE,
     CompressionType.GZIP,
     CompressionType.BZ2,
