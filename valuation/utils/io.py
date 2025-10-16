@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Wednesday October 8th 2025 04:41:21 pm                                              #
-# Modified   : Wednesday October 15th 2025 05:52:00 pm                                             #
+# Modified   : Wednesday October 15th 2025 08:58:44 pm                                             #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -22,7 +22,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 import codecs
 import csv
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 import io
 import json
 import os
@@ -43,10 +43,37 @@ from valuation.utils.data import DataClass
 
 
 # ------------------------------------------------------------------------------------------------ #
+#                                       READ/WRITE KWARGS                                          #
+# ------------------------------------------------------------------------------------------------ #
+@dataclass
+class ReadKwargs(DataClass):
+    pass
+
+
+# ------------------------------------------------------------------------------------------------ #
+@dataclass
+class WriteKwargs(DataClass):
+    pass
+
+
+# ------------------------------------------------------------------------------------------------ #
+@dataclass
+class IOKwargs(DataClass):
+    read: ReadKwargs = field(default_factory=ReadKwargs)
+    write: WriteKwargs = field(default_factory=WriteKwargs)
+
+
+# ------------------------------------------------------------------------------------------------ #
+@dataclass
+class TabularIOKwargs(IOKwargs):
+    engine: str = "pandas"
+
+
+# ------------------------------------------------------------------------------------------------ #
 #                                       PANDAS STATA KWARGS                                        #
 # ------------------------------------------------------------------------------------------------ #
 @dataclass
-class PandasReadStataKwargs(DataClass):
+class PandasReadStataKwargs(ReadKwargs):
     convert_dates: bool = True
     convert_categoricals: bool = False
     convert_missing: bool = False
@@ -61,7 +88,7 @@ class PandasReadStataKwargs(DataClass):
 
 # ------------------------------------------------------------------------------------------------ #
 @dataclass
-class PandasWriteStataKwargs(DataClass):
+class PandasWriteStataKwargs(WriteKwargs):
     write_index: bool = False
     version: int = 114
     convert_dates: bool = True
@@ -72,7 +99,7 @@ class PandasWriteStataKwargs(DataClass):
 
 # ------------------------------------------------------------------------------------------------ #
 @dataclass
-class PandasStataKwargs(DataClass):
+class PandasStataKwargs(IOKwargs):
     read: PandasReadStataKwargs = field(default_factory=PandasReadStataKwargs)
     write: PandasWriteStataKwargs = field(default_factory=PandasWriteStataKwargs)
 
@@ -81,7 +108,7 @@ class PandasStataKwargs(DataClass):
 #                                         PANDAS CSV KWARGS                                        #
 # ------------------------------------------------------------------------------------------------ #
 @dataclass
-class PandasReadCSVKwargs(DataClass):
+class PandasReadCSVKwargs(ReadKwargs):
     sep: str = ","
     header: Union[int, str] = "infer"
     names: List[str] = field(default_factory=list)
@@ -111,8 +138,9 @@ class PandasReadCSVKwargs(DataClass):
     delim_whitespace: bool = False
 
 
+# ------------------------------------------------------------------------------------------------ #
 @dataclass
-class PandasWriteCSVKwargs(DataClass):
+class PandasWriteCSVKwargs(WriteKwargs):
     sep: str = ","
     float_format: Optional[str] = None
     columns: Optional[List[str]] = None
@@ -128,8 +156,9 @@ class PandasWriteCSVKwargs(DataClass):
     errors: str = "strict"
 
 
+# ------------------------------------------------------------------------------------------------ #
 @dataclass
-class PandasCSVKwargs(DataClass):
+class PandasCSVKwargs(IOKwargs):
     read: PandasReadCSVKwargs = field(default_factory=PandasReadCSVKwargs)
     write: PandasWriteCSVKwargs = field(default_factory=PandasWriteCSVKwargs)
 
@@ -138,22 +167,24 @@ class PandasCSVKwargs(DataClass):
 #                                       PANDAS PARQUET KWARGS                                      #
 # ------------------------------------------------------------------------------------------------ #
 @dataclass
-class PandasReadParquetKwargs(DataClass):
+class PandasReadParquetKwargs(ReadKwargs):
     engine: str = "pyarrow"
     dtype_backend: str = "pyarrow"
     filesystem: Any = None
 
 
+# ------------------------------------------------------------------------------------------------ #
 @dataclass
-class PandasWriteParquetKwargs(DataClass):
+class PandasWriteParquetKwargs(WriteKwargs):
     engine: str = "pyarrow"
     index: bool = False
     partition_cols: Optional[List[str]] = None
     compression: str = "zstd"
 
 
+# ------------------------------------------------------------------------------------------------ #
 @dataclass
-class PandasParquetKwargs(DataClass):
+class PandasParquetKwargs(IOKwargs):
     read: PandasReadParquetKwargs = field(default_factory=PandasReadParquetKwargs)
     write: PandasWriteParquetKwargs = field(default_factory=PandasWriteParquetKwargs)
 
@@ -162,32 +193,39 @@ class PandasParquetKwargs(DataClass):
 #                                          DASK CSV KWARGS                                         #
 # ------------------------------------------------------------------------------------------------ #
 @dataclass
-class DaskReadCSVKwargs(DataClass):
-    blocksize: Optional[Union[str, int]] = (
-        "64MB"  # NOTE: A default blocksize is often a good idea.
-    )
+class DaskReadCSVKwargs(ReadKwargs):
+    blocksize: Optional[Union[str, int]] = "64MB"
     assume_missing: bool = False
-    # NOTE: Dask will pass any other kwargs down to pandas.read_csv
-    # So we don't need to explicitly nest the pandas kwargs here.
+
+    @property
+    def read_kwargs(self) -> Dict[str, Any]:
+        kwargs = asdict(PandasReadCSVKwargs())
+        kwargs.update(asdict(self))  # Merge with pandas kwargs
+        return kwargs
 
 
+# ------------------------------------------------------------------------------------------------ #
 @dataclass
-class DaskWriteCSVKwargs(DataClass):
-    single_file: bool = (
-        False  # CHANGED: CRITICAL! True creates a bottleneck and defeats Dask's parallelism.
-    )
-    header_first_partition_only: bool = True  # ADDED: Prevents headers in every partition file.
+class DaskWriteCSVKwargs(WriteKwargs):
+    single_file: bool = False
+    header_first_partition_only: bool = True  # Prevents headers in every partition file.
     compression: Optional[str] = (
-        "gzip"  # CHANGED: gzip is the standard for compressing text files like CSV.
+        "gzip"  # : gzip is the standard for compressing text files like CSV.
     )
     compute: bool = True
     mode: str = "w"
     encoding: str = "utf-8"
-    # NOTE: Other pandas kwargs like `index=False` can be passed directly to ddf.to_csv()
+
+    @property
+    def write_kwargs(self) -> Dict[str, Any]:
+        kwargs = asdict(PandasWriteCSVKwargs())
+        kwargs.update(asdict(self))  # Merge with pandas kwargs
+        return kwargs
 
 
+# ------------------------------------------------------------------------------------------------ #
 @dataclass
-class DaskCSVKwargs(DataClass):
+class DaskCSVKwargs(IOKwargs):
     read: DaskReadCSVKwargs = field(default_factory=DaskReadCSVKwargs)
     write: DaskWriteCSVKwargs = field(default_factory=DaskWriteCSVKwargs)
 
@@ -196,7 +234,7 @@ class DaskCSVKwargs(DataClass):
 #                                        DASK PARQUET KWARGS                                       #
 # ------------------------------------------------------------------------------------------------ #
 @dataclass
-class DaskReadParquetKwargs(DataClass):
+class DaskReadParquetKwargs(ReadKwargs):
     index: Union[str, bool, None] = False  # CORRECT: Avoid loading a meaningless index.
     categories: Optional[Union[List[str], Dict[str, str]]] = None
     dtype_backend: str = "pyarrow"  # CORRECT: Performant choice.
@@ -209,8 +247,9 @@ class DaskReadParquetKwargs(DataClass):
     aggregate_files: Optional[bool] = None  # NOTE: Let Dask handle this by default.
 
 
+# ------------------------------------------------------------------------------------------------ #
 @dataclass
-class DaskWriteParquetKwargs(DataClass):
+class DaskWriteParquetKwargs(WriteKwargs):
     compression: str = "zstd"  # CHANGED: Consistent with pandas and modern best practice.
     write_index: bool = False  # CORRECT: Do not write a meaningless index.
     append: bool = False
@@ -225,22 +264,11 @@ class DaskWriteParquetKwargs(DataClass):
     schema: Union[str, Dict[str, Any]] = "infer"
 
 
+# ------------------------------------------------------------------------------------------------ #
 @dataclass
-class DaskParquetKwargs(DataClass):
+class DaskParquetKwargs(IOKwargs):
     read: DaskReadParquetKwargs = field(default_factory=DaskReadParquetKwargs)
     write: DaskWriteParquetKwargs = field(default_factory=DaskWriteParquetKwargs)
-
-
-# ------------------------------------------------------------------------------------------------ #
-#                                        IO KWARGS                                                 #
-# ------------------------------------------------------------------------------------------------ #
-@dataclass
-class IOKwargs(DataClass):
-    csv: PandasCSVKwargs = field(default_factory=PandasCSVKwargs)
-    parquet: PandasParquetKwargs = field(default_factory=PandasParquetKwargs)
-    stata: PandasStataKwargs = field(default_factory=PandasStataKwargs)
-    dask_csv: DaskCSVKwargs = field(default_factory=DaskCSVKwargs)
-    dask_parquet: DaskParquetKwargs = field(default_factory=DaskParquetKwargs)
 
 
 # ------------------------------------------------------------------------------------------------ #

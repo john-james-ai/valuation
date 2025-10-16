@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday October 10th 2025 02:27:30 am                                                #
-# Modified   : Wednesday October 15th 2025 06:49:05 pm                                             #
+# Modified   : Wednesday October 15th 2025 09:42:23 pm                                             #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -31,7 +31,6 @@ import pandas as pd
 
 from valuation.config.data import DTYPES
 from valuation.utils.data import DataClass
-from valuation.utils.io import IOKwargs, IOService
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -42,7 +41,6 @@ class TaskConfig(DataClass):
     dataset_name: str
     input_location: Path
     output_location: Path
-    iokwargs: IOKwargs
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -252,7 +250,7 @@ class Task(ABC):
                 return  # Triggers the 'finally' block
 
             # Load input data if required and update record count
-            input_data = data if data is not None else self._load(filepath=self._config.input_location)  # type: ignore
+            input_data = data if data is not None else self._load(filepath=self._config.input_location, kwargs=self._config.iokwargs.read)  # type: ignore
             self._task_report.records_in = len(input_data)
 
             # Execute the task and count output records
@@ -386,21 +384,11 @@ class Task(ABC):
         # 4. Critical: Raise the exception to halt execution
         raise RuntimeError(msg)
 
-    def _load(self, filepath: Path, **kwargs) -> pd.DataFrame:
-        """
-        Loads a single data file from the raw data directory using the I/O service.
+    def _load(self, filepath: Path, engine: Optional[str] = None, **kwargs) -> pd.DataFrame:
 
-        The loaded data is also subjected to a type-casting check using DTYPES.
-
-        Args:
-            filepath: The path to the file to be loaded.
-
-        Returns:
-            A DataFrame containing the loaded data with applied dtypes.
-        """
         logger.debug(f"Loading data from {filepath}")
 
-        data = self._io.read(filepath=filepath, kwargs=kwargs)
+        data = self._io.read(filepath=filepath, engine=engine, kwargs=kwargs)
         # Ensure correct data types
         if isinstance(data, pd.DataFrame):
             logger.debug(f"Applying data types to loaded DataFrame")
@@ -411,7 +399,9 @@ class Task(ABC):
             )
         return data
 
-    def _save(self, df: pd.DataFrame, filepath: Path) -> None:
+    def _save(
+        self, df: pd.DataFrame, filepath: Path, engine: Optional[str] = None, **kwargs
+    ) -> None:
         """
         Saves a DataFrame to the processed data directory using the I/O service.
 
@@ -420,7 +410,7 @@ class Task(ABC):
             filepath: The path to the file to be saved.
         """
         logger.debug(f"Saving data to {filepath}")
-        self._io.write(data=df, filepath=filepath)
+        self._io.write(data=df, filepath=filepath, kwargs=kwargs)
 
     def _delete(self, location: Path) -> None:
         """

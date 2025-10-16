@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday October 12th 2025 11:51:12 pm                                                #
-# Modified   : Wednesday October 15th 2025 03:44:39 am                                             #
+# Modified   : Wednesday October 15th 2025 08:11:42 pm                                             #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -37,6 +37,8 @@ class IngestSalesDataTaskConfig(TaskConfig):
 
     week_decode_table_filepath: Path
     raw_data_directory: Path
+    input_engine: str = "pandas"
+    output_engine: str = "dask"
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -85,7 +87,7 @@ class IngestSalesDataTask(Task):
 
             # Load, clean, calculate revenue, and aggregate
             processed_df = (
-                self._load(filepath=filepath)
+                self._load(filepath=filepath, kwargs=config.iokwargs.csv.read.as_dict())
                 .pipe(self._add_category, category=category)
                 .pipe(self._add_dates, week_dates=week_dates)
             )
