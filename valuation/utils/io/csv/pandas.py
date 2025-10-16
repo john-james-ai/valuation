@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Wednesday October 15th 2025 08:21:32 pm                                             #
-# Modified   : Thursday October 16th 2025 02:38:04 am                                              #
+# Modified   : Thursday October 16th 2025 12:06:06 pm                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -26,8 +26,21 @@ import pandas as pd
 
 from valuation.config.data import DTYPES
 from valuation.utils.io.base import IO, ReadKwargs, WriteKwargs
+from valuation.utils.io.csv.base import CompressionType
 
 # ------------------------------------------------------------------------------------------------ #
+#                                       COMPRESSION TYPES                                          #
+# ------------------------------------------------------------------------------------------------ #
+PANDAS_CSV_WRITE_COMPRESSION = {
+    CompressionType.NONE,
+    CompressionType.GZIP,
+    CompressionType.BZ2,
+    CompressionType.XZ,
+    CompressionType.ZSTD,
+    CompressionType.TAR,
+    CompressionType.ZIP,
+    CompressionType.INFER,
+}
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -48,7 +61,7 @@ class PandasReadCSVKwargs(ReadKwargs):
     skip_blank_lines: bool = True
     parse_dates: bool = False
     cache_dates: bool = True
-    compression: Union[str, None] = "infer"
+    compression: Union[str, None] = None
     thousands: Optional[str] = None
     lineterminator: Optional[str] = "\n"
     low_memory: bool = False
@@ -75,7 +88,7 @@ class PandasWriteCSVKwargs(WriteKwargs):
     index_label: Optional[str] = None
     mode: str = "w"
     encoding: str = "utf-8"
-    compression: Union[str, Dict[str, str], None] = "infer"
+    compression: Union[str, Dict[str, str], None] = None
     lineterminator: str = "\n"
     chunksize: Optional[int] = None
     date_format: Optional[str] = None

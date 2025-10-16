@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Wednesday October 15th 2025 08:21:32 pm                                             #
-# Modified   : Thursday October 16th 2025 02:50:47 am                                              #
+# Modified   : Thursday October 16th 2025 12:13:46 pm                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -27,17 +27,16 @@ import dask.dataframe as dd
 from valuation.config.data import DTYPES
 from valuation.utils.io.base import IO, ReadKwargs, WriteKwargs
 
-# ------------------------------------------------------------------------------------------------ #
-
 
 # ------------------------------------------------------------------------------------------------ #
 #                                         PANDAS CSV KWARGS                                        #
 # ------------------------------------------------------------------------------------------------ #
 @dataclass
 class DaskReadCSVKwargs(ReadKwargs):
-    blocksize: Optional[Union[str, int]] = "64MB"
+    blocksize: Optional[Union[str, int]] = "128MB"
     assume_missing: bool = False
     dtype: Optional[Dict[str, Any]] = None  # Default is None, which infers dtypes.
+    compression: Optional[str] = None
 
     @property
     def kwargs(self) -> Dict[str, Any]:
@@ -50,12 +49,11 @@ class DaskReadCSVKwargs(ReadKwargs):
 class DaskWriteCSVKwargs(WriteKwargs):
     single_file: bool = False
     header_first_partition_only: bool = True  # Prevents headers in every partition file.
-    compression: Optional[str] = (
-        "gzip"  # : gzip is the standard for compressing text files like CSV.
-    )
+    compression: Optional[str] = None
     compute: bool = True
     mode: str = "w"
     encoding: str = "utf-8"
+    index: bool = False
 
     @property
     def kwargs(self) -> Dict[str, Any]:

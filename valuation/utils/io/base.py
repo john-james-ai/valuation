@@ -11,16 +11,17 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Wednesday October 15th 2025 07:28:28 pm                                             #
-# Modified   : Thursday October 16th 2025 01:14:20 am                                              #
+# Modified   : Thursday October 16th 2025 10:20:52 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
 # ================================================================================================ #
 from __future__ import annotations
 
+from typing import Any, Dict
+
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any, Dict
 
 from valuation.utils.data import DataClass
 
@@ -59,3 +60,25 @@ class WriteKwargs(DataClass):
     @abstractmethod
     def kwargs(self) -> Dict[str, Any]:
         pass
+
+
+# ------------------------------------------------------------------------------------------------ #
+#                                    IO SERVICE BASE CLASS                                         #
+# ------------------------------------------------------------------------------------------------ #
+class IOService:  # pragma: no cover
+    """Base class for IO services."""
+
+    @classmethod
+    @abstractmethod
+    def read(cls, filepath: str, **kwargs):
+        """Reads data from a file."""
+
+    @classmethod
+    @abstractmethod
+    def write(cls, filepath: str, **kwargs) -> None:
+        """Writes data to a file."""
+
+    @classmethod
+    @abstractmethod
+    def _get_io_handler(cls, filepath: str, **kwargs):
+        """Gets the appropriate IO handler based on file extension."""

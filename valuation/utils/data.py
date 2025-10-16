@@ -11,22 +11,75 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 9th 2025 07:11:18 pm                                               #
-# Modified   : Wednesday October 15th 2025 06:48:16 pm                                             #
+# Modified   : Thursday October 16th 2025 11:14:53 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
 # ================================================================================================ #
+"""Provides data utilities."""
 from __future__ import annotations
+
+from typing import Any, Dict, List, Tuple, Union
 
 from abc import ABC
 from dataclasses import asdict, dataclass, fields, is_dataclass
-from typing import Any, Dict, List, Tuple, Union
+import math
 
+import dask.dataframe as dd
+from dask.utils import parse_bytes
 import numpy as np
 import pandas as pd
 
+
 # ------------------------------------------------------------------------------------------------ #
 # mypy: allow-any-generics
+# ------------------------------------------------------------------------------------------------ #
+def to_dask(df: pd.DataFrame, partition_size: str = "128MB") -> dd.DataFrame:
+    """Converts a Pandas DataFrame to a Dask DataFrame.
+
+    Args:
+        df (pd.DataFrame): The Pandas DataFrame to convert.
+        npartitions (int, optional): The number of partitions for the Dask DataFrame.
+            Defaults to 1.
+
+    Returns:
+        dd.DataFrame: The converted Dask DataFrame.
+    """
+    n_bytes = df.memory_usage(deep=True).sum()
+    npartitions = get_num_dask_partitions(n_bytes, partition_size)
+    return dd.from_pandas(df, npartitions=npartitions)
+
+
+def get_num_dask_partitions(n_bytes: int, partition_size: str = "128MB") -> int:
+    """Calculates the number of Dask partitions for a given data size.
+
+    This function uses Dask's own byte-parsing utility and ceiling
+    division to ensure the calculation is robust and correct.
+
+    Args:
+        n_bytes (int): The total size of the data in bytes.
+        partition_size (str, optional): The desired partition size (e.g.,
+            "64MB", "1.5GB"). Defaults to "64MB".
+
+    Returns:
+        int: The calculated number of partitions.
+    """
+    # 1. Use Dask's built-in, robust byte string parser.
+    try:
+        partition_size_bytes = parse_bytes(partition_size)
+    except ValueError:
+        raise ValueError("Invalid partition_size format. Use formats like '64MB', '1GB', etc.")
+
+    if partition_size_bytes == 0:
+        return 1
+
+    # 2. Use ceiling division to ensure enough partitions are created.
+    n_partitions = math.ceil(n_bytes / partition_size_bytes)
+
+    # 3. Ensure there is at least one partition.
+    return max(1, int(n_partitions))
+
+
 # ------------------------------------------------------------------------------------------------ #
 IMMUTABLE_TYPES: Tuple = (
     str,

@@ -4,41 +4,31 @@
 # Project    : Valuation of Dominick's Fine Foods, Inc. 1997-2003                                  #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
-# Filename   : /tests/conftest.py                                                                  #
+# Filename   : /valuation/utils/io/csv/base.py                                                     #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
-# Created    : Saturday October 11th 2025 08:23:13 pm                                              #
-# Modified   : Thursday October 16th 2025 11:57:13 am                                              #
+# Created    : Thursday October 16th 2025 11:00:51 am                                              #
+# Modified   : Thursday October 16th 2025 11:03:23 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
 # ================================================================================================ #
-import pytest
-
-from valuation.config.data import DTYPES
-from valuation.utils.io.csv.base import CompressionType
-from valuation.utils.io.csv.service import CSVIOService
-
-# from valuation.utils.io.service import ObjectIOService, TabularIOService
-
-# ------------------------------------------------------------------------------------------------ #
-FINANCIALS_FILEPATH = "tests/data/financials.yaml"
-SALES_FILEPATH = "tests/data/wbat.csv"
-
-
-# # ------------------------------------------------------------------------------------------------ #
-# @pytest.fixture(scope="session", autouse=False)
-# def financials():
-#     return ObjectIOService.read(filepath=FINANCIALS_FILEPATH)["financials"]
+"""Defines base classes and enumerations for CSV IO operations."""
+from enum import Enum
 
 
 # ------------------------------------------------------------------------------------------------ #
-@pytest.fixture(scope="session", autouse=False)
-def sales_csv():
-    df = CSVIOService.read(
-        filepath=SALES_FILEPATH, compression=CompressionType.INFER, engine="pandas"
-    )
-    return df.astype({k: v for k, v in DTYPES.items() if k in df.columns})
+#                                       COMPRESSION TYPE                                           #
+# ------------------------------------------------------------------------------------------------ #
+class CompressionType(Enum):
+    NONE = None
+    INFER = "infer"  # Not supported by Dask
+    GZIP = "gzip"
+    BZ2 = "bz2"
+    ZIP = "zip"  # Not supported by Dask
+    XZ = "xz"
+    TAR = "tar"  # Not supported by Dask
+    ZSTD = "zstd"  # Not supported by Dask

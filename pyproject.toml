@@ -76,7 +76,7 @@ addopts = """\
     --no-cov-on-fail \
 """
 filterwarnings = [
-    "ignore::pytest.PytestUnknownMarkWarning",
+    "ignore::pytest.PytestUnknownMarkWarning",        
     ]
 
 log_cli_level = "DEBUG"

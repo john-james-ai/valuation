@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 16th 2025 12:31:54 am                                              #
-# Modified   : Thursday October 16th 2025 03:13:15 am                                              #
+# Modified   : Thursday October 16th 2025 12:14:29 pm                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -22,11 +22,12 @@ import os
 import shutil
 
 import dask.dataframe as dd
+from dask.dataframe.utils import assert_eq
 from loguru import logger
 import pandas as pd
 import pytest
 
-from valuation.utils.io.service import IOService
+from valuation.utils.io.csv.service import CSVIOService
 
 # ------------------------------------------------------------------------------------------------ #
 # pylint: disable=missing-class-docstring, line-too-long
@@ -37,7 +38,7 @@ single_line = f"\n{100 * '-'}"
 # ------------------------------------------------------------------------------------------------ #
 CSV_PANDAS_IN_FILEPATH = "tests/data/wbat.csv"
 CSV_PANDAS_OUT_FILEPATH = "tests/data/test_csv/pandas_out.csv"
-CSV_DASK_IN_FILEPATH = "tests/data/test_csv/dask_out.csv/*.csv"
+CSV_DASK_IN_FILEPATH = f"tests/data/test_csv/dask_in.csv"
 CSV_DASK_OUT_FILEPATH = "tests/data/test_csv/dask_out.csv"
 
 
@@ -74,14 +75,18 @@ class TestCSV:  # pragma: no cover
         logger.info(double_line)
         # ---------------------------------------------------------------------------------------- #
         # Read CSV with Pandas
-        df = IOService.read(filepath=CSV_PANDAS_IN_FILEPATH, engine="pandas")
+        df = CSVIOService.read(filepath=CSV_PANDAS_IN_FILEPATH, engine="pandas")
         assert isinstance(df, pd.DataFrame)
         assert df.shape[1] == 11
         assert df.shape[0] > 1e4
 
         # Write CSV with Pandas
-        IOService.write(filepath=CSV_PANDAS_OUT_FILEPATH, data=df, engine="pandas")
-        df_out = IOService.read(filepath=CSV_PANDAS_OUT_FILEPATH, engine="pandas")
+        CSVIOService.write(
+            filepath=CSV_PANDAS_OUT_FILEPATH,
+            data=df,
+            engine="pandas",
+        )
+        df_out = CSVIOService.read(filepath=CSV_PANDAS_OUT_FILEPATH, engine="pandas")
         assert df.equals(df_out)
 
         # ---------------------------------------------------------------------------------------- #
@@ -101,18 +106,21 @@ class TestCSV:  # pragma: no cover
         )
         logger.info(double_line)
         # ---------------------------------------------------------------------------------------- #
-        # Read CSV with Dask
-        df_plan = IOService.read(filepath=CSV_PANDAS_IN_FILEPATH, engine="dask")
-        df = df_plan.compute()
-        assert isinstance(df_plan, dd.DataFrame)
-        assert len(df_plan.columns) == 11
-        assert len(df_plan) > 1e4
+        # Read CSV with Pandas
+        ddf = CSVIOService.read(filepath=CSV_PANDAS_OUT_FILEPATH, engine="dask")
 
-        # Write CSV with Dask
-        IOService.write(filepath=CSV_DASK_OUT_FILEPATH, data=df_plan, engine="dask")
-        df_plan = IOService.read(filepath=CSV_DASK_IN_FILEPATH, engine="dask")
-        df_out = df_plan.compute()
-        assert df.equals(df_out)
+        # Write the Dask DataFrame to CSV files for Dask input
+        CSVIOService.write(
+            filepath=CSV_DASK_OUT_FILEPATH,
+            data=ddf,
+            engine="dask",
+        )
+        ddf2 = CSVIOService.read(filepath=CSV_DASK_OUT_FILEPATH, engine="dask")
+
+        assert isinstance(ddf, dd.DataFrame)
+        assert len(ddf.columns) == 11
+        assert len(ddf) > 1e4
+        assert_eq(ddf, ddf2)
 
         # ---------------------------------------------------------------------------------------- #
         end = datetime.now()
