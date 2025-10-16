@@ -4,58 +4,48 @@
 # Project    : Valuation of Dominick's Fine Foods, Inc. 1997-2003                                  #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
-# Filename   : /valuation/utils/io/base.py                                                         #
+# Filename   : /valuation/utils/io/parquet/pandas.py                                               #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
-# Created    : Wednesday October 15th 2025 07:28:28 pm                                             #
-# Modified   : Wednesday October 15th 2025 11:52:42 pm                                             #
+# Created    : Wednesday October 15th 2025 10:09:20 pm                                             #
+# Modified   : Wednesday October 15th 2025 11:53:39 pm                                             #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
 # ================================================================================================ #
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
-from dataclasses import dataclass
-from typing import Any, Dict
+from dataclasses import asdict, dataclass
+from typing import Any, List, Optional
 
-from valuation.utils.data import DataClass
-
-
-# ------------------------------------------------------------------------------------------------ #
-class IO(ABC):  # pragma: no cover
-
-    @classmethod
-    @abstractmethod
-    def read(cls, filepath: str, **kwargs) -> Any:
-        pass
-
-    @classmethod
-    @abstractmethod
-    def write(cls, filepath: str, data: Any, **kwargs) -> None:
-        pass
+from valuation.utils.io.base import ReadKwargs, WriteKwargs
 
 
 # ------------------------------------------------------------------------------------------------ #
-#                                       READ/WRITE KWARGS                                          #
+#                                       PANDAS PARQUET KWARGS                                      #
 # ------------------------------------------------------------------------------------------------ #
 @dataclass
-class ReadKwargs(DataClass):
+class PandasReadParquetKwargs(ReadKwargs):
+    engine: str = "pyarrow"
+    dtype_backend: str = "pyarrow"
+    filesystem: Any = None
 
     @property
-    @abstractmethod
-    def read_kwargs(self) -> Dict[str, Any]:
-        pass
+    def read_kwargs(self) -> dict[str, Any]:
+        return asdict(self)
 
 
 # ------------------------------------------------------------------------------------------------ #
 @dataclass
-class WriteKwargs(DataClass):
+class PandasWriteParquetKwargs(WriteKwargs):
+    engine: str = "pyarrow"
+    index: bool = False
+    partition_cols: Optional[List[str]] = None
+    compression: str = "zstd"
 
     @property
-    @abstractmethod
-    def write_kwargs(self) -> Dict[str, Any]:
-        pass
+    def write_kwargs(self) -> dict[str, Any]:
+        return asdict(self)

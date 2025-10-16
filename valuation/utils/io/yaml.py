@@ -4,58 +4,49 @@
 # Project    : Valuation of Dominick's Fine Foods, Inc. 1997-2003                                  #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
-# Filename   : /valuation/utils/io/base.py                                                         #
+# Filename   : /valuation/utils/io/yaml.py                                                         #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
-# Created    : Wednesday October 15th 2025 07:28:28 pm                                             #
-# Modified   : Wednesday October 15th 2025 11:52:42 pm                                             #
+# Created    : Wednesday October 15th 2025 11:46:11 pm                                             #
+# Modified   : Wednesday October 15th 2025 11:50:31 pm                                             #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
 # ================================================================================================ #
-from __future__ import annotations
+"""Provides functionality to read from and write to YAML files."""
 
-from abc import ABC, abstractmethod
-from dataclasses import dataclass
-from typing import Any, Dict
+from typing import Any
 
-from valuation.utils.data import DataClass
+from loguru import logger
+import yaml
 
+from valuation.utils.io.base import IO
 
 # ------------------------------------------------------------------------------------------------ #
-class IO(ABC):  # pragma: no cover
+
+
+class YamlIO(IO):  # pragma: no cover
+    @classmethod
+    def read(cls, filepath: str, **kwargs) -> dict:
+        with open(filepath, "r", encoding="utf-8") as f:
+            try:
+                return yaml.safe_load(f)
+            except yaml.YAMLError as e:  # pragma: no cover
+                logger.exception(e)
+                raise IOError(e) from e
+            finally:
+                f.close()
 
     @classmethod
-    @abstractmethod
-    def read(cls, filepath: str, **kwargs) -> Any:
-        pass
-
-    @classmethod
-    @abstractmethod
     def write(cls, filepath: str, data: Any, **kwargs) -> None:
-        pass
-
-
-# ------------------------------------------------------------------------------------------------ #
-#                                       READ/WRITE KWARGS                                          #
-# ------------------------------------------------------------------------------------------------ #
-@dataclass
-class ReadKwargs(DataClass):
-
-    @property
-    @abstractmethod
-    def read_kwargs(self) -> Dict[str, Any]:
-        pass
-
-
-# ------------------------------------------------------------------------------------------------ #
-@dataclass
-class WriteKwargs(DataClass):
-
-    @property
-    @abstractmethod
-    def write_kwargs(self) -> Dict[str, Any]:
-        pass
+        with open(filepath, "w", encoding="utf-8") as f:
+            try:
+                yaml.dump(data, f)
+            except yaml.YAMLError as e:  # pragma: no cover
+                logger.exception(e)
+                raise IOError(e) from e
+            finally:
+                f.close()

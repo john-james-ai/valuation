@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Wednesday October 8th 2025 04:41:21 pm                                              #
-# Modified   : Wednesday October 15th 2025 08:58:44 pm                                             #
+# Modified   : Wednesday October 15th 2025 11:48:25 pm                                             #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -196,10 +196,11 @@ class PandasParquetKwargs(IOKwargs):
 class DaskReadCSVKwargs(ReadKwargs):
     blocksize: Optional[Union[str, int]] = "64MB"
     assume_missing: bool = False
+    _pandas_read_kwargs: PandasReadCSVKwargs = field(default_factory=PandasReadCSVKwargs)
 
     @property
-    def read_kwargs(self) -> Dict[str, Any]:
-        kwargs = asdict(PandasReadCSVKwargs())
+    def kwargs(self) -> Dict[str, Any]:
+        kwargs = asdict(self._pandas_read_kwargs)
         kwargs.update(asdict(self))  # Merge with pandas kwargs
         return kwargs
 
@@ -215,10 +216,11 @@ class DaskWriteCSVKwargs(WriteKwargs):
     compute: bool = True
     mode: str = "w"
     encoding: str = "utf-8"
+    _pandas_write_kwargs: PandasWriteCSVKwargs = field(default_factory=PandasWriteCSVKwargs)
 
     @property
-    def write_kwargs(self) -> Dict[str, Any]:
-        kwargs = asdict(PandasWriteCSVKwargs())
+    def kwargs(self) -> Dict[str, Any]:
+        kwargs = asdict(self._pandas_write_kwargs)
         kwargs.update(asdict(self))  # Merge with pandas kwargs
         return kwargs
 
@@ -487,52 +489,6 @@ class ZipFileIO(IO):  # pragma: no cover
                 filtered_kwargs["low_memory"] = False  # Default to False for mixed types
 
         return filtered_kwargs
-
-
-# ------------------------------------------------------------------------------------------------ #
-#                                         STATA IO                                                 #
-# ------------------------------------------------------------------------------------------------ #
-
-
-class StataIO(IO):  # pragma: no cover
-    """A class for handling I/O operations for Stata files."""
-
-    @classmethod
-    def _read(
-        cls,
-        filepath: Union[Path, str],
-        columns: List[str] = None,
-        index_col: str = None,
-        convert_dates: bool = True,
-        **kwargs,
-    ) -> pd.DataFrame:
-        """Reads a Stata file into a pandas DataFrame."""
-        data = pd.read_stata(
-            filepath_or_buffer=filepath,
-            columns=columns,
-            index_col=index_col,
-            convert_dates=convert_dates,
-            **kwargs,
-        )
-
-        return cast(pd.DataFrame, data)
-
-    @classmethod
-    def _write(
-        cls,
-        filepath: Union[Path, str],
-        data: pd.DataFrame,
-        write_index: bool = False,
-        version: int = 114,
-        **kwargs,
-    ) -> None:
-        """Writes a pandas DataFrame to a Stata file."""
-        data.to_stata(
-            filepath_or_buffer=filepath,  # type: ignore
-            write_index=write_index,
-            version=version,
-            **kwargs,
-        )
 
 
 # ------------------------------------------------------------------------------------------------ #

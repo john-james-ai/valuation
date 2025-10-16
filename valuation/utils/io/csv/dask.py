@@ -4,26 +4,27 @@
 # Project    : Valuation of Dominick's Fine Foods, Inc. 1997-2003                                  #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
-# Filename   : /valuation/utils/io/csv.py                                                          #
+# Filename   : /valuation/utils/io/csv/dask.py                                                     #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Wednesday October 15th 2025 08:21:32 pm                                             #
-# Modified   : Wednesday October 15th 2025 08:39:10 pm                                             #
+# Modified   : Wednesday October 15th 2025 10:04:40 pm                                             #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
 # ================================================================================================ #
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Union
+from dataclasses import asdict, dataclass, field
+from typing import Any, Dict, Optional, Union
 
-import pandas as pd
+import dask.dataframe as dd
 
 from valuation.utils.io.base import IO, ReadKwargs, WriteKwargs
+from valuation.utils.io.csv.pandas import PandasReadCSVKwargs, PandasWriteCSVKwargs
 
 # ------------------------------------------------------------------------------------------------ #
 
@@ -32,54 +33,40 @@ from valuation.utils.io.base import IO, ReadKwargs, WriteKwargs
 #                                         PANDAS CSV KWARGS                                        #
 # ------------------------------------------------------------------------------------------------ #
 @dataclass
-class PandasReadCSVKwargs(ReadKwargs):
-    sep: str = ","
-    header: Union[int, str] = "infer"
-    names: List[str] = field(default_factory=list)
-    index_col: Optional[Union[bool, int, str]] = None  # NOTE: None is the pandas default.
-    usecols: Optional[List[str]] = None
-    mangle_dupe_cols: bool = True
-    dtype: Optional[Dict[str, Any]] = None
-    engine: str = "c"
-    na_values: Any = None
-    keep_default_na: bool = True
-    na_filter: bool = True
-    verbose: bool = False
-    skip_blank_lines: bool = True
-    parse_dates: bool = False
-    infer_datetime_format: bool = False
-    keep_date_col: bool = False
-    day_first: bool = False
-    cache_dates: bool = True
-    compression: Union[str, None] = "infer"
-    thousands: Optional[str] = None
-    lineterminator: Optional[str] = "\n"
-    low_memory: bool = False
-    encoding: str = "utf-8"
-    on_bad_lines: str = "warn"
-    delim_whitespace: bool = False
+class DaskReadCSVKwargs(ReadKwargs):
+    blocksize: Optional[Union[str, int]] = "64MB"
+    assume_missing: bool = False
+    _pandas_read_kwargs: PandasReadCSVKwargs = field(default_factory=PandasReadCSVKwargs)
+
+    @property
+    def read_kwargs(self) -> Dict[str, Any]:
+        kwargs = asdict(self._pandas_read_kwargs)
+        kwargs.update(asdict(self))  # Merge with pandas kwargs
+        return kwargs
 
 
 # ------------------------------------------------------------------------------------------------ #
 @dataclass
-class PandasWriteCSVKwargs(WriteKwargs):
-    sep: str = ","
-    float_format: Optional[str] = None
-    columns: Optional[List[str]] = None
-    header: bool = True
-    index: bool = False
-    index_label: Optional[str] = None
+class DaskWriteCSVKwargs(WriteKwargs):
+    single_file: bool = False
+    header_first_partition_only: bool = True  # Prevents headers in every partition file.
+    compression: Optional[str] = (
+        "gzip"  # : gzip is the standard for compressing text files like CSV.
+    )
+    compute: bool = True
     mode: str = "w"
     encoding: str = "utf-8"
-    compression: Union[str, Dict[str, str], None] = "infer"
-    line_terminator: str = "\n"
-    chunk_size: Optional[int] = None
-    date_format: Optional[str] = None
-    errors: str = "strict"
+    _pandas_write_kwargs: PandasWriteCSVKwargs = field(default_factory=PandasWriteCSVKwargs)
+
+    @property
+    def write_kwargs(self) -> Dict[str, Any]:
+        kwargs = asdict(self._pandas_write_kwargs)
+        kwargs.update(asdict(self))  # Merge with pandas kwargs
+        return kwargs
 
 
 # ------------------------------------------------------------------------------------------------ #
-class PandasCSVIO(IO):
+class DaskCSVIO(IO):
     """Provides an I/O interface for reading and writing CSV files using pandas.
 
     This class uses a factory pattern with classmethods to handle I/O without
@@ -88,11 +75,11 @@ class PandasCSVIO(IO):
     which validate and manage default arguments for the underlying pandas functions.
     """
 
-    __read_kwargs_class__ = PandasReadCSVKwargs
-    __write_kwargs_class__ = PandasWriteCSVKwargs
+    __read_kwargs_class__ = DaskReadCSVKwargs
+    __write_kwargs_class__ = DaskWriteCSVKwargs
 
     @classmethod
-    def read(cls, filepath: str, **kwargs) -> pd.DataFrame:
+    def read(cls, filepath: str, **kwargs) -> dd.DataFrame:
         """Reads a CSV file into a pandas DataFrame.
 
         The provided keyword arguments are used to override the defaults specified
@@ -110,11 +97,11 @@ class PandasCSVIO(IO):
         Raises:
             TypeError: If an unsupported keyword argument is provided in `**kwargs`.
         """
-        read_kwargs = cls.__read_kwargs_class__(**kwargs).as_dict()
-        return pd.read_csv(filepath, **read_kwargs)
+        read_kwargs = cls.__read_kwargs_class__(**kwargs).read_kwargs
+        return dd.read_csv(filepath, **read_kwargs)
 
     @classmethod
-    def write(cls, filepath: str, data: pd.DataFrame, **kwargs) -> None:
+    def write(cls, filepath: str, data: dd.DataFrame, **kwargs) -> None:
         """Writes a pandas DataFrame to a CSV file.
 
         The provided keyword arguments are used to override the defaults specified
@@ -130,5 +117,5 @@ class PandasCSVIO(IO):
         Raises:
             TypeError: If an unsupported keyword argument is provided in `**kwargs`.
         """
-        write_kwargs = cls.__write_kwargs_class__(**kwargs).as_dict()
+        write_kwargs = cls.__write_kwargs_class__(**kwargs).write_kwargs
         data.to_csv(filepath, **write_kwargs)
