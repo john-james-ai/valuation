@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Wednesday October 15th 2025 10:23:48 pm                                             #
-# Modified   : Wednesday October 15th 2025 11:43:05 pm                                             #
+# Modified   : Thursday October 16th 2025 01:13:42 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -40,7 +40,7 @@ class ZipFileDaskIO(IO):  # pragma: no cover
         Reads all CSV files within a ZIP archive into a single Dask DataFrame.
         """
         # Build the final, flattened kwargs for the read operation
-        read_kwargs = cls.__read_csv_kwargs_class__(**kwargs).read_kwargs
+        read_kwargs = cls.__read_csv_kwargs_class__(**kwargs).kwargs
 
         # Dask can read directly from a zip archive using the `zip://` protocol.
         # The `*.csv` glob finds all CSV files inside.
@@ -62,7 +62,7 @@ class ZipFileDaskIO(IO):  # pragma: no cover
         directory and then zipping the contents of that directory.
         """
         # Build the final, flattened kwargs for the write operation
-        write_kwargs = cls.__write_csv_kwargs_class__(**kwargs).write_kwargs
+        write_kwargs = cls.__write_csv_kwargs_class__(**kwargs).kwargs
 
         # Ensure the final output directory exists
         output_dir = os.path.dirname(filepath)

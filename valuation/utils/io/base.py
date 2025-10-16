@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Wednesday October 15th 2025 07:28:28 pm                                             #
-# Modified   : Wednesday October 15th 2025 11:52:42 pm                                             #
+# Modified   : Thursday October 16th 2025 01:14:20 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -47,7 +47,7 @@ class ReadKwargs(DataClass):
 
     @property
     @abstractmethod
-    def read_kwargs(self) -> Dict[str, Any]:
+    def kwargs(self) -> Dict[str, Any]:
         pass
 
 
@@ -57,5 +57,5 @@ class WriteKwargs(DataClass):
 
     @property
     @abstractmethod
-    def write_kwargs(self) -> Dict[str, Any]:
+    def kwargs(self) -> Dict[str, Any]:
         pass

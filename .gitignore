@@ -21,6 +21,8 @@ __pycache__/
 # Logs
 logs
 
+# Test Data
+tests/data
 # Distribution / packaging
 .Python
 build/

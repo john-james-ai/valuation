@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Wednesday October 15th 2025 10:08:23 pm                                             #
-# Modified   : Wednesday October 15th 2025 10:14:43 pm                                             #
+# Modified   : Thursday October 16th 2025 01:14:20 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -43,7 +43,7 @@ class DaskReadParquetKwargs(ReadKwargs):
     aggregate_files: Optional[bool] = None  # NOTE: Let Dask handle this by default.
 
     @property
-    def read_kwargs(self) -> Dict[str, Any]:
+    def kwargs(self) -> Dict[str, Any]:
         return asdict(self)
 
 
@@ -64,7 +64,7 @@ class DaskWriteParquetKwargs(WriteKwargs):
     schema: Union[str, Dict[str, Any]] = "infer"
 
     @property
-    def write_kwargs(self) -> Dict[str, Any]:
+    def kwargs(self) -> Dict[str, Any]:
         return asdict(self)
 
 
@@ -100,7 +100,7 @@ class DaskParquetIO(IO):
         Raises:
             TypeError: If an unsupported keyword argument is provided in `**kwargs`.
         """
-        read_kwargs = cls.__read_kwargs_class__(**kwargs).read_kwargs
+        read_kwargs = cls.__read_kwargs_class__(**kwargs).kwargs
         return dd.read_csv(filepath, **read_kwargs)
 
     @classmethod
@@ -120,5 +120,5 @@ class DaskParquetIO(IO):
         Raises:
             TypeError: If an unsupported keyword argument is provided in `**kwargs`.
         """
-        write_kwargs = cls.__write_kwargs_class__(**kwargs).write_kwargs
+        write_kwargs = cls.__write_kwargs_class__(**kwargs).kwargs
         data.to_csv(filepath, **write_kwargs)

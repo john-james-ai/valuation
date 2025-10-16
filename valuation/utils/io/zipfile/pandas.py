@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Wednesday October 15th 2025 10:23:48 pm                                             #
-# Modified   : Wednesday October 15th 2025 10:54:49 pm                                             #
+# Modified   : Thursday October 16th 2025 01:13:44 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -29,7 +29,7 @@ import pandas as pd
 
 from valuation.utils.io.base import IO
 from valuation.utils.io.csv.pandas import PandasReadCSVKwargs, PandasWriteCSVKwargs
-from valuation.utils.io.csv.stata import PandasReadStataKwargs, PandasWriteStataKwargs
+from valuation.utils.io.stata import PandasReadStataKwargs, PandasWriteStataKwargs
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -155,7 +155,7 @@ class ZipFilePandasIO(IO):  # pragma: no cover
                 kwargs_class = cls.__read_stata_kwargs_class__
             else:
                 raise ValueError(f"Unsupported file extension for reading: {file_extension}")
-            return kwargs_class(**all_kwargs).read_kwargs
+            return kwargs_class(**all_kwargs).kwargs
         elif operation == "write":
             if file_extension == ".csv":
                 kwargs_class = cls.__write_csv_kwargs_class__
@@ -163,6 +163,6 @@ class ZipFilePandasIO(IO):  # pragma: no cover
                 kwargs_class = cls.__write_stata_kwargs_class__
             else:
                 raise ValueError(f"Unsupported file extension for writing: {file_extension}")
-            return kwargs_class(**all_kwargs).write_kwargs
+            return kwargs_class(**all_kwargs).kwargs
         else:
             raise ValueError("Operation must be either 'read' or 'write'.")

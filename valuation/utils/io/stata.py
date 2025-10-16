@@ -4,14 +4,14 @@
 # Project    : Valuation of Dominick's Fine Foods, Inc. 1997-2003                                  #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
-# Filename   : /valuation/utils/io/csv/stata.py                                                    #
+# Filename   : /valuation/utils/io/stata.py                                                        #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Wednesday October 15th 2025 10:25:13 pm                                             #
-# Modified   : Wednesday October 15th 2025 10:37:41 pm                                             #
+# Modified   : Thursday October 16th 2025 01:14:20 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -43,7 +43,7 @@ class PandasReadStataKwargs(ReadKwargs):
     order_categoricals: bool = False
 
     @property
-    def read_kwargs(self) -> Dict[str, Any]:
+    def kwargs(self) -> Dict[str, Any]:
         kwargs = asdict(self)
         if not self.columns:
             kwargs.pop("columns")  # Remove empty list to use pandas default of None
@@ -63,7 +63,7 @@ class PandasWriteStataKwargs(WriteKwargs):
     compression: str = "infer"
 
     @property
-    def write_kwargs(self) -> Dict[str, Any]:
+    def kwargs(self) -> Dict[str, Any]:
         kwargs = asdict(self)
         if not self.value_labels:
             kwargs.pop("value_labels")  # Remove empty list to use pandas default of None
@@ -104,7 +104,7 @@ class PandasStataIO(IO):
         Raises:
             TypeError: If an unsupported keyword argument is provided in `**kwargs`.
         """
-        read_kwargs = cls.__read_kwargs_class__(**kwargs).read_kwargs
+        read_kwargs = cls.__read_kwargs_class__(**kwargs).kwargs
         return pd.read_stata(filepath, **read_kwargs)
 
     @classmethod
@@ -124,5 +124,5 @@ class PandasStataIO(IO):
         Raises:
             TypeError: If an unsupported keyword argument is provided in `**kwargs`.
         """
-        write_kwargs = cls.__write_kwargs_class__(**kwargs).write_kwargs
+        write_kwargs = cls.__write_kwargs_class__(**kwargs).kwargs
         data.to_stata(filepath, **write_kwargs)

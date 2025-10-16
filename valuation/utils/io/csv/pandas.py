@@ -11,18 +11,20 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Wednesday October 15th 2025 08:21:32 pm                                             #
-# Modified   : Wednesday October 15th 2025 10:39:38 pm                                             #
+# Modified   : Thursday October 16th 2025 02:38:04 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
 # ================================================================================================ #
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass, field
 from typing import Any, Dict, List, Optional, Union
+
+from dataclasses import asdict, dataclass, field
 
 import pandas as pd
 
+from valuation.config.data import DTYPES
 from valuation.utils.io.base import IO, ReadKwargs, WriteKwargs
 
 # ------------------------------------------------------------------------------------------------ #
@@ -36,20 +38,15 @@ class PandasReadCSVKwargs(ReadKwargs):
     sep: str = ","
     header: Union[int, str] = "infer"
     names: List[str] = field(default_factory=list)
-    index_col: Optional[Union[bool, int, str]] = None  # NOTE: None is the pandas default.
+    index_col: bool = False
     usecols: Optional[List[str]] = None
-    mangle_dupe_cols: bool = True
     dtype: Optional[Dict[str, Any]] = None
     engine: str = "c"
     na_values: Any = None
     keep_default_na: bool = True
     na_filter: bool = True
-    verbose: bool = False
     skip_blank_lines: bool = True
     parse_dates: bool = False
-    infer_datetime_format: bool = False
-    keep_date_col: bool = False
-    day_first: bool = False
     cache_dates: bool = True
     compression: Union[str, None] = "infer"
     thousands: Optional[str] = None
@@ -57,10 +54,10 @@ class PandasReadCSVKwargs(ReadKwargs):
     low_memory: bool = False
     encoding: str = "utf-8"
     on_bad_lines: str = "warn"
-    delim_whitespace: bool = False
 
     @property
-    def read_kwargs(self) -> Dict[str, Any]:
+    def kwargs(self) -> Dict[str, Any]:
+        self.dtype = DTYPES
         kwargs = asdict(self)
         if not self.names:
             kwargs.pop("names")  # Remove empty list to use pandas default of None
@@ -79,13 +76,13 @@ class PandasWriteCSVKwargs(WriteKwargs):
     mode: str = "w"
     encoding: str = "utf-8"
     compression: Union[str, Dict[str, str], None] = "infer"
-    line_terminator: str = "\n"
-    chunk_size: Optional[int] = None
+    lineterminator: str = "\n"
+    chunksize: Optional[int] = None
     date_format: Optional[str] = None
     errors: str = "strict"
 
     @property
-    def write_kwargs(self) -> Dict[str, Any]:
+    def kwargs(self) -> Dict[str, Any]:
         return asdict(self)
 
 
@@ -121,7 +118,7 @@ class PandasCSVIO(IO):
         Raises:
             TypeError: If an unsupported keyword argument is provided in `**kwargs`.
         """
-        read_kwargs = cls.__read_kwargs_class__(**kwargs).read_kwargs
+        read_kwargs = cls.__read_kwargs_class__(**kwargs).kwargs
         return pd.read_csv(filepath, **read_kwargs)
 
     @classmethod
@@ -141,5 +138,5 @@ class PandasCSVIO(IO):
         Raises:
             TypeError: If an unsupported keyword argument is provided in `**kwargs`.
         """
-        write_kwargs = cls.__write_kwargs_class__(**kwargs).write_kwargs
+        write_kwargs = cls.__write_kwargs_class__(**kwargs).kwargs
         data.to_csv(filepath, **write_kwargs)

@@ -11,20 +11,21 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Wednesday October 15th 2025 08:21:32 pm                                             #
-# Modified   : Wednesday October 15th 2025 10:04:40 pm                                             #
+# Modified   : Thursday October 16th 2025 02:50:47 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
 # ================================================================================================ #
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass, field
 from typing import Any, Dict, Optional, Union
+
+from dataclasses import asdict, dataclass
 
 import dask.dataframe as dd
 
+from valuation.config.data import DTYPES
 from valuation.utils.io.base import IO, ReadKwargs, WriteKwargs
-from valuation.utils.io.csv.pandas import PandasReadCSVKwargs, PandasWriteCSVKwargs
 
 # ------------------------------------------------------------------------------------------------ #
 
@@ -36,13 +37,12 @@ from valuation.utils.io.csv.pandas import PandasReadCSVKwargs, PandasWriteCSVKwa
 class DaskReadCSVKwargs(ReadKwargs):
     blocksize: Optional[Union[str, int]] = "64MB"
     assume_missing: bool = False
-    _pandas_read_kwargs: PandasReadCSVKwargs = field(default_factory=PandasReadCSVKwargs)
+    dtype: Optional[Dict[str, Any]] = None  # Default is None, which infers dtypes.
 
     @property
-    def read_kwargs(self) -> Dict[str, Any]:
-        kwargs = asdict(self._pandas_read_kwargs)
-        kwargs.update(asdict(self))  # Merge with pandas kwargs
-        return kwargs
+    def kwargs(self) -> Dict[str, Any]:
+        self.dtype = DTYPES
+        return asdict(self)
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -56,13 +56,10 @@ class DaskWriteCSVKwargs(WriteKwargs):
     compute: bool = True
     mode: str = "w"
     encoding: str = "utf-8"
-    _pandas_write_kwargs: PandasWriteCSVKwargs = field(default_factory=PandasWriteCSVKwargs)
 
     @property
-    def write_kwargs(self) -> Dict[str, Any]:
-        kwargs = asdict(self._pandas_write_kwargs)
-        kwargs.update(asdict(self))  # Merge with pandas kwargs
-        return kwargs
+    def kwargs(self) -> Dict[str, Any]:
+        return asdict(self)
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -97,7 +94,7 @@ class DaskCSVIO(IO):
         Raises:
             TypeError: If an unsupported keyword argument is provided in `**kwargs`.
         """
-        read_kwargs = cls.__read_kwargs_class__(**kwargs).read_kwargs
+        read_kwargs = cls.__read_kwargs_class__(**kwargs).kwargs
         return dd.read_csv(filepath, **read_kwargs)
 
     @classmethod
@@ -117,5 +114,5 @@ class DaskCSVIO(IO):
         Raises:
             TypeError: If an unsupported keyword argument is provided in `**kwargs`.
         """
-        write_kwargs = cls.__write_kwargs_class__(**kwargs).write_kwargs
-        data.to_csv(filepath, **write_kwargs)
+        write_kwargs = cls.__write_kwargs_class__(**kwargs).kwargs
+        dd.to_csv(df=data, filename=filepath, **write_kwargs)
