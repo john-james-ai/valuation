@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday October 10th 2025 02:27:30 am                                                #
-# Modified   : Friday October 17th 2025 03:31:14 am                                                #
+# Modified   : Friday October 17th 2025 06:31:02 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -26,6 +26,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime
 import time
+import traceback
 
 from loguru import logger
 import pandas as pd
@@ -133,7 +134,7 @@ class TaskResult(DataClass):
             self.pct_change = 0
         else:
             self.pct_change = round(
-                ((self.records_out - self.records_in) / self.records_in) * 100, 2
+                ((self.records_in - self.records_out) / self.records_in) * 100, 2
             )
 
 
@@ -185,7 +186,7 @@ class TaskContext:
         self,
         exc_type: Optional[Type[BaseException]],
         exc_value: Optional[BaseException],
-        traceback: Optional[TracebackType],
+        exc_traceback: Optional[TracebackType],
     ) -> None:
         """Finalizes and logs the task result upon exiting the `with` block.
 
@@ -212,7 +213,7 @@ class TaskContext:
 
             # Format the full traceback into a string for detailed debugging
             traceback_details = "".join(
-                traceback.format_exception(exc_type, exc_value, exc_tb)  # type: ignore
+                traceback.format_exception(exc_type, exc_value, exc_traceback)  # type: ignore
             )
             logger.error(
                 f"Task {self._result.task_name} failed with an exception:\n{traceback_details}"

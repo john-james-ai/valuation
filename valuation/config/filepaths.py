@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
 # ================================================================================================ #
-# Project    : Valuation of Dominick's Fine Foods, Inc. 1997-2003                                  #
+# Project    : Valuation - Discounted Cash Flow Method                                             #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
 # Filename   : /valuation/config/filepaths.py                                                      #
@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Wednesday October 8th 2025 02:52:13 pm                                              #
-# Modified   : Tuesday October 14th 2025 09:53:22 pm                                               #
+# Modified   : Friday October 17th 2025 04:21:58 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -27,7 +27,7 @@ DATA_DIR = PROJ_ROOT / "data"
 RAW_DATA_DIR = DATA_DIR / "raw"
 INGEST_DATA_DIR = DATA_DIR / "ingest"
 CLEAN_DATA_DIR = DATA_DIR / "clean"
-AGGREGATE_DATA_DIR = DATA_DIR / "aggregate"
+PROCESSED_DATA_DIR = DATA_DIR / "processed"
 ENRICH_DATA_DIR = DATA_DIR / "enrich"
 EXTERNAL_DATA_DIR = DATA_DIR / "external"
 REFERENCES_DIR = PROJ_ROOT / "references"
@@ -67,28 +67,26 @@ FILEPATH_CUSTOMER_CLEAN = CLEAN_DATA_DIR / "customer_clean.csv"
 FILEPATH_STORE_DEMO_CLEAN = CLEAN_DATA_DIR / "store_demo_clean.csv"
 
 # Aggregate Stage
-FILEPATH_SALES_AGGREGATE_YEAR = AGGREGATE_DATA_DIR / "sales_aggregate_year.csv"  # Year
-FILEPATH_SALES_AGGREGATE_SCW = (
-    AGGREGATE_DATA_DIR / "sales_aggregate_scw.csv"
-)  # Store Category Week
-FILEPATH_SALES_AGGREGATE_SY = AGGREGATE_DATA_DIR / "sales_aggregate_sy.csv"  # Store Year
-FILEPATH_SALES_AGGREGATE_CY = AGGREGATE_DATA_DIR / "sales_aggregate_cy.csv"  # Category Year
+FILEPATH_SALES_PROCESSED_YEAR = PROCESSED_DATA_DIR / "sales_processed_year.csv"  # Year
+FILEPATH_SALES_PROCESSED_SCW = PROCESSED_DATA_DIR / "sales_processed_scw.csv"  # Store Category Week
+FILEPATH_SALES_PROCESSED_SY = PROCESSED_DATA_DIR / "sales_processed_sy.csv"  # Store Year
+FILEPATH_SALES_PROCESSED_CY = PROCESSED_DATA_DIR / "sales_processed_cy.csv"  # Category Year
 
 
-FILEPATH_CUSTOMER_AGGREGATE_YEAR = AGGREGATE_DATA_DIR / "customer_aggregate_year.csv"  # Year
-FILEPATH_CUSTOMER_AGGREGATE_SCW = (
-    AGGREGATE_DATA_DIR / "customer_aggregate_scw.csv"
+FILEPATH_CUSTOMER_PROCESSED_YEAR = PROCESSED_DATA_DIR / "customer_processed_year.csv"  # Year
+FILEPATH_CUSTOMER_PROCESSED_SCW = (
+    PROCESSED_DATA_DIR / "customer_processed_scw.csv"
 )  # Store Category Week
-FILEPATH_CUSTOMER_AGGREGATE_SY = AGGREGATE_DATA_DIR / "customer_aggregate_sy.csv"  # Store Year
-FILEPATH_CUSTOMER_AGGREGATE_CY = AGGREGATE_DATA_DIR / "customer_aggregate_cy.csv"  # Category Year
+FILEPATH_CUSTOMER_PROCESSED_SY = PROCESSED_DATA_DIR / "customer_processed_sy.csv"  # Store Year
+FILEPATH_CUSTOMER_PROCESSED_CY = PROCESSED_DATA_DIR / "customer_processed_cy.csv"  # Category Year
 
-FILEPATH_STORE_DEMO_AGGREGATE_YEAR = AGGREGATE_DATA_DIR / "store_demo_aggregate_year.csv"  # Year
-FILEPATH_STORE_DEMO_AGGREGATE_SCW = (
-    AGGREGATE_DATA_DIR / "store_demo_aggregate_scw.csv"
+FILEPATH_STORE_DEMO_PROCESSED_YEAR = PROCESSED_DATA_DIR / "store_demo_processed_year.csv"  # Year
+FILEPATH_STORE_DEMO_PROCESSED_SCW = (
+    PROCESSED_DATA_DIR / "store_demo_processed_scw.csv"
 )  # Store Category Week
-FILEPATH_STORE_DEMO_AGGREGATE_SY = AGGREGATE_DATA_DIR / "store_demo_aggregate_sy.csv"  # Store Year
-FILEPATH_STORE_DEMO_AGGREGATE_CY = (
-    AGGREGATE_DATA_DIR / "store_demo_aggregate_cy.csv"
+FILEPATH_STORE_DEMO_PROCESSED_SY = PROCESSED_DATA_DIR / "store_demo_processed_sy.csv"  # Store Year
+FILEPATH_STORE_DEMO_PROCESSED_CY = (
+    PROCESSED_DATA_DIR / "store_demo_processed_cy.csv"
 )  # Category Year
 
 # Enrich Stage

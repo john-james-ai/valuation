@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Tuesday October 14th 2025 10:53:05 pm                                               #
-# Modified   : Friday October 17th 2025 03:14:54 am                                                #
+# Modified   : Friday October 17th 2025 06:34:18 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -27,6 +27,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 import time
+import traceback
 
 from loguru import logger
 import pandas as pd
@@ -59,8 +60,9 @@ class PipelineConfig(DataClass):
 class PipelineResult(DataClass):
     """Holds the results of a pipeline execution."""
 
-    pipeline_name: str
+    name: str
     dataset_name: str
+    description: str
     config: PipelineConfig = field(default=None)  # Optional until setup
     # Timestamps
     started: Optional[datetime] = field(default=None)  # Optional until setup
@@ -73,24 +75,36 @@ class PipelineResult(DataClass):
     filesize_mb: Optional[float] = field(default=None)  # Only known after execute
 
     # State
-    status: Optional[str] = field(default=None)  # Only known after execute
+    status: str = Status.PENDING.value
     # Pipeline task results
     task_results: List[TaskResult] = field(default_factory=list)
 
     # Data produced by the pipeline
     data: Optional[Union[pd.DataFrame, Any]] = field(default=None)
 
-    def add_task_result(self, result: PipelineResult) -> None:
+    def add_task_result(self, result: TaskResult) -> None:
         """Adds a task result to the pipeline result.
 
         Args:
             result (TaskResult): The result of a task execution.
         """
-        self.task_results.append(result.summary)
+        if (
+            result.validation.is_valid
+            and self.status != Status.FAILURE.value
+            and self.status != Status.CRITICAL.value
+        ):
+            self.status = Status.SUCCESS.value
+        else:
+            self.status = (
+                Status.FAILURE.value
+                if self.status != Status.FAILURE.value
+                else Status.CRITICAL.value
+            )
+
+        self.task_results.append(result)
 
     def summary(self) -> None:
         results = [result.summary for result in self.task_results]
-        print(self)
         print(pd.DataFrame(results))
 
 
@@ -101,8 +115,9 @@ class PipelineContext:
     def __init__(self, config: PipelineConfig):
         self._config = config
         self._result = PipelineResult(
-            pipeline_name=config.name,
+            name=config.name,
             dataset_name=config.dataset_name,
+            description=config.description,
             config=config,
         )
 
@@ -127,7 +142,7 @@ class PipelineContext:
         self,
         exc_type: Optional[Type[BaseException]],
         exc_value: Optional[BaseException],
-        traceback: Optional[TracebackType],
+        exc_traceback: Optional[TracebackType],
     ) -> None:
         """Finalizes and logs the pipeline result upon exiting the `with` block.
 
@@ -152,14 +167,14 @@ class PipelineContext:
 
             # Format the full traceback into a string for detailed debugging
             traceback_details = "".join(
-                traceback.format_exception(exc_type, exc_value, exc_tb)  # type: ignore
+                traceback.format_exception(exc_type, exc_value, exc_traceback)  # type: ignore
             )
             logger.error(
-                f"Pipeline {self._result.pipeline_name} failed with an \
+                f"Pipeline {self._result.name} failed with an \
                     exception:\n{traceback_details}"
             )
             logger.error(
-                f"Pipeline {self._result.pipeline_name} failed with \
+                f"Pipeline {self._result.name} failed with \
                 exception: {exc_value}"
             )
         else:
@@ -201,13 +216,15 @@ class Pipeline:
 
     """
 
-    def __init__(self, config: PipelineConfig, io: IOService = IOService()):
+    def __init__(self, config: PipelineConfig, io: type[IOService] = IOService):
         self._config = config
         self._io = io
         self._pipeline_context = PipelineContext(config=config)
         self._tasks = []
 
-    def _execute(self, data: Union[pd.DataFrame, Any], result: PipelineResult) -> PipelineResult:
+    def _execute(
+        self, data: Union[pd.DataFrame, Any], pipeline_result: PipelineResult
+    ) -> PipelineResult:
         """ "Executes the pipeline logic.
         Args:
             data (pd.DataFrame): The input data for the pipeline.
@@ -217,13 +234,13 @@ class Pipeline:
             PipelineResult: The updated result object after execution."""
         for task in self._tasks:
             task_result = task.run(data=data)
-            result.add_task_result(task_result)
-            if not task_result.is_valid:
+            pipeline_result.add_task_result(task_result)
+            if not task_result.validation.is_valid:
                 logger.error(f"Task {task.__class__.__name__} failed validation.")
                 break
             data = task_result.data
 
-        return result
+        return pipeline_result
 
     def add_task(self, task) -> Pipeline:
         """Adds a task to the pipeline.
@@ -247,25 +264,27 @@ class Pipeline:
             PipelineResult: The result of the pipeline execution.
         """
         try:
-            with self._pipeline_context as result:
+            with self._pipeline_context as pipeline_result:
                 # Check if output already exists
                 if self._output_exists(force=force):
-                    result.status = Status.EXISTS.value
+                    pipeline_result.status = Status.EXISTS.value
                     # Load existing output data
-                    result.data = self._load(filepath=Path(self._config.output_location))
+                    pipeline_result.data = self._load(filepath=Path(self._config.output_location))
                 else:
                     # Obtain the input data for the pipeline
                     input_data = self._initialize()
                     # Execute the pipeline
-                    result = self._execute(data=input_data, result=result)
+                    pipeline_result = self._execute(
+                        data=input_data, pipeline_result=pipeline_result
+                    )
                     # Finalize the pipeline
-                    result = self._finalize(result=result)
+                    pipeline_result = self._finalize(result=pipeline_result)
         except Exception as e:
             logger.critical(f"Pipeline {self._config.name} failed with exception: {e}")
-            result.status = Status.FAILURE.value
+            pipeline_result.status = Status.FAILURE.value
             raise e
         finally:
-            return result
+            return pipeline_result
 
     def _initialize(self) -> Union[pd.DataFrame, Dict[str, str]]:
         """Initializes the pipeline before execution.
@@ -293,22 +312,25 @@ class Pipeline:
         """
 
         logger.debug(f"{self.__class__.__name__} - Finalizing")
-        # Save output data
-        self._save(
-            df=result.data,
-            filepath=Path(self._config.output_location),
-        )
+        if result.status == Status.SUCCESS.value and result.data is not None:
+            # Save output data
+            self._save(
+                df=result.data,
+                filepath=Path(self._config.output_location),
+            )
 
-        result.num_records = len(result.data) if isinstance(result.data, pd.DataFrame) else 0
-        result.num_fields = len(result.data.columns) if isinstance(result.data, pd.DataFrame) else 0
-        result.memory_mb = (
-            result.data.memory_usage(deep=True).sum() / (1024 * 1024)
-            if isinstance(result.data, pd.DataFrame)
-            else 0
-        )
-        result.filesize_mb = Path(self._config.output_location).stat().st_size / (
-            1024 * 1024
-        )  # in MB
+            result.num_records = len(result.data) if isinstance(result.data, pd.DataFrame) else 0
+            result.num_fields = (
+                len(result.data.columns) if isinstance(result.data, pd.DataFrame) else 0
+            )
+            result.memory_mb = (
+                result.data.memory_usage(deep=True).sum() / (1024 * 1024)
+                if isinstance(result.data, pd.DataFrame)
+                else 0
+            )
+            result.filesize_mb = Path(self._config.output_location).stat().st_size / (
+                1024 * 1024
+            )  # in MB
         return result
 
     def _load(self, filepath: Path, **kwargs) -> Union[pd.DataFrame, Dict[str, str]]:

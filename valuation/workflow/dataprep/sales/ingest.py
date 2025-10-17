@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday October 12th 2025 11:51:12 pm                                                #
-# Modified   : Friday October 17th 2025 02:57:26 am                                                #
+# Modified   : Friday October 17th 2025 04:58:56 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -28,7 +28,7 @@ from tqdm import tqdm
 from valuation.config.data import DTYPES
 from valuation.utils.io.config import IOKwargs
 from valuation.utils.io.service import IOService
-from valuation.workflow.task import Task, TaskConfig, TaskResult
+from valuation.workflow.task import Task, TaskConfig, TaskContext, TaskResult
 
 # ------------------------------------------------------------------------------------------------ #
 CONFIG_CATEGORY_INFO_KEY = "category_filenames"
@@ -55,8 +55,9 @@ class IngestSalesDataTask(Task):
 
     """
 
-    def __init__(self, config: IngestSalesDataTaskConfig, io: IOService = IOService()) -> None:
+    def __init__(self, config: IngestSalesDataTaskConfig, io: type[IOService] = IOService) -> None:
         super().__init__(config=config)
+        self._task_context = TaskContext(config=config)
         self._io = io
 
     def _execute(
@@ -78,7 +79,7 @@ class IngestSalesDataTask(Task):
             self._add_dates, week_dates=week_dates
         )
 
-    def run(self, data: Union[pd.DataFrame, Dict[str, str]]) -> TaskResult:
+    def run(self, data: Union[pd.DataFrame, Dict[str, Dict[str, str]]]) -> TaskResult:
         """Executes the full task lifecycle: execution, validation, and reporting.
 
         This method orchestrates the task's operation within a context that
@@ -101,6 +102,8 @@ class IngestSalesDataTask(Task):
             with self._task_context as result:
                 sales_datasets = []
 
+                category_config = data
+
                 # Check input data and set records_in count.
                 if data is None or (isinstance(data, pd.DataFrame) and data.empty):
                     raise RuntimeError(f"{self.__class__.__name__} - No input data provided.")
@@ -109,7 +112,7 @@ class IngestSalesDataTask(Task):
                 week_dates = self._load(filepath=self._config.week_decode_table_filepath)  # type: ignore
 
                 # Get category filenames and categories from config
-                category_config = self._load(filepath=self._config.input_location)  # type: ignore
+
                 if CONFIG_CATEGORY_INFO_KEY not in category_config:
                     raise RuntimeError(
                         f"{self.__class__.__name__} - Missing '{CONFIG_CATEGORY_INFO_KEY}' in config."
@@ -117,9 +120,11 @@ class IngestSalesDataTask(Task):
 
                 # Set up the progress bar to iterate through categories
                 pbar = tqdm(
-                    category_config[CONFIG_CATEGORY_INFO_KEY],
+                    category_config[CONFIG_CATEGORY_INFO_KEY].items(),
                     total=len(category_config[CONFIG_CATEGORY_INFO_KEY]),
                 )
+
+                logger.debug("Beginning ingestion of sales data by category.")
 
                 # Iterate through category sales files
                 for _, category_info in pbar:
@@ -129,7 +134,9 @@ class IngestSalesDataTask(Task):
                     pbar.set_description(f"Processing category: {category} from file: {filename}")
 
                     # Load the file and process ingestion
-                    data = self._load(filepath=filepath, kwargs=IOKwargs.pandas_csv.read.as_dict())
+                    data = self._load(
+                        filepath=filepath, kwargs=IOKwargs().pandas_csv.read.as_dict()
+                    )
                     result.records_in += len(data)
 
                     # Execute ingestion steps

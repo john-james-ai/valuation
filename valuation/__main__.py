@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 9th 2025 11:01:16 pm                                               #
-# Modified   : Friday October 17th 2025 03:44:48 am                                                #
+# Modified   : Friday October 17th 2025 04:26:43 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -22,7 +22,7 @@ import typer
 
 from valuation.config.filepaths import (
     CONFIG_FILEPATH,
-    FILEPATH_SALES_AGGREGATE_SCW,
+    FILEPATH_SALES_PROCESSED_SCW,
     RAW_DATA_DIR,
     WEEK_DECODE_TABLE_FILEPATH,
 )
@@ -141,7 +141,7 @@ def run_sales_data_pipeline(force: bool) -> PipelineResult:
         dataset_name="Dominick's Sales Data",
         description="Pipeline to prepare sales data for analysis.",
         input_location=CONFIG_FILEPATH,
-        output_location=FILEPATH_SALES_AGGREGATE_SCW,
+        output_location=FILEPATH_SALES_PROCESSED_SCW,
     )
 
     # Create and run the sales data pipeline
@@ -171,7 +171,7 @@ def main(
     # Construct the data preparation pipeline tasks
     result = run_sales_data_pipeline(force=force)
     print(result)
-    print(result.summary)
+    result.summary
 
 
 if __name__ == "__main__":
