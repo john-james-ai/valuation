@@ -1,31 +1,31 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
 # ================================================================================================ #
-# Project    : Valuation of Dominick's Fine Foods, Inc. 1997-2003                                  #
+# Project    : Valuation - Discounted Cash Flow Method                                             #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
-# Filename   : /valuation/dataprep/split.py                                                        #
+# Filename   : /valuation/workflow/dataprep/split.py                                               #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday October 10th 2025 06:45:03 pm                                                #
-# Modified   : Monday October 13th 2025 01:23:12 am                                                #
+# Modified   : Friday October 17th 2025 03:05:19 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
 # ================================================================================================ #
 """Data Splitter Module"""
+from dataclasses import dataclass
 from pathlib import Path
 
 from loguru import logger
-from dataclasses import dataclass
 
 from valuation.dataprep.base import DataPrep
 from valuation.dataprep.config import DataPrepBaseConfig
 from valuation.utils.data import DataFramePartitioner
-from valuation.utils.io import IOService
+from valuation.utils.io.service import IOService
 from valuation.utils.print import Printer
 
 # ------------------------------------------------------------------------------------------------ #

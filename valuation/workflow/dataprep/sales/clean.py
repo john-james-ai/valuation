@@ -1,38 +1,27 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
 # ================================================================================================ #
-# Project    : Valuation of Dominick's Fine Foods, Inc. 1997-2003                                  #
+# Project    : Valuation - Discounted Cash Flow Method                                             #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
-# Filename   : /valuation/dataprep/sales/clean.py                                                  #
+# Filename   : /valuation/workflow/dataprep/sales/clean.py                                         #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday October 12th 2025 11:51:12 pm                                                #
-# Modified   : Wednesday October 15th 2025 02:21:31 pm                                             #
+# Modified   : Friday October 17th 2025 03:08:41 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
 # ================================================================================================ #
-from dataclasses import dataclass
-from typing import Any, Optional, Union
+from typing import Any, Union
 
 from loguru import logger
 import pandas as pd
 
-from valuation.dataprep.base import Task, TaskConfig, Validation
-
-
-# ------------------------------------------------------------------------------------------------ #
-@dataclass
-class CleanSalesDataTaskConfig(TaskConfig):
-    """Holds all parameters for the sales data cleaning process."""
-
-    return_dask: bool = True
-
-    pass
+from valuation.workflow.task import Task, TaskConfig, Validation
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -47,34 +36,18 @@ class CleanSalesDataTask(Task):
 
     """
 
-    def __init__(self, config: CleanSalesDataTaskConfig) -> None:
+    def __init__(self, config: TaskConfig) -> None:
         super().__init__(config=config)
 
-    def _execute(self, data: Optional[pd.DataFrame] = None) -> Union[pd.DataFrame, Any]:
-        """Runs the ingestion process on the provided DataFrame.
-        Args:
-            data (pd.DataFrame): The raw sales data DataFrame.
-            category (str): The category name to assign to all records in the DataFrame.
+    def _execute(self, data: Union[pd.DataFrame, Any], **kwargs) -> Union[pd.DataFrame, Any]:
 
-        Returns:
-            pd.DataFrame: The processed sales data with added category and date information.
-
-        """
         logger.debug("Cleaning sales data.")
 
-        data = (
-            data
-            if data is not None
-            else self._load(
-                filepath=self.config.input_location, return_dask=self.config.return_dask  # type: ignore
-            )
-        )
         return (
             data.pipe(self._remove_invalid_records)
             .pipe(self._normalize_columns)
             .pipe(self._calculate_revenue)
             .pipe(self._calculate_gross_profit)
-            .pipe(self._aggregate)
         )
 
     def _remove_invalid_records(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -155,45 +128,7 @@ class CleanSalesDataTask(Task):
         df["gross_profit"] = df["revenue"] * (df["gross_margin_pct"] / 100.0)
         return df
 
-    def _aggregate(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Aggregates transaction-level data to the store-category-week level.
-
-        This method collapses revenue, gross profit, and gross margin percent
-        to the store, category, and week level.
-
-        Args:
-            df (pd.DataFrame): DataFrame with transaction-level data, including
-                'store', 'category', 'week', and 'revenue' columns.
-
-        Returns:
-            pd.DataFrame: An aggregated DataFrame with total revenue, gross_profit, and
-                gross margin percent for each store, category, and week.
-        """
-        logger.debug("Aggregating to store-category-week level.")
-        # 1: Group by store, category, and week, summing revenue and gross profit
-        aggregated = (
-            df.groupby(["store", "category", "week"])
-            .agg(
-                revenue=("revenue", "sum"),
-                gross_profit=("gross_profit", "sum"),
-                year=("year", "first"),
-                start=("start", "first"),
-                end=("end", "first"),
-            )
-            .reset_index()
-        )
-        # Step 2: Calculate the true margin from the summed totals
-        # We add a small epsilon to avoid division by zero if revenue is 0
-        aggregated["gross_margin_pct"] = (
-            aggregated["gross_profit"] / (aggregated["revenue"] + 1e-6) * 100
-        )
-
-        # Sort for reproducibility
-        aggregated = aggregated.sort_values(["store", "category", "week"])
-
-        return aggregated
-
-    def _validate(self, data: pd.DataFrame) -> Validation:
+    def _validate_result(self, data: pd.DataFrame) -> Validation:
         """
         Validates the output DataFrame for structural integrity and data quality after aggregation.
 
@@ -231,23 +166,6 @@ class CleanSalesDataTask(Task):
             if col not in data.columns:
                 validation.add_message(f"Missing mandatory column: {col}")
                 return validation
-
-        # 2. Check for uniqueness on key (Aggregation guarantee)
-        logger.debug("Checking for uniqueness on aggregation key.")
-        group_cols = ["week", "year", "store", "category"]
-        duplicates = data[data.duplicated(subset=group_cols, keep=False)]
-        if not duplicates.empty:
-            reason = "Output data contains duplicate rows on the aggregation key, indicating incomplete aggregation."
-            validation.add_failed_records(reason=reason, records=duplicates)
-
-        # 3. Check integrity of aggregated financial metrics
-        logger.debug("Performing sanity checks on aggregated financial metrics.")
-        # Check for negative revenue values
-        logger.debug("..checking negative revenue.")
-        negative_revenue = data[data["revenue"] < 0]
-        if not negative_revenue.empty:
-            reason = f"Aggregated 'revenue' contains {len(negative_revenue)} negative values."
-            validation.add_failed_records(reason=reason, records=negative_revenue)
 
         # Check for negative gross profit
         logger.debug("..checking negative gross profit.")

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
 # ================================================================================================ #
-# Project    : Valuation of Dominick's Fine Foods, Inc. 1997-2003                                  #
+# Project    : Valuation - Discounted Cash Flow Method                                             #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
 # Filename   : /valuation/utils/data.py                                                            #
@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 9th 2025 07:11:18 pm                                               #
-# Modified   : Thursday October 16th 2025 11:14:53 am                                              #
+# Modified   : Thursday October 16th 2025 10:51:31 pm                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -209,7 +209,7 @@ class DataClass(ABC):  # noqa
         return s
 
     def as_dict(self) -> Dict[str, Any]:
-        """Returns a dictionary representation of the Config object."""
+        """Returns a dictionary representation of the DataClass object."""
         return asdict(self)
 
 

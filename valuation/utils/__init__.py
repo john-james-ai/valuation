@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
 # ================================================================================================ #
-# Project    : Valuation of Dominick's Fine Foods, Inc. 1997-2003                                  #
+# Project    : Valuation - Discounted Cash Flow Method                                             #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
 # Filename   : /valuation/utils/__init__.py                                                        #
@@ -10,10 +10,9 @@
 # Email      : john.james.ai.studio@gmail.com                                                      #
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
-# Created    : Wednesday October 8th 2025 02:52:13 pm                                              #
-# Modified   : Wednesday October 15th 2025 07:27:12 pm                                             #
+# Created    : Thursday October 16th 2025 08:04:23 pm                                              #
+# Modified   : Thursday October 16th 2025 08:06:20 pm                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
 # ================================================================================================ #
-"""Utilities Package for Dominick's Fine Foods Valuation Analysis."""

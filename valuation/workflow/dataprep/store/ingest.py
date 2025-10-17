@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday October 12th 2025 11:51:12 pm                                                #
-# Modified   : Wednesday October 15th 2025 01:37:36 am                                             #
+# Modified   : Thursday October 16th 2025 07:29:02 pm                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -38,7 +38,7 @@ class IngestStoreDemoDataTask(Task):
 
         return data
 
-    def _validate(self, data: pd.DataFrame) -> Validation:
+    def _validate_result(self, data: pd.DataFrame) -> Validation:
         validation = Validation()
         COLUMNS = ["STORE"]
         validation = self._validate_columns(
