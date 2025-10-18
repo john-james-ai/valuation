@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday October 10th 2025 02:27:30 am                                                #
-# Modified   : Saturday October 18th 2025 06:06:55 am                                              #
+# Modified   : Saturday October 18th 2025 06:53:52 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -32,9 +32,10 @@ from loguru import logger
 import pandas as pd
 
 from valuation.config.data import DTYPES
-from valuation.utils.data import DataClass, Dataset
-from valuation.utils.db.base import EntityStore
-from valuation.utils.identity import Passport
+from valuation.core.dataset import Dataset
+from valuation.core.entity import Passport
+from valuation.utils.data import DataClass
+from valuation.utils.db.dataset import DatasetStore
 from valuation.utils.io.service import IOService
 from valuation.workflow import Status
 from valuation.workflow.validation import Validation
@@ -250,20 +251,20 @@ class Task(ABC):
         config (TaskConfig): The configuration object for the task.
         io (type[IOService], optional): The IO service class to use for data
             loading and saving. Defaults to `IOService`.
-        entity_store (type[EntityStore], optional): The entity store class to use
-            for managing data entities. Defaults to `EntityStore`.
+        dataset_store (type[DatasetStore], optional): The entity store class to use
+            for managing data entities. Defaults to `DatasetStore`.
     """
 
     def __init__(
         self,
         config: TaskConfig,
         io: type[IOService] = IOService,
-        entity_store: type[EntityStore] = EntityStore,
+        dataset_store: DatasetStore = DatasetStore,
     ) -> None:
 
         self._config = config
         self._io = io()
-        self._entity_store = entity_store()
+        self._dataset_store = dataset_store
         self._task_context = TaskContext(config=config)
 
     @property
@@ -337,13 +338,13 @@ class Task(ABC):
                     raise RuntimeError("Target configuration must be a Passport instance.")
 
                 # 3. Check if output already exists to potentially skip processing.
-                if self._entity_store.exists(
+                if self._dataset_store.exists(
                     name=self._config.target.name, stage=self._config.target.stage
                 ):
 
                     result.status = Status.EXISTS.value
                     # Get the output dataset from the entity store
-                    dataset_out = self._entity_store.get(
+                    dataset_out = self._dataset_store.get(
                         name=self._config.target.name,
                         stage=self._config.target.stage,
                     )
@@ -391,7 +392,7 @@ class Task(ABC):
         result.dataset = dataset
         result.records_out = cast(int, dataset.nrows)
         result.finalize()
-        self._entity_store.add(entity=dataset)
+        self._dataset_store.add(dataset=dataset)
         return result
 
     def _validate_columns(

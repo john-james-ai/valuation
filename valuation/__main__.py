@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 9th 2025 11:01:16 pm                                               #
-# Modified   : Saturday October 18th 2025 06:10:45 am                                              #
+# Modified   : Saturday October 18th 2025 07:35:36 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -20,15 +20,18 @@
 
 import typer
 
-from valuation.archive.io.base import IOService
+from valuation.config.data import DTYPES
 from valuation.config.filepaths import (
     CONFIG_FILEPATH,
+    DATASET_STORE_DIR,
     FILEPATH_SALES_PROCESSED_SCW,
     RAW_DATA_DIR,
     WEEK_DECODE_TABLE_FILEPATH,
 )
 from valuation.config.loggers import configure_logging
-from valuation.utils.identity import DatasetStage, EntityType, Passport
+from valuation.core.entity import DatasetStage, EntityType, Passport
+from valuation.utils.db.dataset import DatasetStore
+from valuation.utils.io.service import IOService
 from valuation.workflow.dataprep.sales.aggregate import AggregateSalesDataTask
 from valuation.workflow.dataprep.sales.clean import CleanSalesDataTask
 from valuation.workflow.dataprep.sales.ingest import IngestSalesDataTask, IngestSalesDataTaskConfig
@@ -86,7 +89,7 @@ def get_aggregate_sales_data_task(source: Passport) -> Task:
     """
     # Create the output Passport for the aggregated sales data
     passport = Passport.create(
-        name="Dominick's Sales Data - Aggregation",
+        name="sales_aggregated",
         description="Dominick's Aggregated Sales Data Dataset",
         stage=DatasetStage.PROCESSED,
         type=EntityType.DATASET,
@@ -101,8 +104,12 @@ def get_aggregate_sales_data_task(source: Passport) -> Task:
         source=source,
         target=passport,
     )
+
+    # Instantiate Dataset Store
+    dataset_store = DatasetStore(location=DATASET_STORE_DIR)
+
     # Run the sales data processing task
-    return AggregateSalesDataTask(config=config)
+    return AggregateSalesDataTask(config=config, dataset_store=dataset_store)
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -110,7 +117,7 @@ def get_clean_sales_data_task(source: Passport) -> Task:
 
     # Create the output Passport for the cleaned sales data
     passport = Passport.create(
-        name="Dominick's Sales Data - Clean",
+        name="sales_clean",
         description="Dominick's Clean Sales Data Dataset",
         stage=DatasetStage.CLEAN,
         type=EntityType.DATASET,
@@ -125,8 +132,12 @@ def get_clean_sales_data_task(source: Passport) -> Task:
         source=source,
         target=passport,
     )
+
+    # Instantiate Dataset Store
+    dataset_store = DatasetStore(location=DATASET_STORE_DIR)
+
     # Run the sales data processing task
-    return CleanSalesDataTask(config=config)
+    return CleanSalesDataTask(config=config, dataset_store=dataset_store)
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -137,11 +148,11 @@ def get_ingest_sales_data_task() -> Task:
         force (bool): Whether to force reprocessing if the file already exists.
     """
     # Obtain prerequisite data
-    week_dates = IOService.read(filepath=WEEK_DECODE_TABLE_FILEPATH)
+    week_dates = IOService.read(filepath=WEEK_DECODE_TABLE_FILEPATH, dtype=DTYPES)
     filepaths = IOService.read(filepath=CONFIG_FILEPATH)
     # Create Passport for Target Dataset
     passport = Passport.create(
-        name="Dominick's Sales Data - Ingestion",
+        name="sales_ingestion",
         description="Dominick's Sales Data Ingestion Dataset",
         stage=DatasetStage.INGEST,
         type=EntityType.DATASET,
@@ -150,15 +161,17 @@ def get_ingest_sales_data_task() -> Task:
 
     config = IngestSalesDataTaskConfig(
         task_name="IngestSalesDataTask",
-        description="Ingests Dominick's raw sales data.",
-        dataset_name="Dominick's Sales Data - Ingestion",
-        week_decode_table=week_dates,
+        description=passport.description,
+        dataset_name=passport.name,
+        week_decode_table_filepath=WEEK_DECODE_TABLE_FILEPATH,
         source=filepaths,
         target=passport,
         raw_data_directory=RAW_DATA_DIR,
     )
+    # Instantiate Dataset Store
+    dataset_store = DatasetStore(location=DATASET_STORE_DIR)
     # Run the sales data processing task
-    return IngestSalesDataTask(config=config)
+    return IngestSalesDataTask(config=config, dataset_store=dataset_store)
 
 
 def run_sales_data_pipeline(force: bool) -> PipelineResult:

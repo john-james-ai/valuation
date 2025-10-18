@@ -10,46 +10,9 @@
 # Email      : john.james.ai.studio@gmail.com                                                      #
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
-# Created    : Wednesday October 8th 2025 02:52:13 pm                                              #
-# Modified   : Saturday October 18th 2025 12:45:49 am                                              #
+# Created    : Thursday October 16th 2025 08:04:32 pm                                              #
+# Modified   : Saturday October 18th 2025 06:16:15 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
 # ================================================================================================ #
-"""Valuation package."""
-
-from abc import ABC, abstractmethod
-
-from valuation.utils.identity import Passport
-
-
-# ------------------------------------------------------------------------------------------------ #
-class Entity(ABC):
-    """
-    An abstract base class for any object with a persistent state and a unique identity.
-    """
-
-    def __init__(self, passport: Passport) -> None:
-        self._passport = passport
-
-    @property
-    def name(self) -> str:
-        """The entity's name."""
-        return self._passport.name
-
-    @property
-    def passport(self) -> Passport:
-        """The entity's unique and immutable passport."""
-        return self._passport
-
-    @abstractmethod
-    def load(self) -> None:
-        """Loads the entity's data from the filepath specified in its passport."""
-        # Example: self.data = pd.read_csv(self.filepath)
-        pass
-
-    @abstractmethod
-    def save(self) -> None:
-        """Saves the entity's data to the filepath specified in its passport."""
-        # Example: self.data.to_csv(self.filepath)
-        pass

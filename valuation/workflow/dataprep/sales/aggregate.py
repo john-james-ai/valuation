@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 16th 2025 06:18:02 pm                                              #
-# Modified   : Saturday October 18th 2025 05:46:15 am                                              #
+# Modified   : Saturday October 18th 2025 06:44:43 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -21,6 +21,7 @@
 from loguru import logger
 import pandas as pd
 
+from valuation.utils.db.dataset import DatasetStore
 from valuation.workflow.task import Task, TaskConfig, TaskResult
 
 
@@ -36,8 +37,12 @@ class AggregateSalesDataTask(Task):
 
     """
 
-    def __init__(self, config: TaskConfig) -> None:
-        super().__init__(config=config)
+    def __init__(
+        self,
+        config: TaskConfig,
+        dataset_store: DatasetStore,
+    ) -> None:
+        super().__init__(config=config, dataset_store=dataset_store)
 
     def _execute(self, data: pd.DataFrame) -> pd.DataFrame:
         """Runs the ingestion process on the provided DataFrame.

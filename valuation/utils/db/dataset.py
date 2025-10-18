@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday October 17th 2025 11:19:18 pm                                                #
-# Modified   : Saturday October 18th 2025 04:14:11 am                                              #
+# Modified   : Saturday October 18th 2025 06:57:16 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -21,10 +21,10 @@ from typing import Optional
 
 from pathlib import Path
 
-from valuation.utils.data import Dataset
+from valuation.core.dataset import Dataset
+from valuation.core.entity import DatasetStage, EntityType
 from valuation.utils.db.base import EntityStore
 from valuation.utils.exception import DatasetExistsError, DatasetNotFoundError
-from valuation.utils.identity import DatasetStage, EntityType
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -34,6 +34,7 @@ class DatasetStore(EntityStore):
         """ """
         super().__init__(location=location)
 
+    @property
     def entity_type(self) -> EntityType:
         """ """
         return EntityType.DATASET

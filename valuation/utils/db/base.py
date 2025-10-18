@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday October 17th 2025 11:19:18 pm                                                #
-# Modified   : Saturday October 18th 2025 04:39:39 am                                              #
+# Modified   : Saturday October 18th 2025 06:47:52 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -27,12 +27,11 @@ from pathlib import Path
 from loguru import logger
 import pandas as pd
 
-from valuation import Entity
-from valuation.archive.io.base import IOService
 from valuation.config.filepaths import ENTITY_STORE_DIR
-from valuation.utils.data import Dataset
+from valuation.core.dataset import Dataset
+from valuation.core.entity import Entity, EntityType, Passport, Stage
 from valuation.utils.exception import EntityStoreNotFoundError
-from valuation.utils.identity import EntityType, Passport, Stage
+from valuation.utils.io.service import IOService
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -49,7 +48,7 @@ class EntityStore(ABC):
     __entity_map = {"dataset": Dataset}
 
     def __init__(self, location: Optional[Path] = None, io: IOService = IOService) -> None:
-        """Initialize the EntityStore."""
+        """Initialize the DatasetStore."""
         self._location = Path(location) or ENTITY_STORE_DIR
         self._location.mkdir(parents=True, exist_ok=True)
         self._io = io
@@ -185,7 +184,6 @@ class EntityStore(ABC):
             logger.info(f"Passport for {name}, stage: {stage.value} is removed from the store.")
         logger.info(f"Entity '{name}' removed from the store.")
 
-    @abstractmethod
     def exists(self, name: str, stage: Stage) -> bool:
         """Checks if an entity exists in the store by name and stage.
 

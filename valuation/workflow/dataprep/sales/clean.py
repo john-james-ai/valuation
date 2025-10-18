@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday October 12th 2025 11:51:12 pm                                                #
-# Modified   : Saturday October 18th 2025 04:45:43 am                                              #
+# Modified   : Saturday October 18th 2025 06:44:25 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -21,6 +21,7 @@ from typing import Any, Union
 from loguru import logger
 import pandas as pd
 
+from valuation.utils.db.dataset import DatasetStore
 from valuation.workflow.task import Task, TaskConfig, TaskResult
 
 
@@ -36,8 +37,12 @@ class CleanSalesDataTask(Task):
 
     """
 
-    def __init__(self, config: TaskConfig) -> None:
-        super().__init__(config=config)
+    def __init__(
+        self,
+        config: TaskConfig,
+        dataset_store: DatasetStore,
+    ) -> None:
+        super().__init__(config=config, dataset_store=dataset_store)
 
     def _execute(self, data: Union[pd.DataFrame, Any], **kwargs) -> Union[pd.DataFrame, Any]:
 

@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Tuesday October 14th 2025 10:53:05 pm                                               #
-# Modified   : Saturday October 18th 2025 06:11:15 am                                              #
+# Modified   : Saturday October 18th 2025 06:56:21 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -32,7 +32,8 @@ import traceback
 from loguru import logger
 import pandas as pd
 
-from valuation.utils.data import DataClass, Dataset
+from valuation.core.dataset import Dataset
+from valuation.utils.data import DataClass
 from valuation.workflow import Status
 from valuation.workflow.task import TaskResult
 
@@ -227,13 +228,14 @@ class Pipeline:
 
         Returns:
             PipelineResult: The updated result object after execution."""
+        dataset = None
         for task in self._tasks:
-            task_result = task.run(data=data)
+            task_result = task.run(dataset=dataset)
             pipeline_result.add_task_result(task_result)
             if not task_result.validation.is_valid:
                 logger.error(f"Task {task.__class__.__name__} failed validation.")
                 break
-            data = task_result.dataset.data
+            dataset = task_result.dataset
 
         return pipeline_result
 

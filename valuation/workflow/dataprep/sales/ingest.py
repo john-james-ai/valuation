@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday October 12th 2025 11:51:12 pm                                                #
-# Modified   : Saturday October 18th 2025 06:12:15 am                                              #
+# Modified   : Saturday October 18th 2025 07:18:14 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -26,7 +26,8 @@ import pandas as pd
 from tqdm import tqdm
 
 from valuation.config.data import DTYPES
-from valuation.utils.data import Dataset
+from valuation.core.dataset import Dataset
+from valuation.utils.db.dataset import DatasetStore
 from valuation.utils.io.service import IOService
 from valuation.workflow.task import Task, TaskConfig, TaskContext, TaskResult
 
@@ -40,7 +41,7 @@ class IngestSalesDataTaskConfig(TaskConfig):
     """Holds all parameters for the sales data ingestion process."""
 
     source: Dict[str, Dict[str, str]]
-    week_decode_table: pd.DataFrame
+    week_decode_table_filepath: Path
     raw_data_directory: Path
 
 
@@ -56,15 +57,19 @@ class IngestSalesDataTask(Task):
 
     """
 
-    def __init__(self, config: IngestSalesDataTaskConfig, io: type[IOService] = IOService) -> None:
-        super().__init__(config=config)
+    def __init__(
+        self,
+        config: IngestSalesDataTaskConfig,
+        dataset_store: DatasetStore,
+        io: type[IOService] = IOService,
+    ) -> None:
+        super().__init__(config=config, dataset_store=dataset_store)
         self._task_context = TaskContext(config=config)
         self._io = io
 
-        self._week_decode_table = config.week_decode_table
         self._category_filenames = cast(dict, config.source.get(CONFIG_CATEGORY_INFO_KEY, {}))
 
-    def _execute(self, dataset: Dataset, category: str, week_dates: pd.DataFrame) -> pd.DataFrame:
+    def _execute(self, df: pd.DataFrame, category: str, week_dates: pd.DataFrame) -> pd.DataFrame:
         """Runs the ingestion process on the provided DataFrame.
 
         Args:
@@ -77,7 +82,7 @@ class IngestSalesDataTask(Task):
             pd.DataFrame: The processed sales data with added category and date information.
         """
         # Add category and dates to the data
-        return self._add_category(df=dataset.data, category=category).pipe(
+        return self._add_category(df=df, category=category).pipe(
             self._add_dates, week_dates=week_dates
         )
 
@@ -104,9 +109,6 @@ class IngestSalesDataTask(Task):
             with self._task_context as result:
                 sales_datasets = []
 
-                # Obtain the week decode table for date mapping
-                week_dates = self._load(filepath=self._config.week_decode_table_filepath)  # type: ignore
-
                 # Set up the progress bar to iterate through categories
                 pbar = tqdm(
                     self._category_filenames.items(),
@@ -114,6 +116,10 @@ class IngestSalesDataTask(Task):
                     desc="Ingesting Sales Data by Category",
                     unit="category",
                 )
+
+                # Obtain week decode table
+                config = cast(IngestSalesDataTaskConfig, self._config)
+                week_dates = self._load(filepath=config.week_decode_table_filepath)
 
                 # Iterate through category sales files
                 for _, category_info in pbar:
@@ -127,9 +133,7 @@ class IngestSalesDataTask(Task):
                     result.records_in += cast(pd.DataFrame, df_in).shape[0]
 
                     # Execute ingestion steps
-                    category_df = self._execute(
-                        dataset=df_in, category=category, week_dates=week_dates
-                    )
+                    category_df = self._execute(df=df_in, category=category, week_dates=week_dates)
 
                     sales_datasets.append(category_df)
 
