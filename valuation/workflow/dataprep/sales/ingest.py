@@ -11,12 +11,12 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday October 12th 2025 11:51:12 pm                                                #
-# Modified   : Friday October 17th 2025 04:58:56 am                                                #
+# Modified   : Saturday October 18th 2025 06:12:15 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
 # ================================================================================================ #
-from typing import Any, Dict, Union
+from typing import Dict, Optional, Union, cast
 
 from dataclasses import dataclass
 from pathlib import Path
@@ -26,7 +26,7 @@ import pandas as pd
 from tqdm import tqdm
 
 from valuation.config.data import DTYPES
-from valuation.utils.io.config import IOKwargs
+from valuation.utils.data import Dataset
 from valuation.utils.io.service import IOService
 from valuation.workflow.task import Task, TaskConfig, TaskContext, TaskResult
 
@@ -39,7 +39,8 @@ CONFIG_CATEGORY_INFO_KEY = "category_filenames"
 class IngestSalesDataTaskConfig(TaskConfig):
     """Holds all parameters for the sales data ingestion process."""
 
-    week_decode_table_filepath: Path
+    source: Dict[str, Dict[str, str]]
+    week_decode_table: pd.DataFrame
     raw_data_directory: Path
 
 
@@ -60,9 +61,10 @@ class IngestSalesDataTask(Task):
         self._task_context = TaskContext(config=config)
         self._io = io
 
-    def _execute(
-        self, data: Union[pd.DataFrame, Any], category: str, week_dates: pd.DataFrame
-    ) -> pd.DataFrame:
+        self._week_decode_table = config.week_decode_table
+        self._category_filenames = cast(dict, config.source.get(CONFIG_CATEGORY_INFO_KEY, {}))
+
+    def _execute(self, dataset: Dataset, category: str, week_dates: pd.DataFrame) -> pd.DataFrame:
         """Runs the ingestion process on the provided DataFrame.
 
         Args:
@@ -75,11 +77,11 @@ class IngestSalesDataTask(Task):
             pd.DataFrame: The processed sales data with added category and date information.
         """
         # Add category and dates to the data
-        return self._add_category(df=data, category=category).pipe(
+        return self._add_category(df=dataset.data, category=category).pipe(
             self._add_dates, week_dates=week_dates
         )
 
-    def run(self, data: Union[pd.DataFrame, Dict[str, Dict[str, str]]]) -> TaskResult:
+    def run(self, dataset: Optional[Dataset] = None) -> TaskResult:
         """Executes the full task lifecycle: execution, validation, and reporting.
 
         This method orchestrates the task's operation within a context that
@@ -102,29 +104,16 @@ class IngestSalesDataTask(Task):
             with self._task_context as result:
                 sales_datasets = []
 
-                category_config = data
-
-                # Check input data and set records_in count.
-                if data is None or (isinstance(data, pd.DataFrame) and data.empty):
-                    raise RuntimeError(f"{self.__class__.__name__} - No input data provided.")
-
                 # Obtain the week decode table for date mapping
                 week_dates = self._load(filepath=self._config.week_decode_table_filepath)  # type: ignore
 
-                # Get category filenames and categories from config
-
-                if CONFIG_CATEGORY_INFO_KEY not in category_config:
-                    raise RuntimeError(
-                        f"{self.__class__.__name__} - Missing '{CONFIG_CATEGORY_INFO_KEY}' in config."
-                    )
-
                 # Set up the progress bar to iterate through categories
                 pbar = tqdm(
-                    category_config[CONFIG_CATEGORY_INFO_KEY].items(),
-                    total=len(category_config[CONFIG_CATEGORY_INFO_KEY]),
+                    self._category_filenames.items(),
+                    total=len(self._category_filenames),
+                    desc="Ingesting Sales Data by Category",
+                    unit="category",
                 )
-
-                logger.debug("Beginning ingestion of sales data by category.")
 
                 # Iterate through category sales files
                 for _, category_info in pbar:
@@ -133,22 +122,25 @@ class IngestSalesDataTask(Task):
                     category = category_info["category"]
                     pbar.set_description(f"Processing category: {category} from file: {filename}")
 
-                    # Load the file and process ingestion
-                    data = self._load(
-                        filepath=filepath, kwargs=IOKwargs().pandas_csv.read.as_dict()
-                    )
-                    result.records_in += len(data)
+                    # Create a temporary dataset for loading the data
+                    df_in = self._load(filepath=filepath)
+                    result.records_in += cast(pd.DataFrame, df_in).shape[0]
 
                     # Execute ingestion steps
-                    category_data = self._execute(
-                        data=data, category=category, week_dates=week_dates
+                    category_df = self._execute(
+                        dataset=df_in, category=category, week_dates=week_dates
                     )
 
-                    sales_datasets.append(category_data)
+                    sales_datasets.append(category_df)
 
                 # Concatenate all datasets
-                result.data = pd.concat(sales_datasets, ignore_index=True)
-                result.records_out = len(result.data)
+                concat_df = pd.concat(sales_datasets, ignore_index=True)
+                # Create the output dataset
+                dataset_out = Dataset(passport=self._config.target, df=concat_df)
+
+                # Add the dataset to the result object and count output records
+
+                result.records_out = cast(int, dataset_out.nrows)
 
                 # Validate the result by calling the subclass's implementation.
                 result = self._validate_result(result=result)
@@ -157,7 +149,7 @@ class IngestSalesDataTask(Task):
                 if not result.validation.is_valid:  # type: ignore
                     self._handle_validation_failure(validation=result.validation)
         finally:
-            return result
+            return self._finalize(result=result, dataset=dataset_out)
 
     def _validate_result(self, result: TaskResult) -> TaskResult:
         """Validates the result of the ingestion process.
@@ -191,7 +183,7 @@ class IngestSalesDataTask(Task):
         else:
             # Check presence and types of mandatory columns
             validation = self._validate_columns(
-                validation=result.validation, data=result.data, required_columns=COLUMNS
+                validation=result.validation, data=result.dataset.data, required_columns=COLUMNS
             )
             # Check for consistent record count
             if result.records_in != result.records_out:

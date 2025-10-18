@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday October 12th 2025 11:51:12 pm                                                #
-# Modified   : Friday October 17th 2025 06:05:52 am                                                #
+# Modified   : Saturday October 18th 2025 04:45:43 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -148,7 +148,7 @@ class CleanSalesDataTask(Task):
             "gross_margin_pct",
         ]
 
-        data = result.data
+        data = result.dataset.data
         validation = result.validation
 
         # 1. Check for mandatory columns

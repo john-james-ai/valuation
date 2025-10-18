@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Tuesday October 14th 2025 10:53:05 pm                                               #
-# Modified   : Friday October 17th 2025 06:34:18 am                                                #
+# Modified   : Saturday October 18th 2025 06:11:15 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -21,7 +21,7 @@ from __future__ import annotations
 
 from types import TracebackType
 import typing
-from typing import Any, Dict, List, Optional, Type, Union
+from typing import List, Optional, Type, Union
 
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -32,9 +32,7 @@ import traceback
 from loguru import logger
 import pandas as pd
 
-from valuation.config.data import DTYPES
-from valuation.utils.data import DataClass
-from valuation.utils.io.service import IOService
+from valuation.utils.data import DataClass, Dataset
 from valuation.workflow import Status
 from valuation.workflow.task import TaskResult
 
@@ -51,8 +49,8 @@ class PipelineConfig(DataClass):
     name: str
     dataset_name: str
     description: str
-    input_location: Union[Path, str]
-    output_location: Union[Path, str]
+    input_filepath: Union[Path, str]
+    output_filepath: Union[Path, str]
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -80,7 +78,7 @@ class PipelineResult(DataClass):
     task_results: List[TaskResult] = field(default_factory=list)
 
     # Data produced by the pipeline
-    data: Optional[Union[pd.DataFrame, Any]] = field(default=None)
+    dataset: Optional[Dataset] = field(default=None)
 
     def add_task_result(self, result: TaskResult) -> None:
         """Adds a task result to the pipeline result.
@@ -216,15 +214,12 @@ class Pipeline:
 
     """
 
-    def __init__(self, config: PipelineConfig, io: type[IOService] = IOService):
+    def __init__(self, config: PipelineConfig):
         self._config = config
-        self._io = io
         self._pipeline_context = PipelineContext(config=config)
         self._tasks = []
 
-    def _execute(
-        self, data: Union[pd.DataFrame, Any], pipeline_result: PipelineResult
-    ) -> PipelineResult:
+    def _execute(self, pipeline_result: PipelineResult) -> PipelineResult:
         """ "Executes the pipeline logic.
         Args:
             data (pd.DataFrame): The input data for the pipeline.
@@ -238,7 +233,7 @@ class Pipeline:
             if not task_result.validation.is_valid:
                 logger.error(f"Task {task.__class__.__name__} failed validation.")
                 break
-            data = task_result.data
+            data = task_result.dataset.data
 
         return pipeline_result
 
@@ -265,39 +260,16 @@ class Pipeline:
         """
         try:
             with self._pipeline_context as pipeline_result:
-                # Check if output already exists
-                if self._output_exists(force=force):
-                    pipeline_result.status = Status.EXISTS.value
-                    # Load existing output data
-                    pipeline_result.data = self._load(filepath=Path(self._config.output_location))
-                else:
-                    # Obtain the input data for the pipeline
-                    input_data = self._initialize()
-                    # Execute the pipeline
-                    pipeline_result = self._execute(
-                        data=input_data, pipeline_result=pipeline_result
-                    )
-                    # Finalize the pipeline
-                    pipeline_result = self._finalize(result=pipeline_result)
+                # Execute the pipeline
+                pipeline_result = self._execute(pipeline_result=pipeline_result)
+                # Finalize the pipeline
+                pipeline_result = self._finalize(result=pipeline_result)
         except Exception as e:
             logger.critical(f"Pipeline {self._config.name} failed with exception: {e}")
             pipeline_result.status = Status.FAILURE.value
             raise e
         finally:
             return pipeline_result
-
-    def _initialize(self) -> Union[pd.DataFrame, Dict[str, str]]:
-        """Initializes the pipeline before execution.
-
-        Obtains the data required for the pipeline from the input location.
-
-        Returns:
-            Union[pd.DataFrame, Dict[str,str]]: The initialized data for the pipeline.
-        """
-        logger.debug(f"{self.__class__.__name__} - Initializing")
-        # Load input data
-        data = self._load(filepath=Path(self._config.input_location))
-        return data
 
     def _finalize(self, result: PipelineResult) -> PipelineResult:
         """Finalizes the pipeline after execution.
@@ -310,105 +282,28 @@ class Pipeline:
         Returns:
             PipelineResult: The finalized result of the pipeline execution.
         """
+        if not isinstance(result.dataset, Dataset) or not isinstance(
+            result.dataset.data, pd.DataFrame
+        ):
+            raise ValueError("No valid dataset to save for the pipeline.")
 
         logger.debug(f"{self.__class__.__name__} - Finalizing")
-        if result.status == Status.SUCCESS.value and result.data is not None:
-            # Save output data
-            self._save(
-                df=result.data,
-                filepath=Path(self._config.output_location),
-            )
+        if result.status == Status.SUCCESS.value and result.dataset.data is not None:
 
-            result.num_records = len(result.data) if isinstance(result.data, pd.DataFrame) else 0
-            result.num_fields = (
-                len(result.data.columns) if isinstance(result.data, pd.DataFrame) else 0
+            result.num_records = (
+                len(result.dataset.data) if isinstance(result.dataset.data, pd.DataFrame) else 0
             )
-            result.memory_mb = (
-                result.data.memory_usage(deep=True).sum() / (1024 * 1024)
-                if isinstance(result.data, pd.DataFrame)
+            result.num_fields = (
+                len(result.dataset.data.columns)
+                if isinstance(result.dataset.data, pd.DataFrame)
                 else 0
             )
-            result.filesize_mb = Path(self._config.output_location).stat().st_size / (
+            result.memory_mb = (
+                result.dataset.data.memory_usage(deep=True).sum() / (1024 * 1024)
+                if isinstance(result.dataset.data, pd.DataFrame)
+                else 0
+            )
+            result.filesize_mb = Path(self._config.output_filepath).stat().st_size / (
                 1024 * 1024
             )  # in MB
         return result
-
-    def _load(self, filepath: Path, **kwargs) -> Union[pd.DataFrame, Dict[str, str]]:
-        """Loads a DataFrame from the specified filepath using the I/O service.
-
-        Args:
-            filepath: The path to the file to be loaded.
-            **kwargs: Additional keyword arguments for the I/O service.
-
-            Returns:
-            Union[pd.DataFrame, Any]: The loaded DataFrame or data object."""
-
-        logger.debug(f"Loading data from {filepath}")
-
-        data = self._io.read(filepath=filepath, **kwargs)
-        # Ensure correct data types
-        if isinstance(data, pd.DataFrame):
-            logger.debug(f"Applying data types to loaded DataFrame")
-            data = data.astype({k: v for k, v in DTYPES.items() if k in data.columns})
-        else:
-            logger.debug(
-                f"Loaded data is type {type(data)} and not a DataFrame. Skipping dtype application."
-            )
-        return data
-
-    def _save(self, df: pd.DataFrame, filepath: Path, **kwargs) -> None:
-        """
-        Saves a DataFrame to the processed data directory using the I/O service.
-
-        Args:
-            df: The DataFrame to save.
-            filepath: The path to the file to be saved.
-        """
-        logger.debug(f"Saving data to {filepath}")
-        self._io.write(data=df, filepath=filepath, **kwargs)
-
-    def _delete(self, location: Path) -> None:
-        """
-        Deletes a file from the specified location.
-
-        Args:
-            location: The path of the file to delete.
-        """
-        location.unlink(missing_ok=True)
-
-    def _exists(self, location: Path) -> bool:
-        """
-        Checks if a file exists at the specified location.
-
-        Args:
-            location: The path to a file for the existence check.
-
-        Returns:
-            True if the file exists, False otherwise.
-        """
-        return location.exists()
-
-    def _output_exists(self, force: bool = False) -> bool:
-        """
-        Determines whether the pipeline should be skipped because the output file already exists.
-
-        If `force` is True, the existing file is deleted, and the pipeline proceeds.
-
-        Args:
-            force: If True, forces the pipeline to run by deleting existing output.
-
-        Returns:
-            True if the pipeline should be skipped (i.e., output file exists and force is False),
-            False otherwise.
-        """
-        if force:
-            self._delete(location=self._config.output_location)
-            output_exists = False
-        else:
-            output_exists = self._exists(location=self._config.output_location) and not force
-
-        if output_exists:
-            logger.info(f"{self.__class__.__name__} - Output file already exists. Pipeline halted.")
-        else:
-            logger.info(f"{self.__class__.__name__}  - Starting")
-        return output_exists

@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 16th 2025 06:18:02 pm                                              #
-# Modified   : Friday October 17th 2025 03:29:59 am                                                #
+# Modified   : Saturday October 18th 2025 05:46:15 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -105,7 +105,7 @@ class AggregateSalesDataTask(Task):
 
         # Extract result components for brevity and clarity
         validation = result.validation
-        data = result.data
+        data = result.dataset.data
 
         # 1. Check for mandatory columns
         logger.debug("Validating output DataFrame structure and integrity.")
@@ -113,7 +113,7 @@ class AggregateSalesDataTask(Task):
         # columns.
 
         for col in COLUMNS:
-            if col not in result.data.columns:
+            if col not in result.dataset.data.columns:
                 validation.add_message(f"Missing mandatory column: {col}")
                 return result
 

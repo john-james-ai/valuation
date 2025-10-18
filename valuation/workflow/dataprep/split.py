@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday October 10th 2025 06:45:03 pm                                                #
-# Modified   : Friday October 17th 2025 03:05:19 am                                                #
+# Modified   : Friday October 17th 2025 08:21:35 pm                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -24,7 +24,7 @@ from loguru import logger
 
 from valuation.dataprep.base import DataPrep
 from valuation.dataprep.config import DataPrepBaseConfig
-from valuation.utils.data import DataFramePartitioner
+from valuation.utils.data import DataFrameSplitter
 from valuation.utils.io.service import IOService
 from valuation.utils.print import Printer
 
@@ -35,7 +35,7 @@ from valuation.utils.print import Printer
 class PathsConfig:
     """Holds all file paths for the splitting process."""
 
-    input_location: Path
+    input_filepath: Path
     train_filepath: Path
     validation_filepath: Path
     test_filepath: Path
@@ -58,8 +58,8 @@ class DatasetSplitter(DataPrep):
     """Splits datasets into training, validation, and test sets.
 
     Args:
-        splitter (DataFramePartitioner, optional): An instance of DataFramePartitioner for splitting
-            the dataset. Defaults to DataFramePartitioner.
+        splitter (DataFrameSplitter, optional): An instance of DataFrameSplitter for splitting
+            the dataset. Defaults to DataFrameSplitter.
         printer (Printer, optional): An instance of Printer for printing information. Defaults to
             Printer.
         io (IOService, optional): An instance of IOService for input/output operations. Defaults to
@@ -69,7 +69,7 @@ class DatasetSplitter(DataPrep):
 
     def __init__(
         self,
-        splitter: type[DataFramePartitioner] = DataFramePartitioner,
+        splitter: type[DataFrameSplitter] = DataFrameSplitter,
         printer: Printer = Printer,
         io: IOService = IOService,
     ) -> None:
@@ -94,7 +94,7 @@ class DatasetSplitter(DataPrep):
         if self._output_exists(config=config):
             return
 
-        df = self.load(filepath=config.paths.input_location)
+        df = self.load(filepath=config.paths.input_filepath)
         self._splits = self._splitter.split_by_proportion_of_values(
             df=df,
             val_col=config.val_col,

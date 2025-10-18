@@ -32,7 +32,7 @@ for year in (1, n_years):
 - **Visualization:** Create Bar Chart of Average YoY Sales Growth for the years in the training set
 
 #### Store Sales Growth
-**YoY Sales Growth (%):** This is the Same-Store Sales Growth calculation applied to each individual store. It shows which locations are expanding their customer base and sales volume.
+**YoY Sales Growth (%):** This is the Same-Store Sales Growth calculation applied to each individual store. It shows which filepaths are expanding their customer base and sales volume.
 To visualize create the following tables:
 - Top 10 Stores by YoY Sales Growth (%)    
 - Bottom 10 Stores by YoY Sales Growth (%)

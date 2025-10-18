@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday October 10th 2025 02:27:30 am                                                #
-# Modified   : Friday October 17th 2025 06:31:02 am                                                #
+# Modified   : Saturday October 18th 2025 06:06:55 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -20,7 +20,7 @@
 from __future__ import annotations
 
 from types import TracebackType
-from typing import Any, Dict, List, Optional, Type, Union
+from typing import Any, Dict, List, Optional, Type, Union, cast
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
@@ -32,7 +32,10 @@ from loguru import logger
 import pandas as pd
 
 from valuation.config.data import DTYPES
-from valuation.utils.data import DataClass
+from valuation.utils.data import DataClass, Dataset
+from valuation.utils.db.base import EntityStore
+from valuation.utils.identity import Passport
+from valuation.utils.io.service import IOService
 from valuation.workflow import Status
 from valuation.workflow.validation import Validation
 
@@ -44,6 +47,9 @@ class TaskConfig(DataClass):
 
     task_name: str
     dataset_name: str
+    description: str
+    source: Union[Passport, Dict[str, str]]
+    target: Passport
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -96,7 +102,7 @@ class TaskResult(DataClass):
     status: Optional[str] = field(default=Status.PENDING.value)
 
     # Contains the output data from the task
-    data: pd.DataFrame = field(default_factory=pd.DataFrame)
+    dataset: Dataset = field(default=None)
 
     @property
     def summary(self) -> Dict[str, Any]:
@@ -233,41 +239,55 @@ class TaskContext:
 
 # ------------------------------------------------------------------------------------------------ #
 class Task(ABC):
-    """Abstract base class for data preparation tasks.
+    """Abstract base class for data processing tasks.
 
-    This class provides a structured template for tasks that follow a consistent
-    lifecycle: execution, validation, and reporting. The lifecycle is managed
-    by the `run` method, which orchestrates the process and ensures robust
-    error handling and result reporting.
+    This class defines the interface and common functionality for all
+    data processing tasks within the workflow. Subclasses must implement
+    the `_execute` and `_validate_result` methods to provide specific
+    processing logic and validation rules.
 
-    Subclasses are required to implement the core `_execute` and
-    `_validate_result` logic.
+    Args:
+        config (TaskConfig): The configuration object for the task.
+        io (type[IOService], optional): The IO service class to use for data
+            loading and saving. Defaults to `IOService`.
+        entity_store (type[EntityStore], optional): The entity store class to use
+            for managing data entities. Defaults to `EntityStore`.
     """
 
-    def __init__(self, config: TaskConfig) -> None:
-        """Initializes the Task with its configuration.
+    def __init__(
+        self,
+        config: TaskConfig,
+        io: type[IOService] = IOService,
+        entity_store: type[EntityStore] = EntityStore,
+    ) -> None:
 
-        Args:
-            config (TaskConfig): A dataclass containing all configuration
-                parameters needed for the task.
-        """
         self._config = config
+        self._io = io()
+        self._entity_store = entity_store()
         self._task_context = TaskContext(config=config)
 
-    @abstractmethod
-    def _execute(self, data: Union[pd.DataFrame, Any], **kwargs) -> Union[pd.DataFrame, Any]:
-        """Executes the core logic of the task.
-
-        Subclasses must implement the specific data transformation or
-        processing logic in this method.
-
-        Args:
-            data: The input data for the task.
+    @property
+    def config(self) -> TaskConfig:
+        """Returns the task configuration object.
 
         Returns:
-            The processed output data.
+            TaskConfig: The configuration object used by this task.
         """
-        pass
+        return self._config
+
+    @abstractmethod
+    def _execute(self, df: pd.DataFrame, **kwargs) -> Dataset:
+        """Executes the core logic of the task.
+
+        Subclasses must implement this method to perform the specific
+        data processing or transformation that the task is responsible for.
+
+        Args:
+            dataset (Dataset): The input dataset to be processed.
+
+        Returns:
+            Dataset: The processed output dataset.
+        """
 
     @abstractmethod
     def _validate_result(self, result: TaskResult) -> TaskResult:
@@ -287,7 +307,7 @@ class Task(ABC):
         """
         pass
 
-    def run(self, data: Union[pd.DataFrame, Dict[str, str]]) -> TaskResult:
+    def run(self, dataset: Dataset) -> TaskResult:
         """Executes the full task lifecycle: execution, validation, and reporting.
 
         This method orchestrates the task's operation within a context that
@@ -295,7 +315,7 @@ class Task(ABC):
         complete TaskResult object is returned, whether the task succeeds or fails.
 
         Args:
-            data: The input data to be processed by the task.
+            data: Optional[pd.DataFrame]: The input data to be processed by the task.
 
         Returns:
             TaskResult: An object containing the final status, metrics,
@@ -308,16 +328,37 @@ class Task(ABC):
 
         try:
             with self._task_context as result:
-                # Check input data and set records_in count.
-                if data is None or (isinstance(data, pd.DataFrame) and data.empty):
-                    raise RuntimeError(f"{self.__class__.__name__} - No input data provided.")
-                result.records_in = len(data) if isinstance(data, pd.DataFrame) else 0
 
-                # Execute the task and count records out.
-                result.data = self._execute(data=data)
-                result.records_out = (
-                    len(result.data) if isinstance(result.data, pd.DataFrame) else 0
-                )
+                # 1. Capture the size of the input dataset.
+                result.records_in = cast(int, dataset.nrows)
+
+                # 2. Check validity of target configuration
+                if not isinstance(self._config.target, Passport):
+                    raise RuntimeError("Target configuration must be a Passport instance.")
+
+                # 3. Check if output already exists to potentially skip processing.
+                if self._entity_store.exists(
+                    name=self._config.target.name, stage=self._config.target.stage
+                ):
+
+                    result.status = Status.EXISTS.value
+                    # Get the output dataset from the entity store
+                    dataset_out = self._entity_store.get(
+                        name=self._config.target.name,
+                        stage=self._config.target.stage,
+                    )
+                    # Cast to a dataset object and assign to result
+                    dataset_out = cast(Dataset, dataset_out)
+                    result.records_out = cast(int, dataset_out.nrows)
+                    result.dataset = dataset_out
+                    return result
+
+                # 4. Otherwise execute the task
+                df_out = self._execute(df=dataset.data)
+
+                # 2. Create the output dataset object and count output records.
+                dataset_out = Dataset(passport=self._config.target, df=df_out)
+                result.records_out = cast(int, result.dataset.nrows)
 
                 # Validate the result by calling the subclass's implementation.
                 result = self._validate_result(result=result)
@@ -326,7 +367,32 @@ class Task(ABC):
                 if not result.validation.is_valid:  # type: ignore
                     self._handle_validation_failure(validation=result.validation)
         finally:
-            return result
+            return self._finalize(result=result, dataset=dataset_out)
+
+    def _finalize(self, result: TaskResult, dataset: Dataset) -> TaskResult:
+        """Finalizes the TaskResult with output dataset and metrics.
+
+        This method updates the TaskResult object with the final output
+        dataset and recalculates derived metrics such as record counts
+        and percentage change.
+
+        Args:
+            result (TaskResult): The TaskResult object to be finalized.
+            dataset_out (Dataset): The output dataset produced by the task.
+
+        Returns:
+            TaskResult: The updated TaskResult object with final metrics.
+        """
+        passport = dataset.passport
+        passport.complete(
+            created=result.started, completed=result.ended, cost=result.elapsed or 0.0
+        )
+        dataset.stamp_passport(passport=passport)
+        result.dataset = dataset
+        result.records_out = cast(int, dataset.nrows)
+        result.finalize()
+        self._entity_store.add(entity=dataset)
+        return result
 
     def _validate_columns(
         self, validation: Validation, data: pd.DataFrame, required_columns: List[str]
@@ -368,5 +434,5 @@ class Task(ABC):
 
         msg = f"{self.__class__.__name__} - Validation Failed"
         logger.error(msg)
-        logger.error(f"Validation Messages: {validation.messages}")
+        logger.error(f"Validation Messages:\n{validation.messages}")
         raise RuntimeError(msg)

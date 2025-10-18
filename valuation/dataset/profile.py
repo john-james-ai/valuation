@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
 # ================================================================================================ #
-# Project    : Valuation of Dominick's Fine Foods, Inc. 1997-2003                                  #
+# Project    : Valuation - Discounted Cash Flow Method                                             #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
 # Filename   : /valuation/dataset/profile.py                                                       #
@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Monday October 13th 2025 08:32:34 am                                                #
-# Modified   : Monday October 13th 2025 08:46:18 am                                                #
+# Modified   : Saturday October 18th 2025 06:12:51 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -20,6 +20,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 import pandas as pd
+
 from valuation.dataprep.base import Task, TaskConfig
 from valuation.utils.data import DataClass
 
@@ -77,7 +78,7 @@ class ProfileTask(Task):
 
         """
 
-        df = self._load(filepath=self._config.input_location)
+        df = self._load(filepath=self._config.input_filepath)
 
         profile = Profile(
             dataset_name=self._config.dataset_name,
@@ -93,8 +94,8 @@ class ProfileTask(Task):
             ),
             memory_usage_mb=df.memory_usage(deep=True).sum() / (1024 * 1024),
             file_size_mb=(
-                self._config.input_location.stat().st_size / (1024 * 1024)
-                if self._config.input_location.exists()
+                self._config.input_filepath.stat().st_size / (1024 * 1024)
+                if self._config.input_filepath.exists()
                 else 0
             ),
         )

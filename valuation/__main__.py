@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 9th 2025 11:01:16 pm                                               #
-# Modified   : Friday October 17th 2025 04:26:43 am                                                #
+# Modified   : Saturday October 18th 2025 06:10:45 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -20,6 +20,7 @@
 
 import typer
 
+from valuation.archive.io.base import IOService
 from valuation.config.filepaths import (
     CONFIG_FILEPATH,
     FILEPATH_SALES_PROCESSED_SCW,
@@ -27,6 +28,7 @@ from valuation.config.filepaths import (
     WEEK_DECODE_TABLE_FILEPATH,
 )
 from valuation.config.loggers import configure_logging
+from valuation.utils.identity import DatasetStage, EntityType, Passport
 from valuation.workflow.dataprep.sales.aggregate import AggregateSalesDataTask
 from valuation.workflow.dataprep.sales.clean import CleanSalesDataTask
 from valuation.workflow.dataprep.sales.ingest import IngestSalesDataTask, IngestSalesDataTaskConfig
@@ -47,8 +49,8 @@ app = typer.Typer()
 
 #     config = TaskConfig(
 #         dataset_name="Dominick's Store Demo Data - Ingestion",
-#         input_location=FILEPATH_STORE_DEMO_RAW,
-#         output_location=FILEPATH_STORE_DEMO_INGEST,
+#         input_filepath=FILEPATH_STORE_DEMO_RAW,
+#         output_filepath=FILEPATH_STORE_DEMO_INGEST,
 #     )
 #     # Run the sales data processing task
 #     return IngestStoreDemoDataTask(config=config)
@@ -66,8 +68,8 @@ app = typer.Typer()
 
 #     config = TaskConfig(
 #         dataset_name="Dominick's Customer Data - Ingestion",
-#         input_location=FILEPATH_CUSTOMER_RAW,
-#         output_location=FILEPATH_CUSTOMER_INGEST,
+#         input_filepath=FILEPATH_CUSTOMER_RAW,
+#         output_filepath=FILEPATH_CUSTOMER_INGEST,
 #     )
 #     # Run the sales data processing task
 #     return IngestCustomerDataTask(config=config)
@@ -76,30 +78,52 @@ app = typer.Typer()
 # ------------------------------------------------------------------------------------------------ #
 #                                   SALES DATA PIPELINE                                            #
 # ------------------------------------------------------------------------------------------------ #
-def get_aggregate_sales_data_task() -> Task:
+def get_aggregate_sales_data_task(source: Passport) -> Task:
     """Aggregates cleaned sales data to the store-category-week level.
 
     Args:
         force (bool): Whether to force reprocessing if the file already exists.
     """
-    # Create configuration for sales data processing
+    # Create the output Passport for the aggregated sales data
+    passport = Passport.create(
+        name="Dominick's Sales Data - Aggregation",
+        description="Dominick's Aggregated Sales Data Dataset",
+        stage=DatasetStage.PROCESSED,
+        type=EntityType.DATASET,
+        format="csv",
+    )
 
+    # Create configuration for sales data processing
     config = TaskConfig(
         task_name="AggregateSalesDataTask",
-        dataset_name="Dominick's Sales Data - Aggregation",
+        dataset_name=passport.name,
+        description=passport.description,
+        source=source,
+        target=passport,
     )
     # Run the sales data processing task
     return AggregateSalesDataTask(config=config)
 
 
 # ------------------------------------------------------------------------------------------------ #
-def get_clean_sales_data_task() -> Task:
+def get_clean_sales_data_task(source: Passport) -> Task:
+
+    # Create the output Passport for the cleaned sales data
+    passport = Passport.create(
+        name="Dominick's Sales Data - Clean",
+        description="Dominick's Clean Sales Data Dataset",
+        stage=DatasetStage.CLEAN,
+        type=EntityType.DATASET,
+        format="parquet",
+    )
 
     # Create configuration for sales data processing
-
     config = TaskConfig(
         task_name="CleanSalesDataTask",
-        dataset_name="Dominick's Sales Data - Clean",
+        dataset_name=passport.name,
+        description=passport.description,
+        source=source,
+        target=passport,
     )
     # Run the sales data processing task
     return CleanSalesDataTask(config=config)
@@ -112,12 +136,25 @@ def get_ingest_sales_data_task() -> Task:
     Args:
         force (bool): Whether to force reprocessing if the file already exists.
     """
-    # Create configuration for sales data processing
+    # Obtain prerequisite data
+    week_dates = IOService.read(filepath=WEEK_DECODE_TABLE_FILEPATH)
+    filepaths = IOService.read(filepath=CONFIG_FILEPATH)
+    # Create Passport for Target Dataset
+    passport = Passport.create(
+        name="Dominick's Sales Data - Ingestion",
+        description="Dominick's Sales Data Ingestion Dataset",
+        stage=DatasetStage.INGEST,
+        type=EntityType.DATASET,
+        format="parquet",
+    )
 
     config = IngestSalesDataTaskConfig(
         task_name="IngestSalesDataTask",
+        description="Ingests Dominick's raw sales data.",
         dataset_name="Dominick's Sales Data - Ingestion",
-        week_decode_table_filepath=WEEK_DECODE_TABLE_FILEPATH,
+        week_decode_table=week_dates,
+        source=filepaths,
+        target=passport,
         raw_data_directory=RAW_DATA_DIR,
     )
     # Run the sales data processing task
@@ -132,16 +169,16 @@ def run_sales_data_pipeline(force: bool) -> PipelineResult:
     """
     # Construct the data preparation pipeline tasks
     ingest_sales_data_task = get_ingest_sales_data_task()
-    clean_sales_data_task = get_clean_sales_data_task()
-    aggregate_sales_data_task = get_aggregate_sales_data_task()
+    clean_sales_data_task = get_clean_sales_data_task(ingest_sales_data_task.config.target)
+    aggregate_sales_data_task = get_aggregate_sales_data_task(clean_sales_data_task.config.target)
 
     # Pipeline Configuration
     config = PipelineConfig(
         name="Sales Data Preparation Pipeline",
         dataset_name="Dominick's Sales Data",
         description="Pipeline to prepare sales data for analysis.",
-        input_location=CONFIG_FILEPATH,
-        output_location=FILEPATH_SALES_PROCESSED_SCW,
+        input_filepath=CONFIG_FILEPATH,
+        output_filepath=FILEPATH_SALES_PROCESSED_SCW,
     )
 
     # Create and run the sales data pipeline

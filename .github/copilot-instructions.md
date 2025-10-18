@@ -1,0 +1,1 @@
+Create docstrings for all python code using the google style guide. Ensure that argument data types are indicateed as per the google docstring standard. Do not modify any code other than to add docstrings.

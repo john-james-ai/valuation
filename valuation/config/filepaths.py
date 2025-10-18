@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Wednesday October 8th 2025 02:52:13 pm                                              #
-# Modified   : Friday October 17th 2025 04:21:58 am                                                #
+# Modified   : Saturday October 18th 2025 01:20:37 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -31,6 +31,9 @@ PROCESSED_DATA_DIR = DATA_DIR / "processed"
 ENRICH_DATA_DIR = DATA_DIR / "enrich"
 EXTERNAL_DATA_DIR = DATA_DIR / "external"
 REFERENCES_DIR = PROJ_ROOT / "references"
+
+# ENTITY STORE
+ENTITY_STORE_DIR = PROJ_ROOT / "entities"
 
 # MODELS
 MODELS_DIR = PROJ_ROOT / "models"
