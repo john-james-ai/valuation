@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
 # ================================================================================================ #
-# Project    : Valuation of Dominick's Fine Foods, Inc. 1997-2003                                  #
+# Project    : Valuation - Discounted Cash Flow Method                                             #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
-# Filename   : /valuation/dataset/category.py                                                      #
+# Filename   : /valuation/app/analysis/category.py                                                 #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday October 12th 2025 03:17:59 am                                                #
-# Modified   : Sunday October 12th 2025 10:33:38 am                                                #
+# Modified   : Saturday October 18th 2025 11:15:33 pm                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -19,7 +19,7 @@
 import numpy as np
 import pandas as pd
 
-from valuation.dataset.base import DataAggregator, Dataset
+from valuation.analysis.base import DataAggregator, Dataset
 
 # ------------------------------------------------------------------------------------------------ #
 
@@ -88,9 +88,7 @@ class CategoryDataset(Dataset):
         categorys_previous = set(
             aggregated[aggregated["year"] == previous_year]["category"].unique()
         )
-        categorys_current = set(
-            aggregated[aggregated["year"] == current_year]["category"].unique()
-        )
+        categorys_current = set(aggregated[aggregated["year"] == current_year]["category"].unique())
         comp_categorys = categorys_previous.intersection(categorys_current)
 
         # Filter for only the comparable categorys and the two relevant years
@@ -113,8 +111,7 @@ class CategoryDataset(Dataset):
         # 5. Calculate the sales growth rate
         comp_categorys_data["sales_growth_rate"] = np.where(
             comp_categorys_data["revenue_prev"] > 0,
-            ((comp_categorys_data["revenue_curr"] / comp_categorys_data["revenue_prev"]) - 1)
-            * 100,
+            ((comp_categorys_data["revenue_curr"] / comp_categorys_data["revenue_prev"]) - 1) * 100,
             0,
         )
 

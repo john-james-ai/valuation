@@ -4,14 +4,14 @@
 # Project    : Valuation - Discounted Cash Flow Method                                             #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
-# Filename   : /valuation/asset/dataset.py                                                         #
+# Filename   : /valuation/asset/dataset/base.py                                                    #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 9th 2025 07:11:18 pm                                               #
-# Modified   : Saturday October 18th 2025 08:20:20 pm                                              #
+# Modified   : Saturday October 18th 2025 11:16:37 pm                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -24,13 +24,50 @@ from typing import Optional, Union
 from dataclasses import dataclass
 from pathlib import Path
 
+from loguru import logger
 import pandas as pd
 
 from valuation.asset.base import Asset, Passport
 from valuation.asset.identity import AssetType
-from valuation.infra.db.file_system import FileSystem
-from valuation.core.data import DataClass
-from valuation.utils.io.service import IOService
+from valuation.core.structure import DataClass
+from valuation.infra.exception import DatasetExistsError
+from valuation.infra.file.file_system import FileSystem
+from valuation.infra.file.io import IOService
+
+# ------------------------------------------------------------------------------------------------ #
+DTYPES = {}
+DTYPES = {
+    "CATEGORY": "string",
+    "STORE": "Int64",
+    "DATE": "datetime64[ns]",
+    "UPC": "Int64",
+    "WEEK": "Int64",
+    "QTY": "Int64",
+    "MOVE": "Int64",
+    "OK": "Int64",
+    "SALE": "string",
+    "PRICE": "float64",
+    "REVENUE": "float64",
+    "PROFIT": "float64",
+    "YEAR": "Int64",
+    "START": "datetime64[ns]",
+    "END": "datetime64[ns]",
+    "GROSS_MARGIN_PCT": "float64",
+    "GROSS_MARGIN": "float64",
+    "GROSS_PROFIT": "float64",
+    "OK": "Int64",
+}
+DTYPES_CAPITAL = {k.capitalize(): v for k, v in DTYPES.items()}
+DTYPES_LOWER = {k.lower(): v for k, v in DTYPES.items()}
+DTYPES.update(DTYPES_CAPITAL)
+DTYPES.update(DTYPES_LOWER)
+
+NUMERIC_COLUMNS = [k for k, v in DTYPES.items() if v in ("Int64", "float64")]
+DATETIME_COLUMNS = [k for k, v in DTYPES.items() if v == "datetime64[ns]"]
+STRING_COLUMNS = [k for k, v in DTYPES.items() if v == "str"]
+
+NUMERIC_PLACEHOLDER = -1  # Placeholder for missing numeric values
+STRING_PLACEHOLDER = "Unknown"  # Placeholder for missing string values
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -167,8 +204,6 @@ class DatasetProfile(DataClass):
 
 
 class Dataset(Asset):
-    
-    __ASSET_TYPE = AssetType.DATASET
 
     def __init__(
         self,
@@ -179,7 +214,8 @@ class Dataset(Asset):
         self._passport = passport
         self._df = df
         self._io = io()
-        self._file_system = FileSystem(Dataset.__ASSET_TYPE)
+        self._file_system = FileSystem(self.asset_type)
+        self._asset_filepath = self._file_system.get_asset_filepath(passport=passport)
 
         self._fileinfo: Optional[FileInfo] = None
         self._profile: Optional[DatasetProfile] = None
@@ -195,6 +231,11 @@ class Dataset(Asset):
     def passport(self) -> Passport:
         """The dataset's unique idasset."""
         return self._passport
+
+    @property
+    def asset_type(self) -> AssetType:
+        """The type of asset."""
+        return AssetType.DATASET
 
     @property
     def profile(self) -> Optional[DatasetProfile]:
@@ -239,11 +280,7 @@ class Dataset(Asset):
         """
         stale = self._fileinfo.is_stale if self._fileinfo else False
         if self._df is None or self._df.empty or stale or force:
-            asset_filepath = self._file_system.get_(location=self.
-            if self._passport.filepath:
-                self.load()
-            else:
-                logger.warning("No filepath set; cannot refresh data.")
+            self.load()
 
     def refresh_profile(self, force: bool = False) -> None:
         """Refreshes the dataset profile if it is missing or stale.
@@ -264,10 +301,10 @@ class Dataset(Asset):
             force: If True, forces the file metadata to be re-read.
         """
         stale = self._fileinfo.is_stale if self._fileinfo else False
-        if (self._fileinfo is None or stale or force) and self._passport.filepath:
-            self._fileinfo = FileInfo.from_filepath(filepath=self._passport.filepath)
+        if self._fileinfo is None or stale or force:
+            self._fileinfo = FileInfo.from_filepath(filepath=self._asset_filepath)
 
-    def load(self, dtypes: Optional[Dict[str, Any]] = None, **kwargs) -> None:
+    def load(self, **kwargs) -> None:
         """Loads data from the source filepath into the internal DataFrame.
 
         This method uses the injected IO service to read the file. It can also
@@ -279,14 +316,11 @@ class Dataset(Asset):
             **kwargs: Additional keyword arguments to pass to the IO service's
                 read method.
         """
-        logger.debug(f"Loading data from {self._passport.filepath}")
-        if not self._passport.filepath:
-            raise ValueError("Filepath is not set. Cannot load data.")
 
-        self._df = self._io.read(filepath=self._passport.filepath, **kwargs)
+        self._df = self._io.read(filepath=self._asset_filepath, **kwargs)
 
-        if dtypes is not None and self._df is not None and not self._df.empty:
-            valid_dtypes = {k: v for k, v in dtypes.items() if k in self._df.columns}
+        if DTYPES is not None and self._df is not None and not self._df.empty:
+            valid_dtypes = {k: v for k, v in DTYPES.items() if k in self._df.columns}
             self._df = self._df.astype(valid_dtypes)
 
     def save(self, overwrite: bool = False, **kwargs) -> None:
@@ -303,9 +337,7 @@ class Dataset(Asset):
             ValueError: If the Dataset has no canonical filepath set.
             FileConflictError: If the file exists and `overwrite` is False.
         """
-        if not self._passport.filepath:
-            raise ValueError("Filepath is not set. Use save_as() instead.")
-        self.save_as(self._passport.filepath, overwrite=overwrite, **kwargs)
+        self.save_as(self._asset_filepath, overwrite=overwrite, **kwargs)
 
     def save_as(self, filepath: Union[Path, str], overwrite: bool = False, **kwargs) -> None:
         """Saves the in-memory DataFrame to a specified location.
@@ -331,10 +363,10 @@ class Dataset(Asset):
 
     def delete(self) -> None:
         """Deletes the file associated with this Dataset from the filesystem."""
-        if not self._passport.filepath:
+        if not self._asset_filepath:
             raise ValueError("Filepath is not set. No file to delete.")
-        logger.debug(f"Deleting file {self._passport.filepath}")
-        self._passport.filepath.unlink(missing_ok=True)
+        logger.debug(f"Deleting file {self._asset_filepath}")
+        self._asset_filepath.unlink(missing_ok=True)
 
     def exists(self) -> bool:
         """Checks if a file exists at the Dataset's canonical filepath.
@@ -343,6 +375,6 @@ class Dataset(Asset):
             True if the file exists, False otherwise. Returns False if no
             filepath is associated with the Dataset.
         """
-        if not self._passport.filepath:
+        if not self._asset_filepath:
             return False
-        return self._passport.filepath.exists()
+        return self._asset_filepath.exists()

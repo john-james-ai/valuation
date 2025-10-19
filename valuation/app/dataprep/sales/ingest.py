@@ -4,14 +4,14 @@
 # Project    : Valuation - Discounted Cash Flow Method                                             #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
-# Filename   : /valuation/workflow/dataprep/sales/ingest.py                                        #
+# Filename   : /valuation/app/dataprep/sales/ingest.py                                             #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday October 12th 2025 11:51:12 pm                                                #
-# Modified   : Saturday October 18th 2025 08:20:23 pm                                              #
+# Modified   : Saturday October 18th 2025 11:15:34 pm                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -25,14 +25,15 @@ from loguru import logger
 import pandas as pd
 from tqdm import tqdm
 
+from valuation.asset.data import DTYPES
 from valuation.asset.dataset import Dataset
-from valuation.config.data import DTYPES
 from valuation.utils.db.dataset import DatasetStore
 from valuation.utils.io.service import IOService
 from valuation.workflow.task import Task, TaskConfig, TaskContext, TaskResult
 
 # ------------------------------------------------------------------------------------------------ #
 CONFIG_CATEGORY_INFO_KEY = "category_filenames"
+WEEK_DECODE_TABLE_FILEPATH = "data/external/week_decode_table.csv"
 
 
 # ------------------------------------------------------------------------------------------------ #

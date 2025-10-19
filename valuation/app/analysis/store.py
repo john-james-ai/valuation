@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
 # ================================================================================================ #
-# Project    : Valuation of Dominick's Fine Foods, Inc. 1997-2003                                  #
+# Project    : Valuation - Discounted Cash Flow Method                                             #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
-# Filename   : /valuation/dataset/store.py                                                         #
+# Filename   : /valuation/app/analysis/store.py                                                    #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday October 12th 2025 03:17:59 am                                                #
-# Modified   : Sunday October 12th 2025 10:18:15 am                                                #
+# Modified   : Saturday October 18th 2025 11:15:33 pm                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -20,7 +20,7 @@ from loguru import logger
 import numpy as np
 import pandas as pd
 
-from valuation.dataset.base import DataAggregator, Dataset
+from valuation.analysis.base import DataAggregator, Dataset
 
 # ------------------------------------------------------------------------------------------------ #
 
@@ -75,9 +75,7 @@ class StoreDataset(Dataset):
         # Obtain the dataset from the base class
         dataset = self.dataset
 
-        aggregated = self._aggregator.aggregate(
-            data=dataset.data.copy(), groupby=["store", "year"]
-        )
+        aggregated = self._aggregator.aggregate(data=dataset.data.copy(), groupby=["store", "year"])
 
         # Identify the previous and current years
         previous_year = dataset.years[-2] if len(dataset.years) > 1 else None

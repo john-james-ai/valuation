@@ -4,41 +4,27 @@
 # Project    : Valuation - Discounted Cash Flow Method                                             #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
-# Filename   : /tests/conftest.py                                                                  #
+# Filename   : /devops/mode_data.py                                                                #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
-# Created    : Saturday October 11th 2025 08:23:13 pm                                              #
-# Modified   : Saturday October 18th 2025 11:15:33 pm                                              #
+# Created    : Sunday October 19th 2025 12:18:21 am                                                #
+# Modified   : Sunday October 19th 2025 12:33:17 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
 # ================================================================================================ #
-import pytest
+from dataclasses import dataclass
 
-from valuation.asset.data import DTYPES
-from valuation.utils.io.csv.base import CompressionType
-from valuation.utils.io.csv.service import CSVIOService
-
-# from valuation.utils.io.service import ObjectIOService, TabularIOService
-
-# ------------------------------------------------------------------------------------------------ #
-FINANCIALS_FILEPATH = "tests/data/financials.yaml"
-SALES_FILEPATH = "tests/data/wbat.csv"
+from valuation.core.structure import DataClass
 
 
-# # ------------------------------------------------------------------------------------------------ #
-# @pytest.fixture(scope="session", autouse=False)
-# def financials():
-#     return ObjectIOService.read(filepath=FINANCIALS_FILEPATH)["financials"]
+@dataclass
+class ModeSalesDataConfig(DataClass):
+    """Holds data related to the current operating mode."""
 
-
-# ------------------------------------------------------------------------------------------------ #
-@pytest.fixture(scope="session", autouse=False)
-def sales_csv():
-    df = CSVIOService.read(
-        filepath=SALES_FILEPATH, compression=CompressionType.INFER, engine="pandas"
-    )
-    return df.astype({k: v for k, v in DTYPES.items() if k in df.columns})
+    source_mode: str
+    target_mode: str
+    max_dataset_size: int

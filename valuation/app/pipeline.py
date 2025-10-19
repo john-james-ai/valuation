@@ -4,14 +4,14 @@
 # Project    : Valuation - Discounted Cash Flow Method                                             #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
-# Filename   : /valuation/workflow/pipeline.py                                                     #
+# Filename   : /valuation/app/pipeline.py                                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Tuesday October 14th 2025 10:53:05 pm                                               #
-# Modified   : Saturday October 18th 2025 08:20:23 pm                                              #
+# Modified   : Saturday October 18th 2025 11:16:36 pm                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -32,9 +32,9 @@ import traceback
 from loguru import logger
 import pandas as pd
 
+from valuation.app.state import Status
 from valuation.asset.dataset import Dataset
-from valuation.core.data import DataClass
-from valuation.workflow import Status
+from valuation.core.structure import DataClass
 from valuation.workflow.task import TaskResult
 
 # ------------------------------------------------------------------------------------------------ #

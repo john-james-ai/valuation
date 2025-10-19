@@ -4,14 +4,14 @@
 # Project    : Valuation - Discounted Cash Flow Method                                             #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
-# Filename   : /valuation/infra/store/dataset_store.py                                             #
+# Filename   : /valuation/infra/store/dataset.py                                                   #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday October 17th 2025 11:19:18 pm                                                #
-# Modified   : Saturday October 18th 2025 08:20:20 pm                                              #
+# Modified   : Saturday October 18th 2025 11:54:35 pm                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -19,31 +19,25 @@
 """Manages the Dataset Store."""
 from typing import Optional, cast
 
-from pathlib import Path
-
-from valuation.asset.dataset import Dataset
-from valuation.asset.identity import AssetType, DatasetStage, Passport
-from valuation.config.filepaths import DATA_DIR
-from valuation.infra.db.base import AssetStore
+from valuation.asset.dataset.base import Dataset
+from valuation.asset.identity import Passport
+from valuation.asset.stage import DatasetStage
+from valuation.asset.types import AssetType
 from valuation.infra.exception import DatasetExistsError, DatasetNotFoundError
+from valuation.infra.store.base import AssetStoreBase
 
 
 # ------------------------------------------------------------------------------------------------ #
-class DatasetStore(AssetStore):
+class DatasetStore(AssetStoreBase):
 
-    def __init__(self, location: Path) -> None:
+    def __init__(self) -> None:
         """ """
-        super().__init__(location=location)
+        super().__init__()
 
     @property
     def asset_type(self) -> AssetType:
         """ """
         return AssetType.DATASET
-
-    @property
-    def asset_location(self) -> Path:
-        """ """
-        return DATA_DIR
 
     def add(self, dataset: Dataset, overwrite: bool = False) -> None:
         """Adds a dataset to the store.
@@ -91,14 +85,3 @@ class DatasetStore(AssetStore):
 
     def create_asset(self, passport: Passport) -> Dataset:
         return Dataset(passport=passport)
-
-    def get_asset_filepath(self, passport: Passport) -> Path:
-        Path(self.asset_location / passport.stage.value).mkdir(parents=True, exist_ok=True)
-        return (
-            self.asset_location
-            / passport.stage.value
-            / f"{passport.asset_type.value}_{passport.stage.value}_{passport.name}_{passport.created}.{passport.asset_format}"
-        )
-
-    def get_passport_filepath(self, stage: DatasetStage, name: str) -> Path:
-        return self._location / f"{self.asset_type.value}_{stage.value}_{name}.json"

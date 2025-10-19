@@ -11,16 +11,15 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday October 17th 2025 11:19:18 pm                                                #
-# Modified   : Saturday October 18th 2025 08:20:23 pm                                              #
+# Modified   : Sunday October 19th 2025 12:27:24 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
 # ================================================================================================ #
 """Manages the Dataset Store."""
-from typing import Any, Dict, Optional, Union
+from typing import Optional, Union
 
 from abc import abstractmethod
-import json
 from pathlib import Path
 
 from loguru import logger
@@ -30,6 +29,7 @@ from valuation.asset.base import Asset
 from valuation.asset.identity import AssetType, Passport, Stage
 from valuation.asset.store import AssetStore
 from valuation.infra.exception import AssetStoreNotFoundError
+from valuation.infra.file.file_system import FileSystem
 from valuation.infra.file.io import IOService
 
 
@@ -44,23 +44,10 @@ class AssetStoreBase(AssetStore):
         _io (IOService): IO service used to read/write passport files.
     """
 
-    def __init__(self, location: Optional[Path] = None, io: IOService = IOService) -> None:
-        """Initialize the AssetStore.
+    def __init__(self, io: IOService = IOService) -> None:
 
-        Ensures the storage directory exists and sets the IO service.
-
-        Args:
-            location (Optional[Path]): Directory path for storing asset JSON files. If None,
-                the default ASSET_STORE_DIR is used.
-            io (IOService): IO service used for reading and writing passport files.
-
-        Returns:
-            None
-        """
-        self._location = Path(location) or ASSET_STORE_DIR
-        self._location.mkdir(parents=True, exist_ok=True)
         self._io = io
-        self._file_system = FileSystem()
+        self._file_system = FileSystem(self.asset_type)
 
     @property
     @abstractmethod
@@ -69,16 +56,6 @@ class AssetStoreBase(AssetStore):
 
         Returns:
             AssetType: The enum value representing the asset type handled by the store.
-        """
-        pass
-
-    @property
-    @abstractmethod
-    def asset_location(self) -> AssetType:
-        """Filesystem location where assets are stored.
-
-        Returns:
-            AssetType: The enum or descriptor indicating the asset storage location.
         """
         pass
 
@@ -100,10 +77,7 @@ class AssetStoreBase(AssetStore):
             FileExistsError: If an asset with the same passport already exists and overwrite is False.
         """
         passport_filepath = self._file_system.get_passport_filepath(
-            location=self._location,
-            asset_type=self.asset_type,
-            stage=asset.passport.stage,
-            name=asset.passport.name,
+            stage=asset.passport.stage, name=asset.passport.name
         )
 
         if passport_filepath.exists() and not overwrite:
@@ -132,9 +106,7 @@ class AssetStoreBase(AssetStore):
             FileNotFoundError: If the passport file for the requested asset does not exist.
         """
         # Get the filepath for the passport
-        passport_filepath = self._file_system.get_passport_filepath(
-            location=self._location, asset_type=self.asset_type, stage=stage, name=name
-        )
+        passport_filepath = self._file_system.get_passport_filepath(stage=stage, name=name)
         # Obtain the passport dictionary
         passport_dict = self._io.read(filepath=passport_filepath)
         # Create the passport
@@ -160,17 +132,13 @@ class AssetStoreBase(AssetStore):
             FileNotFoundError: If the passport file for the requested asset does not exist.
         """
         # Get the filepath for the passport
-        passport_filepath = self._file_system.get_passport_filepath(
-            location=self._location, asset_type=self.asset_type, stage=stage, name=name
-        )
+        passport_filepath = self._file_system.get_passport_filepath(stage=stage, name=name)
 
         # Get the passport
         passport = self._get_passport(filepath=passport_filepath)
 
         # Get the asset filepath
-        asset_filepath = self._file_system.get_asset_filepath(
-            location=self._location, passport=passport
-        )
+        asset_filepath = self._file_system.get_asset_filepath(passport=passport)
 
         # Remove asset data file and passport
         self._remove_file(filepath=asset_filepath)
@@ -203,13 +171,15 @@ class AssetStoreBase(AssetStore):
         """
         registry = []
 
-        if not self._location.is_dir():
-            raise AssetStoreNotFoundError(f"Error: Directory not found at '{self._location}'")
+        store_location = self._file_system.store_location
+
+        if not store_location:
+            raise AssetStoreNotFoundError(f"Error: Directory not found at '{store_location}'")
 
         registry = [
             data
-            for path in self._location.glob("*.json")
-            if (data := self._get_registry(path)) is not None
+            for path in store_location.glob("*.json")
+            if (data := self._io.read(path)) is not None
         ]
 
         return pd.DataFrame(registry)
@@ -224,12 +194,7 @@ class AssetStoreBase(AssetStore):
         Returns:
             bool: True if the asset exists, False otherwise.
         """
-        passport_filepath = self._file_system.get_passport_filepath(
-            location=self._location,
-            asset_type=self.asset_type,
-            stage=stage,
-            name=name,
-        )
+        passport_filepath = self._file_system.get_passport_filepath(name=name, stage=stage)
 
         return passport_filepath.exists()
 
@@ -269,19 +234,3 @@ class AssetStoreBase(AssetStore):
         except Exception as e:
             logger.error(f"Failed to read passport from '{filepath}': {e}")
             raise
-
-    def _get_registry(self, filepath: Path) -> Optional[Dict[str, Any]]:
-        """Safely read and parse a single JSON registry file.
-
-        Args:
-            filepath (Path): The path to the JSON file.
-
-        Returns:
-            Optional[Dict[str, Any]]: A dictionary of the parsed JSON data, or None if parsing fails.
-        """
-        try:
-            with open(filepath, "r") as f:
-                return json.load(f)
-        except (json.JSONDecodeError, TypeError) as e:
-            logger.warning(f"Could not parse '{filepath.name}'. Skipping. Reason: {e}")
-            return None

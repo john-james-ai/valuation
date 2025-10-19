@@ -4,14 +4,14 @@
 # Project    : Valuation - Discounted Cash Flow Method                                             #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
-# Filename   : /valuation/workflow/task.py                                                         #
+# Filename   : /valuation/app/task.py                                                              #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday October 10th 2025 02:27:30 am                                                #
-# Modified   : Saturday October 18th 2025 08:20:20 pm                                              #
+# Modified   : Saturday October 18th 2025 11:16:37 pm                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -31,13 +31,13 @@ import traceback
 from loguru import logger
 import pandas as pd
 
+from valuation.app.state import Status
+from valuation.asset.data import DTYPES
 from valuation.asset.dataset import Dataset
 from valuation.asset.identity import Passport
-from valuation.config.data import DTYPES
-from valuation.core.data import DataClass
+from valuation.core.structure import DataClass
 from valuation.utils.db.dataset import DatasetStore
 from valuation.utils.io.service import IOService
-from valuation.workflow import Status
 from valuation.workflow.validation import Validation
 
 

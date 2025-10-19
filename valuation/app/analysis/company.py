@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
 # ================================================================================================ #
-# Project    : Valuation of Dominick's Fine Foods, Inc. 1997-2003                                  #
+# Project    : Valuation - Discounted Cash Flow Method                                             #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
-# Filename   : /valuation/dataset/company.py                                                       #
+# Filename   : /valuation/app/analysis/company.py                                                  #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Saturday October 11th 2025 07:04:50 pm                                              #
-# Modified   : Sunday October 12th 2025 06:49:59 am                                                #
+# Modified   : Saturday October 18th 2025 11:15:33 pm                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -19,8 +19,8 @@
 
 import pandas as pd
 
-from valuation.dataset.base import Dataset
-from valuation.dataset.financials import Financials
+from valuation.analysis.base import Dataset
+from valuation.analysis.financials import Financials
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -57,9 +57,7 @@ class CompanyDataset(Dataset):
             return self._annual_sales
 
         # 1. Group by year and sum the revenue. Ensure data is sorted chronologically.
-        annual_sales = (
-            self.dataset.data.groupby("year")["revenue"].sum().sort_index().reset_index()
-        )
+        annual_sales = self.dataset.data.groupby("year")["revenue"].sum().sort_index().reset_index()
 
         # 2. Use pct_change() to calculate YoY growth in a single, vectorized operation.
         # This calculates (current_year_revenue / previous_year_revenue) - 1

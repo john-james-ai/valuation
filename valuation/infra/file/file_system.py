@@ -11,19 +11,24 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Saturday October 18th 2025 06:47:58 pm                                              #
-# Modified   : Saturday October 18th 2025 08:21:07 pm                                              #
+# Modified   : Sunday October 19th 2025 12:26:46 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
 # ================================================================================================ #
 
+import os
 from pathlib import Path
+
+from dotenv import load_dotenv
 
 from valuation.asset.identity import AssetType, Passport, Stage
 
 # ------------------------------------------------------------------------------------------------ #
+load_dotenv()
+# ------------------------------------------------------------------------------------------------ #
 PROJ_ROOT = Path(__file__).resolve().parents[2]
-
+MODE = os.getenv("MODE", "dev")
 # ------------------------------------------------------------------------------------------------ #
 #                                          LOCATIONS                                               #
 # ------------------------------------------------------------------------------------------------ #
@@ -51,30 +56,33 @@ class FileSystem:
 
     __asset_type_stage_location_map = {
         AssetType.DATASET: {
-            "passport_location": ASSET_STORE_DATASET_PASSPORT_DIR,
+            "store_location": ASSET_STORE_DATASET_PASSPORT_DIR,
             "asset_location": DATA_DIR,
         },
         AssetType.MODEL: {
-            "passport_location": ASSET_STORE_MODEL_PASSPORT_DIR,
+            "store_location": ASSET_STORE_MODEL_PASSPORT_DIR,
             "asset_location": MODEL_DIR,
         },
         AssetType.REPORT: {
-            "passport_location": ASSET_STORE_REPORT_PASSPORT_DIR,
+            "store_location": ASSET_STORE_REPORT_PASSPORT_DIR,
             "asset_location": REPORT_DIR,
         },
     }
 
     def __init__(self, asset_type: AssetType) -> None:
         self._asset_type = asset_type
-        self._passport_location = self.__asset_type_stage_location_map[asset_type][
-            "passport_location"
-        ]
+        self._store_location = self.__asset_type_stage_location_map[asset_type]["store_location"]
         self._asset_location = self.__asset_type_stage_location_map[asset_type]["asset_location"]
 
     @property
     def asset_location(self) -> Path:
         """The base location for asset data files."""
-        return self._asset_location
+        return self._asset_location / MODE
+
+    @property
+    def store_location(self) -> Path:
+        """The base location for asset data files."""
+        return self._store_location / MODE
 
     def get_asset_filepath(self, passport: Passport) -> Path:
         """Construct the filepath for an asset data file and ensure directories exist.
@@ -85,10 +93,10 @@ class FileSystem:
         Returns:
             Path: Full path to the asset data file.
         """
-        Path(self._asset_location / passport.stage.value).mkdir(parents=True, exist_ok=True)
         return Path(
             self._asset_location
-            / passport.stage.value
+            / MODE
+            / self._asset_type.value
             / f"{passport.asset_type.value}_{passport.stage.value}_{passport.name}_{passport.created}.{passport.asset_format}"
         )
 
@@ -104,4 +112,22 @@ class FileSystem:
         Returns:
             Path: The path to the passport JSON file.
         """
-        return self._passport_location / f"{self._asset_type.value}_{stage.value}_{name}.json"
+
+        return (
+            self._store_location
+            / MODE
+            / self._asset_type.value
+            / f"{self._asset_type.value}_{stage.value}_{name}.json"
+        )
+
+    def get_raw_sales_data_location(self) -> Path:
+        """Returns the filepath for raw sales data."""
+        return DATA_DIR / MODE / "sales"
+
+    def get_raw_customer_data_location(self) -> Path:
+        """Returns the filepath for raw customer data."""
+        return DATA_DIR / MODE / "customer"
+
+    def get_raw_store_data_location(self) -> Path:
+        """Returns the filepath for raw store data."""
+        return DATA_DIR / MODE / "store"

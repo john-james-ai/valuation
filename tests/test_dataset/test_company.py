@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
 # ================================================================================================ #
-# Project    : Valuation of Dominick's Fine Foods, Inc. 1997-2003                                  #
+# Project    : Valuation - Discounted Cash Flow Method                                             #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
-# Filename   : /tests/test_analysis/test_company.py                                                #
+# Filename   : /tests/test_dataset/test_company.py                                                 #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Saturday October 11th 2025 08:17:34 pm                                              #
-# Modified   : Sunday October 12th 2025 06:51:45 am                                                #
+# Modified   : Saturday October 18th 2025 11:15:33 pm                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -24,8 +24,8 @@ from loguru import logger
 import pandas as pd
 import pytest
 
-from valuation.dataset.company import CompanyDataset
-from valuation.dataset.financials import (
+from valuation.analysis.company import CompanyDataset
+from valuation.analysis.financials import (
     BalanceSheet,
     CashflowStatement,
     Financials,
