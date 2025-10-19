@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday October 10th 2025 02:27:30 am                                                #
-# Modified   : Sunday October 19th 2025 09:32:28 am                                                #
+# Modified   : Sunday October 19th 2025 03:10:23 pm                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -44,7 +44,16 @@ class TaskConfig(DataClass):
 # ------------------------------------------------------------------------------------------------ #
 @dataclass
 class TaskResult(DataClass, ABC):
-    """Holds task execution metadata."""
+    """Holds task execution metadata.
+
+    Attributes:
+        task_name (str): Name of the task.
+        config (Optional[TaskConfig]): Configuration used for the task.
+        started (Optional[datetime]): Timestamp when the task started.
+        ended (Optional[datetime]): Timestamp when the task ended.
+        elapsed (Optional[float]): Elapsed time in seconds.
+        status (Optional[str]): Current status value from Status enum.
+    """
 
     task_name: str
     config: Optional[TaskConfig] = field(default=None)
@@ -58,15 +67,19 @@ class TaskResult(DataClass, ABC):
     status: Optional[str] = field(default=Status.PENDING.value)
 
     def start_task(self) -> None:
-        """Mark the task as started and record the start time."""
+        """Mark the task as started and record the start time.
+
+        Returns:
+            None
+        """
         self.started = datetime.now()
         self.status = Status.RUNNING.value
 
     def end_task(self) -> None:
-        """Mark the task as ended, compute elapsed time, and set final status.
+        """Mark the task as ended and compute elapsed time.
 
-        Args:
-            status (Status): Final status enum value for the task.
+        This will set the ended timestamp and compute elapsed seconds if a start
+        timestamp is available. It does not accept or set a final status.
 
         Returns:
             None

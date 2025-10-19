@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday October 17th 2025 05:55:14 pm                                                #
-# Modified   : Saturday October 18th 2025 06:31:58 pm                                              #
+# Modified   : Sunday October 19th 2025 03:36:53 pm                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -29,6 +29,12 @@ class DatasetNotFoundError(Exception):
 
 
 class DatasetExistsError(Exception):
+    """Exception raised when there is a file conflict, such as attempting to overwrite an existing file without permission."""
+
+    pass
+
+
+class AssetExistsError(Exception):
     """Exception raised when there is a file conflict, such as attempting to overwrite an existing file without permission."""
 
     pass

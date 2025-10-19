@@ -11,12 +11,12 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Saturday October 18th 2025 06:47:58 pm                                              #
-# Modified   : Sunday October 19th 2025 02:18:35 pm                                                #
+# Modified   : Sunday October 19th 2025 04:25:29 pm                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
 # ================================================================================================ #
-
+"""Filesystem path utilities for asset data and passports."""
 
 from abc import ABC, abstractmethod
 import os
@@ -84,7 +84,7 @@ class FileSystem(ABC):
     @abstractmethod
     def get_asset_filepath(
         self,
-        asset_id: Passport | ID,
+        id_or_passport: Passport | ID,
         format: str = "parquet",
         mode: str = MODE,
         **kwargs,
@@ -93,7 +93,7 @@ class FileSystem(ABC):
         pass
 
     @abstractmethod
-    def get_passport_filepath(self, asset_id: ID, mode: str = MODE) -> Path:
+    def get_passport_filepath(self, id_or_passport: ID | Passport, mode: str = MODE) -> Path:
         """Builds the full filepath for an asset passport JSON file."""
         pass
 

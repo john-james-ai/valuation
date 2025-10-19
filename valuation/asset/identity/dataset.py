@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Wednesday October 8th 2025 02:52:13 pm                                              #
-# Modified   : Sunday October 19th 2025 01:57:12 pm                                                #
+# Modified   : Sunday October 19th 2025 05:10:31 pm                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -26,7 +26,7 @@ from datetime import datetime
 
 from valuation.asset.entity import Entity
 from valuation.asset.identity.base import ID, Passport
-from valuation.asset.stage import Stage
+from valuation.asset.stage import DatasetStage
 from valuation.asset.types import AssetType
 
 
@@ -43,7 +43,7 @@ class DatasetPassport(Passport):
         name: str,
         description: str,
         entity: Entity,
-        stage: Stage,
+        stage: DatasetStage,
         asset_format: str = "parquet",
     ) -> DatasetPassport:
         """Creates a DatasetPassport."""
@@ -57,14 +57,19 @@ class DatasetPassport(Passport):
             created=datetime.now(),
         )
 
+    @property
+    def id(self) -> DatasetID:
+        """Converts the Passport to an ID."""
+        return DatasetID.from_passport(passport=self)
+
     @classmethod
-    def from_dict(cls, data: dict) -> Passport:
+    def from_dict(cls, data: dict) -> DatasetPassport:
         """Creates a DatasetPassport from a dictionary."""
         data["name"] = str(data["name"])
         data["description"] = str(data["description"])
         data["asset_type"] = AssetType(data["asset_type"])
         data["entity"] = Entity(data["entity"])
-        data["stage"] = Stage(data["stage"])
+        data["stage"] = DatasetStage(data["stage"])
         data["asset_format"] = str(data["asset_format"])
         if data.get("created"):
             data["created"] = datetime.strptime(data["created"], "%Y%m%d-%H%M")
@@ -90,9 +95,12 @@ class DatasetID(ID):
     """An immutable, unique identifier for a dataset asset."""
 
     name: str
-    asset_type: str
-    entity: str
-    stage: str
+    asset_type: AssetType
+    entity: Entity
+    stage: DatasetStage
+
+    def label(self) -> str:
+        return f"{str(self.entity).capitalize()} {str(self.asset_type).capitalize()} {self.name} of the {self.stage.value} stage"
 
     @classmethod
     def from_passport(cls, passport: DatasetPassport) -> DatasetID:
@@ -101,7 +109,7 @@ class DatasetID(ID):
 
         return cls(
             name=passport.name,
-            asset_type=passport.asset_type.value,
-            entity=passport.entity.value if passport.entity is not None else "",
-            stage=passport.stage.value,
+            asset_type=passport.asset_type,
+            entity=passport.entity if passport.entity is not None else "",
+            stage=passport.stage,
         )

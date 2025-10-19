@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday October 19th 2025 02:01:46 pm                                                #
-# Modified   : Sunday October 19th 2025 02:33:20 pm                                                #
+# Modified   : Sunday October 19th 2025 04:13:37 pm                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -49,7 +49,7 @@ class DatasetFileSystem(FileSystem):
 
     def get_asset_filepath(
         self,
-        asset_id: DatasetPassport | DatasetID,
+        id_or_passport: DatasetPassport | DatasetID,
         format: str = "parquet",
         mode: str = MODE,
         **kwargs,
@@ -58,17 +58,17 @@ class DatasetFileSystem(FileSystem):
         return Path(
             self._asset_location
             / mode
-            / str(asset_id.asset_type)
-            / str(asset_id.entity)
-            / f"{str(asset_id.stage)}_{asset_id.name}.{format}"
+            / str(id_or_passport.asset_type)
+            / str(id_or_passport.entity)
+            / f"{str(id_or_passport.stage)}_{id_or_passport.name}.{format}"
         )
 
     def get_passport_filepath(
-        self, asset_id: DatasetPassport | DatasetID, mode: str = MODE, **kwargs
+        self, id_or_passport: DatasetPassport | DatasetID, mode: str = MODE, **kwargs
     ) -> Path:
 
         return Path(
             self._store_location
             / mode
-            / f"{str(asset_id.asset_type)}_{str(asset_id.entity)}_{str(asset_id.stage)}_{asset_id.name}_passport.json"
+            / f"{str(id_or_passport.asset_type)}_{str(id_or_passport.entity)}_{str(id_or_passport.stage)}_{id_or_passport.name}_passport.json"
         )

@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Wednesday October 8th 2025 02:52:13 pm                                              #
-# Modified   : Saturday October 18th 2025 08:20:23 pm                                              #
+# Modified   : Sunday October 19th 2025 03:53:32 pm                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -21,7 +21,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
-from valuation.asset.identity import Passport
+from valuation.asset.identity.base import Passport
 
 
 # ------------------------------------------------------------------------------------------------ #

@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 9th 2025 07:11:18 pm                                               #
-# Modified   : Sunday October 19th 2025 02:18:34 pm                                                #
+# Modified   : Sunday October 19th 2025 04:23:10 pm                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -28,10 +28,11 @@ from loguru import logger
 import pandas as pd
 
 from valuation.asset.base import Asset, Passport
-from valuation.asset.identity import AssetType, DatasetPassport
+from valuation.asset.identity.dataset import DatasetPassport
+from valuation.asset.types import AssetType
 from valuation.core.structure import DataClass
 from valuation.infra.exception import DatasetExistsError
-from valuation.infra.file.base import FileSystem
+from valuation.infra.file.dataset import DatasetFileSystem
 from valuation.infra.file.io import IOService
 
 # ------------------------------------------------------------------------------------------------ #
@@ -214,8 +215,9 @@ class Dataset(Asset):
         self._passport = passport
         self._df = df
         self._io = io()
-        self._file_system = FileSystem(self.asset_type)
-        self._asset_filepath = self._file_system.get_asset_filepath(passport_or_stage=passport)
+
+        self._file_system = DatasetFileSystem()
+        self._asset_filepath = self._file_system.get_asset_filepath(id_or_passport=self._passport)
 
         self._fileinfo: Optional[FileInfo] = None
         self._profile: Optional[DatasetProfile] = None

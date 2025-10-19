@@ -11,34 +11,69 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Saturday October 11th 2025 08:23:13 pm                                              #
-# Modified   : Saturday October 18th 2025 11:15:33 pm                                              #
+# Modified   : Sunday October 19th 2025 05:01:26 pm                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
 # ================================================================================================ #
 import pytest
 
-from valuation.asset.data import DTYPES
-from valuation.utils.io.csv.base import CompressionType
-from valuation.utils.io.csv.service import CSVIOService
-
-# from valuation.utils.io.service import ObjectIOService, TabularIOService
-
-# ------------------------------------------------------------------------------------------------ #
-FINANCIALS_FILEPATH = "tests/data/financials.yaml"
-SALES_FILEPATH = "tests/data/wbat.csv"
-
-
-# # ------------------------------------------------------------------------------------------------ #
-# @pytest.fixture(scope="session", autouse=False)
-# def financials():
-#     return ObjectIOService.read(filepath=FINANCIALS_FILEPATH)["financials"]
-
+from valuation.asset.dataset.base import Dataset
+from valuation.asset.entity import Entity
+from valuation.asset.identity.dataset import DatasetPassport
+from valuation.asset.stage import DatasetStage
+from valuation.infra.file.io import IOService
 
 # ------------------------------------------------------------------------------------------------ #
+DATASET_FILEPATH = "data/test/ingest/sales_ingest_test.parquet"
+
+
+@pytest.fixture(scope="function", autouse=True)
+def auto_set_test_mode_env(monkeypatch):
+    """
+    A fixture that automatically patches os.environ for every test.
+
+    This sets MODE="test" in the environment variables. Pytest's
+    monkeypatch automatically restores the original state after the test.
+    """
+    # Use monkeypatch to set the environment variable
+    # monkeypatch will automatically handle restoring the original
+    # value (or unsetting it) after the test.
+    monkeypatch.setenv("MODE", "test")
+
+    # Your app's code that calls load_dotenv() will now
+    # load this value from os.environ.
+
+    # If your app *re-reads* the .env file during the test,
+    # you might need the file-based approach. But if it reads
+    # on startup (like 99% of apps), this is the better way.
+
+    yield
+
+    # No teardown code needed! monkeypatch handles it.
+
+
 @pytest.fixture(scope="session", autouse=False)
-def sales_csv():
-    df = CSVIOService.read(
-        filepath=SALES_FILEPATH, compression=CompressionType.INFER, engine="pandas"
+def dataset_passport() -> DatasetPassport:
+    passport = DatasetPassport.create(
+        name="test_dataset",
+        description="Test dataset for unit tests.",
+        entity=Entity.SALES,
+        stage=DatasetStage.INGEST,
+        asset_format="parquet",
     )
-    return df.astype({k: v for k, v in DTYPES.items() if k in df.columns})
+    return passport
+
+
+@pytest.fixture(scope="session", autouse=False)
+def dataset(dataset_passport: DatasetPassport) -> Dataset:
+    """Fixture for dataset tests."""
+
+    df = IOService.read(filepath=DATASET_FILEPATH)
+
+    dataset = Dataset(passport=dataset_passport, df=df)
+
+    if dataset is None:
+        pytest.skip("Dataset not found in store.")
+
+    return dataset

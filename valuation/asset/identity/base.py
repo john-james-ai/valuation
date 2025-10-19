@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Wednesday October 8th 2025 02:52:13 pm                                              #
-# Modified   : Sunday October 19th 2025 01:57:13 pm                                                #
+# Modified   : Sunday October 19th 2025 05:10:48 pm                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -70,6 +70,11 @@ class Passport(DataClass):
             created=datetime.now(),
         )
 
+    @property
+    def id(self) -> ID:
+        """Converts the Passport to an ID."""
+        return ID.from_passport(passport=self)
+
     @classmethod
     def from_dict(cls, data: dict) -> Passport:
         """Creates a Passport from a dictionary."""
@@ -101,8 +106,12 @@ class ID(DataClass):
     """An immutable, unique identifier for an asset."""
 
     name: str
-    asset_type: str
-    stage: str
+    asset_type: AssetType
+    stage: Stage
+
+    def label(self) -> str:
+        """Returns a string label for the ID."""
+        return f"{str(self.asset_type).capitalize()} {self.name} of the {self.stage.value} stage"
 
     @classmethod
     def from_passport(cls, passport: Passport) -> ID:
@@ -111,6 +120,6 @@ class ID(DataClass):
 
         return cls(
             name=passport.name,
-            asset_type=passport.asset_type.value,
-            stage=passport.stage.value,
+            asset_type=passport.asset_type,
+            stage=passport.stage,
         )
