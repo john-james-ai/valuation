@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday October 19th 2025 12:18:21 am                                                #
-# Modified   : Sunday October 19th 2025 03:20:54 am                                                #
+# Modified   : Sunday October 19th 2025 02:15:14 pm                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -27,12 +27,12 @@ import numpy as np
 import pandas as pd
 import typer
 
+from valuation.app.dataprep.task import DatasetTaskResult, TaskResult
 from valuation.app.state import Status
-from valuation.app.task import TaskResult
 from valuation.asset.stage import DatasetStage
 from valuation.asset.types import AssetType
 from valuation.core.structure import DataClass
-from valuation.infra.file.file_system import FileSystem
+from valuation.infra.file.base import FileSystem
 from valuation.infra.file.io import IOService
 from valuation.infra.loggers import configure_logging
 
@@ -42,7 +42,7 @@ class ModeSalesDataConfig(DataClass):
     """Holds data related to the current operating mode."""
 
     source_dataset: str = "data/prod/ingest/sales_ingest.parquet"
-    target_sample_size: int = 1000
+    target_sample_size: int = 10000
     window_size: int = 52
 
 
@@ -54,7 +54,7 @@ class ModeSalesDataGenerator:
         self._config = config
         self._io = io
         self._file_system = FileSystem(asset_type=AssetType.DATASET)
-        self._result = TaskResult(task_name="ModeSalesDataGenerator", dataset_name="sales")
+        self._result = DatasetTaskResult(task_name="ModeSalesDataGenerator", dataset_name="sales")
 
     def run(self, mode: str) -> TaskResult:
         """Generates the mode sales data."""
@@ -95,6 +95,8 @@ class ModeSalesDataGenerator:
         self._result.ended = datetime.now()
         self._result.elapsed = (self._result.ended - self._result.started).total_seconds()
         self._result.status = Status.SUCCESS.value
+        # Finalize the task result
+        self._result.end_task(status=Status.SUCCESS)
 
         return self._result
 
@@ -130,7 +132,7 @@ class ModeSalesDataGenerator:
         """Finds the set of sequential week indices that exist for ALL categories."""
 
         return (
-            df.groupby("category")["week"]
+            df.groupby("CATEGORY")["WEEK"]
             .apply(lambda x: set(x))
             .pipe(lambda s: reduce(set.intersection, s))
         )
@@ -138,11 +140,21 @@ class ModeSalesDataGenerator:
     def _filter_dataset(self, df: pd.DataFrame, weeks: Set[int]) -> pd.DataFrame:
         """Filters the dataset to include only records from the specified weeks."""
 
-        return df[df["week"].isin(weeks)]
+        return df[df["WEEK"].isin(weeks)]
 
     def _stratified_sample(self, df: pd.DataFrame, p: float) -> pd.DataFrame:
+        """Performs stratified sampling by CATEGORY and WEEK and returns a sampled DataFrame.
 
-        return df.groupby(["category", "week"], group_keys=False).apply(lambda x: x.sample(frac=p))
+        Args:
+            df (pd.DataFrame): The input dataframe to sample from.
+            p (float): The fraction of samples to draw from each group.
+
+        Returns:
+            pd.DataFrame: The stratified sampled dataframe with reset index.
+        """
+        return (
+            df.groupby(["CATEGORY", "WEEK"], group_keys=False).sample(frac=p).reset_index(drop=True)
+        )
 
 
 # ------------------------------------------------------------------------------------------------ #

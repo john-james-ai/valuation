@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday October 17th 2025 11:19:18 pm                                                #
-# Modified   : Saturday October 18th 2025 11:54:35 pm                                              #
+# Modified   : Sunday October 19th 2025 02:15:14 pm                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -20,10 +20,11 @@
 from typing import Optional, cast
 
 from valuation.asset.dataset.base import Dataset
-from valuation.asset.identity import Passport
+from valuation.asset.identity import DatasetPassport
 from valuation.asset.stage import DatasetStage
 from valuation.asset.types import AssetType
 from valuation.infra.exception import DatasetExistsError, DatasetNotFoundError
+from valuation.infra.file.base import FileSystem
 from valuation.infra.store.base import AssetStoreBase
 
 
@@ -33,6 +34,7 @@ class DatasetStore(AssetStoreBase):
     def __init__(self) -> None:
         """ """
         super().__init__()
+        self._file_system = FileSystem(asset_type=self.asset_type)
 
     @property
     def asset_type(self) -> AssetType:
@@ -55,33 +57,32 @@ class DatasetStore(AssetStoreBase):
             raise DatasetExistsError(str(e)) from e
 
     def get(self, name: str, stage: DatasetStage) -> Optional[Dataset]:
-        """Retrieves a dataset from the store by name and stage.
-
-        Args:
-            name (str): The name of the dataset.
-            stage (DatasetStage): The stage of the dataset.
-
-        Returns:
-            Dataset: The retrieved dataset.
-        """
         try:
             return cast(Dataset, super().get(name=name, stage=stage))
-
         except FileNotFoundError as e:
-            raise DatasetNotFoundError(str(e)) from e
+            raise DatasetNotFoundError(
+                f"Dataset '{name}' at stage '{stage.value}' does not exist in the store."
+            )
 
     def remove(self, name: str, stage: DatasetStage) -> None:
-        """Removes a dataset from the store by name and stage.
 
-        Args:
-            name (str): The name of the dataset.
-            stage (DatasetStage): The stage of the dataset.
+        # Get the filepath for the passport
+        passport_filepath = self._file_system.get_passport_filepath(
+            stage=stage,
+            name=name,
+        )
 
-        """
-        try:
-            super().remove(name=name, stage=stage)
-        except FileNotFoundError as e:
-            raise DatasetNotFoundError(str(e)) from e
+        # Get the passport
+        passport = cast(DatasetPassport, self._get_passport(filepath=passport_filepath))
 
-    def create_asset(self, passport: Passport) -> Dataset:
+        # Get the asset filepath
+        asset_filepath = self._file_system.get_asset_filepath(
+            passport_or_stage=passport, entity=passport.entity
+        )
+
+        # Remove asset data file and passport
+        self._remove_file(filepath=asset_filepath)
+        self._remove_file(filepath=passport_filepath)
+
+    def create_asset(self, passport: DatasetPassport) -> Dataset:
         return Dataset(passport=passport)

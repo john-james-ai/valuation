@@ -11,21 +11,22 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 16th 2025 08:04:32 pm                                              #
-# Modified   : Saturday October 18th 2025 11:15:32 pm                                              #
+# Modified   : Sunday October 19th 2025 07:21:24 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
 # ================================================================================================ #
 """Module defining workflow states."""
-from enum import Enum
+from enum import StrEnum
 
 # ------------------------------------------------------------------------------------------------ #
 
 
-class Status(Enum):
+class Status(StrEnum):
     """Enumeration of possible task statuses."""
 
     PENDING = "Pending"
+    RUNNING = "Running"
     SUCCESS = "Success"
     FAILURE = "Failure"
     CRITICAL = "Critical Failure"

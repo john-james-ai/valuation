@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 9th 2025 07:11:18 pm                                               #
-# Modified   : Saturday October 18th 2025 11:16:37 pm                                              #
+# Modified   : Sunday October 19th 2025 02:15:13 pm                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -28,10 +28,10 @@ from loguru import logger
 import pandas as pd
 
 from valuation.asset.base import Asset, Passport
-from valuation.asset.identity import AssetType
+from valuation.asset.identity import AssetType, DatasetPassport
 from valuation.core.structure import DataClass
 from valuation.infra.exception import DatasetExistsError
-from valuation.infra.file.file_system import FileSystem
+from valuation.infra.file.base import FileSystem
 from valuation.infra.file.io import IOService
 
 # ------------------------------------------------------------------------------------------------ #
@@ -207,7 +207,7 @@ class Dataset(Asset):
 
     def __init__(
         self,
-        passport: Passport,
+        passport: DatasetPassport,
         df: pd.DataFrame = pd.DataFrame(),
         io: type[IOService] = IOService,
     ) -> None:
@@ -215,7 +215,7 @@ class Dataset(Asset):
         self._df = df
         self._io = io()
         self._file_system = FileSystem(self.asset_type)
-        self._asset_filepath = self._file_system.get_asset_filepath(passport=passport)
+        self._asset_filepath = self._file_system.get_asset_filepath(passport_or_stage=passport)
 
         self._fileinfo: Optional[FileInfo] = None
         self._profile: Optional[DatasetProfile] = None

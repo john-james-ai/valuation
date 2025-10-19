@@ -4,14 +4,14 @@
 # Project    : Valuation - Discounted Cash Flow Method                                             #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
-# Filename   : /valuation/utils/data.py                                                            #
+# Filename   : /valuation/core/structure.py                                                        #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 9th 2025 07:11:18 pm                                               #
-# Modified   : Saturday October 18th 2025 06:27:42 am                                              #
+# Modified   : Sunday October 19th 2025 08:21:17 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -23,6 +23,7 @@ from typing import Any, Dict, List, Tuple, Union
 
 from abc import ABC
 from dataclasses import asdict, dataclass, fields, is_dataclass
+from enum import Enum, StrEnum
 
 import numpy as np
 import pandas as pd
@@ -36,7 +37,8 @@ IMMUTABLE_TYPES: Tuple = (
     int,
     float,
     bool,
-    type(None),
+    Enum,
+    StrEnum,
     np.int16,
     np.int32,
     np.int64,

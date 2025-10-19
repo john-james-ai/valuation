@@ -1,2 +1,3 @@
-
-1. Add mkdir to IOService class
+- [x] Add mkdir to IOService class
+- [x] Add read/write kwargs to Dataset config, and update Dataset load/save to pass them to IOService.
+- [ ] Add output exists logic to check for file when dataset doesn't exist.
