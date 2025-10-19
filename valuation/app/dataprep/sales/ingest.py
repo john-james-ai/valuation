@@ -11,12 +11,12 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday October 12th 2025 11:51:12 pm                                                #
-# Modified   : Sunday October 19th 2025 06:43:37 am                                                #
+# Modified   : Sunday October 19th 2025 07:05:53 pm                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
 # ================================================================================================ #
-from typing import Dict, Optional, Union, cast
+from typing import Dict, Optional, Union
 
 from dataclasses import dataclass
 from pathlib import Path
@@ -25,8 +25,10 @@ from loguru import logger
 import pandas as pd
 from tqdm import tqdm
 
-from valuation.app.dataprep.task import Task, TaskConfig, TaskContext, TaskResult
+from valuation.app.dataprep.task import DataPrepTask, DataPrepTaskResult, TaskConfig, TaskResult
+from valuation.app.state import Status
 from valuation.asset.dataset.base import DTYPES, Dataset
+from valuation.asset.identity.dataset import DatasetID, DatasetPassport
 from valuation.infra.file.io import IOService
 from valuation.infra.store.dataset import DatasetStore
 
@@ -40,13 +42,14 @@ WEEK_DECODE_TABLE_FILEPATH = "data/external/week_decode_table.csv"
 class IngestSalesDataTaskConfig(TaskConfig):
     """Holds all parameters for the sales data ingestion process."""
 
-    source: Dict[str, Dict[str, str]]
+    source: str  # Path to categories and filenames mapping
+    target: DatasetPassport  # Target ingested dataset passport
     week_decode_table_filepath: Path
     raw_data_directory: Path
 
 
 # ------------------------------------------------------------------------------------------------ #
-class IngestSalesDataTask(Task):
+class IngestSalesDataTask(DataPrepTask):
     """Ingests a raw sales data file.
 
     The ingestion adds category and date information to the raw sales data.
@@ -60,14 +63,12 @@ class IngestSalesDataTask(Task):
     def __init__(
         self,
         config: IngestSalesDataTaskConfig,
-        dataset_store: DatasetStore,
-        io: type[IOService] = IOService,
+        dataset_store: type[DatasetStore] = DatasetStore,
+        io: IOService = IOService,
     ) -> None:
-        super().__init__(config=config, dataset_store=dataset_store)
-        self._task_context = TaskContext(config=config)
+        self._config = config
+        self._dataset_store = dataset_store()
         self._io = io
-
-        self._category_filenames = cast(dict, config.source.get(CONFIG_CATEGORY_INFO_KEY, {}))
 
     def _execute(self, df: pd.DataFrame, category: str, week_dates: pd.DataFrame) -> pd.DataFrame:
         """Runs the ingestion process on the provided DataFrame.
@@ -86,76 +87,92 @@ class IngestSalesDataTask(Task):
             self._add_dates, week_dates=week_dates
         )
 
-    def run(self, dataset: Optional[Dataset] = None) -> TaskResult:
-        """Executes the full task lifecycle: execution, validation, and reporting.
-
-        This method orchestrates the task's operation within a context that
-        handles timing, status updates, and error logging. It ensures that a
-        complete TaskResult object is returned, whether the task succeeds or fails.
+    def run(self, dataset: Optional[Dataset] = None, force: bool = False) -> Optional[Dataset]:
+        """Executes the sales data ingestion task.
 
         Args:
-            data: The input data to be processed by the task.
-
+            dataset (Optional[Dataset], optional): Not used. Defaults to None.
+            force (bool, optional): If True, forces re-ingestion even if the target dataset exists.
+                Defaults to False.
         Returns:
-            TaskResult: An object containing the final status, metrics,
-                validation info, and output data of the task run.
-
-        Raises:
-            RuntimeError: If input data is missing or empty, or if the
-                validation fails.
+            Optional[Dataset]: The ingested sales dataset, or None if ingestion was skipped.
         """
 
+        # Initialize the result object and start the task
+        result = DataPrepTaskResult(task_name=self.task_name, config=self._config)
+        result.start_task()
+
+        # Check if output dataset alread exists
+        dataset_id_out = DatasetID.from_passport(self._config.target)
+        if self._dataset_store.exists(dataset_id=dataset_id_out) and not force:
+            dataset_out = self._dataset_store.get(dataset_id=dataset_id_out)
+            result.status = Status.EXISTS.value
+            result.end_task()
+            logger.info(result)
+            return dataset_out
+
+        sales_datasets = []
         try:
-            with self._task_context as result:
-                sales_datasets = []
 
-                # Set up the progress bar to iterate through categories
-                pbar = tqdm(
-                    self._category_filenames.items(),
-                    total=len(self._category_filenames),
-                    desc="Ingesting Sales Data by Category",
-                    unit="category",
-                )
+            # Read week decoding table
+            week_dates = self._load(filepath=self._config.week_decode_table_filepath)
 
-                # Obtain week decode table
-                config = cast(IngestSalesDataTaskConfig, self._config)
-                week_dates = self._load(filepath=config.week_decode_table_filepath)
+            # Read category filenames mapping
+            category_filenames = self._io.read(filepath=self._config.source)[
+                CONFIG_CATEGORY_INFO_KEY
+            ]
 
-                # Iterate through category sales files
-                for _, category_info in pbar:
-                    filename = category_info["filename"]
-                    filepath = self._config.raw_data_directory / filename  # type: ignore
-                    category = category_info["category"]
-                    pbar.set_description(f"Processing category: {category} from file: {filename}")
+            # Create tqdm progress bar for categories
+            pbar = tqdm(
+                category_filenames.items(),
+                total=len(category_filenames),
+                desc="Ingesting Sales Data by Category",
+                unit="category",
+            )
 
-                    # Create a temporary dataset for loading the data
-                    df_in = self._load(filepath=filepath)
-                    result.records_in += cast(pd.DataFrame, df_in).shape[0]
+            # Iterate through category sales files
+            for _, category_info in pbar:
+                filename = category_info["filename"]
+                filepath = self._config.raw_data_directory / filename  # type: ignore
+                category = category_info["category"]
+                pbar.set_description(f"Processing category: {category} from file: {filename}")
 
-                    # Execute ingestion steps
-                    category_df = self._execute(df=df_in, category=category, week_dates=week_dates)
+                # Create a temporary dataset for loading the data
+                df_in = self._load(filepath=filepath)
+                if isinstance(df_in, pd.DataFrame):
+                    result.records_in += len(df_in)  # type: ignore
 
-                    sales_datasets.append(category_df)
+                # Execute ingestion steps
+                category_df = self._execute(df=df_in, category=category, week_dates=week_dates)
 
-                # Concatenate all datasets
-                concat_df = pd.concat(sales_datasets, ignore_index=True)
-                # Create the output dataset
-                dataset_out = Dataset(passport=self._config.target, df=concat_df)
+                sales_datasets.append(category_df)
 
-                # Add the dataset to the result object and count output records
+            # Concatenate all datasets
+            concat_df = pd.concat(sales_datasets, ignore_index=True)
 
-                result.records_out = cast(int, dataset_out.nrows)
+            # Update result with output record counts
+            result.records_out = len(concat_df)
 
-                # Validate the result by calling the subclass's implementation.
-                result = self._validate_result(result=result)
+            # Create the output dataset
+            dataset_out = Dataset(passport=self._config.target, df=concat_df)
 
-                # Handle validation failure.
-                if not result.validation.is_valid:  # type: ignore
-                    self._handle_validation_failure(validation=result.validation)
+            # Add the dataset to the result object and validate
+            result.dataset = dataset_out
+            result = self._validate_result(result=result)
+
+            # Save the dataset if validation passed
+            if result.validation.is_valid:  # type: ignore
+                self._dataset_store.add(dataset=dataset_out, overwrite=True)
+                logger.debug(f"Saved ingested dataset {dataset_out.passport.label} to the store.")
+            else:
+                self._handle_validation_failure(validation=result.validation)  # type: ignore
+
         finally:
-            return self._finalize(result=result, dataset=dataset_out)
+            result.end_task()
+            logger.info(result)
+            return result.dataset  # type: ignore
 
-    def _validate_result(self, result: TaskResult) -> TaskResult:
+    def _validate_result(self, result: DataPrepTaskResult) -> TaskResult:
         """Validates the result of the ingestion process.
 
         Args:
@@ -186,15 +203,14 @@ class IngestSalesDataTask(Task):
             result.validation.add_message("No records were processed.")  # type: ignore
         else:
             # Check presence and types of mandatory columns
-            validation = self._validate_columns(
+            result.validation = self._validate_columns(
                 validation=result.validation, data=result.dataset.data, required_columns=COLUMNS
             )
             # Check for consistent record count
             if result.records_in != result.records_out:
-                validation.add_message(
+                result.validation.add_message(
                     f"Number of input records {result.records_in} does not match number of output records {result.records_out}."
                 )
-            result.validation = validation
 
         return result
 

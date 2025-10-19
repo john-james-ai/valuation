@@ -1,3 +1,4 @@
 - [x] Add mkdir to IOService class
 - [x] Add read/write kwargs to Dataset config, and update Dataset load/save to pass them to IOService.
-- [ ] Add output exists logic to check for file when dataset doesn't exist.
+- [x] Add output exists logic to check for file when dataset doesn't exist.
+- [ ] Remove use of the cast function and use isinstance type guarding

@@ -4,14 +4,14 @@
 # Project    : Valuation - Discounted Cash Flow Method                                             #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
-# Filename   : /devops/mode_data.py                                                                #
+# Filename   : /devops/raw_datagen.py                                                              #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday October 19th 2025 12:18:21 am                                                #
-# Modified   : Sunday October 19th 2025 05:49:49 pm                                                #
+# Modified   : Sunday October 19th 2025 06:08:08 pm                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -27,7 +27,7 @@ import numpy as np
 import pandas as pd
 import typer
 
-from valuation.app.dataprep.task import DatasetTaskResult, TaskResult
+from valuation.app.dataprep.task import DataPrepTaskResult, TaskResult
 from valuation.app.state import Status
 from valuation.asset.entity import Entity
 from valuation.asset.identity.dataset import DatasetID
@@ -67,6 +67,9 @@ class RawSalesDataGenerator:
     def run(self) -> None:
         """Generates the mode sales data."""
 
+        if self._mode == "prod":
+            raise RuntimeError("Raw sales data generation is not allowed in 'prod' mode.")
+
         # Check if dataset already exists
         if self._exists() and not self._force:
             logger.info("Raw sales data already exists. Use --force to regenerate.")
@@ -82,7 +85,7 @@ class RawSalesDataGenerator:
 
     def generate_stratified_sample(self) -> TaskResult:
         """Generates the mode sales data."""
-        result = DatasetTaskResult(task_name="GenrateStratifiedSample", dataset_name="sales")
+        result = DataPrepTaskResult(task_name="GenrateStratifiedSample", dataset_name="sales")
         if self._mode == "prod":
             raise RuntimeError("Mode sales data generation is not allowed in 'prod' mode.")
 
@@ -147,7 +150,7 @@ class RawSalesDataGenerator:
         if self._mode == "prod":
             raise RuntimeError("Mode sales data generation is not allowed in 'prod' mode.")
 
-        result = DatasetTaskResult(task_name="Generate Zipped Files", dataset_name="sales")
+        result = DataPrepTaskResult(task_name="Generate Zipped Files", dataset_name="sales")
         result.started = datetime.now()
 
         # Get the filepath for the previously ingested dataset

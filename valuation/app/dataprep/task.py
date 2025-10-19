@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday October 10th 2025 02:27:30 am                                                #
-# Modified   : Sunday October 19th 2025 02:18:32 pm                                                #
+# Modified   : Sunday October 19th 2025 06:44:14 pm                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -19,7 +19,7 @@
 """Base classes for data preparation tasks."""
 from __future__ import annotations
 
-from typing import Dict, List, Optional, Union, cast
+from typing import List, Optional, cast
 
 from abc import abstractmethod
 from dataclasses import dataclass, field
@@ -31,23 +31,14 @@ from valuation.app.base.task import Task, TaskConfig, TaskResult
 from valuation.app.state import Status
 from valuation.app.validation import Validation
 from valuation.asset.dataset.base import DTYPES, Dataset
-from valuation.asset.identity import DatasetPassport, DatasetID
+from valuation.asset.identity.dataset import DatasetID, DatasetPassport
 from valuation.infra.store.dataset import DatasetStore
 
 
 # ------------------------------------------------------------------------------------------------ #
 @dataclass
-class DatasetTaskConfig(TaskConfig):
-    """Base configuration class for tasks."""
+class DataPrepTaskResult(TaskResult):
 
-    source: DatasetPassport | Dict[str, str]
-    target: DatasetPassport
-
-
-# ------------------------------------------------------------------------------------------------ #
-@dataclass
-class DatasetTaskResult(TaskResult):
-    
     dataset_name: Optional[str] = None
 
     # Record counts
@@ -61,7 +52,6 @@ class DatasetTaskResult(TaskResult):
     # Contains the output data from the task
     dataset: Dataset = field(default=None)
 
-
     def end_task(self) -> None:
 
         super().end_task()
@@ -73,22 +63,8 @@ class DatasetTaskResult(TaskResult):
             )
 
 
-
 # ------------------------------------------------------------------------------------------------ #
-class DatasetTask(Task):
-
-
-    def __init__(
-        self,
-        config: DatasetTaskConfig,
-        dataset_store: DatasetStore = DatasetStore,
-    ) -> None:
-        super().__init__(config=config)
-
-        self._dataset_store = dataset_store
-        self._result = DatasetTaskResult(task_name=self.task_name, config=self._config)
-
-
+class DataPrepTask(Task):
 
     @abstractmethod
     def _execute(self, df: pd.DataFrame, **kwargs) -> Dataset:
@@ -123,70 +99,19 @@ class DatasetTask(Task):
         pass
 
     @abstractmethod
-    def run(self, dataset: Dataset) -> Dataset:
+    def run(self, dataset: Dataset, force: bool = False) -> Dataset:
         """Executes the full task lifecycle: execution, validation, and reporting.
 
         This method orchestrates the task's operation within a context that
-        handles timing, status updates, and error logging. It ensures that a
-        complete TaskResult object is returned, whether the task succeeds or fails.
+        captures timing, status, and validation results.
 
         Args:
-            data: Optional[pd.DataFrame]: The input data to be processed by the task.
+            dataset (Dataset): The input dataset to be processed.
+            force (bool): If True, forces re-execution even if output exists.
 
         Returns:
-            TaskResult: An object containing the final status, metrics,
-                validation info, and output data of the task run.
-
-        Raises:
-            RuntimeError: If input data is missing or empty, or if the
-                validation fails.
+            Dataset: The processed output dataset, or None if skipped.
         """
-        
-
-        try:
-
-                # 1. Capture the size of the input dataset.
-                result.records_in = cast(int, dataset.nrows)
-
-                # 2. Check validity of target configuration
-                if not isinstance(self._config.target, Passport):
-                    raise RuntimeError("Target configuration must be a Passport instance.")
-
-                # 3. Check if output already exists to potentially skip processing.
-                if self._dataset_store.exists(
-                    name=self._config.target.name, stage=self._config.target.stage
-                ):
-
-                    result.status = Status.EXISTS.value
-                    # Get the output dataset from the asset store
-                    dataset_out = self._dataset_store.get(
-                        name=self._config.target.name,
-                        stage=self._config.target.stage,
-                        entity
-                    )
-                    # Cast to a dataset object and assign to result
-                    dataset_out = cast(Dataset, dataset_out)
-                    result.records_out = cast(int, dataset_out.nrows)
-                    result.dataset = dataset_out
-                    return result
-
-                # 4. Otherwise execute the task
-                df_out = self._execute(df=dataset.data)
-
-                # 2. Create the output dataset object and count output records.
-                dataset_out = Dataset(passport=self._config.target, df=df_out)
-                result.records_out = cast(int, result.dataset.nrows)
-
-                # Validate the result by calling the subclass's implementation.
-                result = self._validate_result(result=result)
-
-                # Handle validation failure.
-                if not result.validation.is_valid:  # type: ignore
-                    self._handle_validation_failure(validation=result.validation)
-        finally:
-            return self._finalize(result=result, dataset=dataset_out)
-
-    
 
     def _validate_columns(
         self, validation: Validation, data: pd.DataFrame, required_columns: List[str]
@@ -232,25 +157,24 @@ class DatasetTask(Task):
         raise RuntimeError(msg)
 
 
-
-
 # ------------------------------------------------------------------------------------------------ #
 @dataclass
-class SISODatasetTaskConfig(DatasetTaskConfig):
+class SISODataPrepTaskConfig(TaskConfig):
     """Base configuration class for tasks."""
 
     source: DatasetPassport
     target: DatasetPassport
+
+
 # ------------------------------------------------------------------------------------------------ #
-class SISODatasetTask(DatasetTask):
+class SISODataPrepTask(DataPrepTask):
     def __init__(
         self,
-        config: SISODatasetTaskConfig,
-        dataset_store: DatasetStore = DatasetStore,
+        config: SISODataPrepTaskConfig,
+        dataset_store: type[DatasetStore] = DatasetStore,
     ) -> None:
-        super().__init__(config=config, dataset_store=dataset_store)
-        # Recast config to SISO type for easier access
-        self._config = cast(SISODatasetTaskConfig, self._config)
+        self._config = config
+        self._dataset_store = dataset_store()
 
     @abstractmethod
     def _execute(self, df: pd.DataFrame, **kwargs) -> Dataset:
@@ -264,8 +188,8 @@ class SISODatasetTask(DatasetTask):
 
         Returns:
             Dataset: The processed output dataset.
-        """        
-        
+        """
+
     @abstractmethod
     def _validate_result(self, result: TaskResult) -> TaskResult:
         """Validates the output data and updates the TaskResult.
@@ -284,19 +208,16 @@ class SISODatasetTask(DatasetTask):
         """
         pass
 
-    def run(self, dataset: Dataset) -> Optional[Dataset]:
-        
-        # Initaialize the result object and start the task
-        result = DatasetTaskResult(task_name=self.task_name, config=self._config)
+    def run(self, dataset: Dataset, force: bool = False) -> Optional[Dataset]:
+
+        # Initialize the result object and start the task
+        result = DataPrepTaskResult(task_name=self.task_name, config=self._config)
         result.start_task()
-        
+
         # Check if output already exists to potentially skip processing.
-        output_dataset_id = DatasetID.from_passport(self._config.target)        
-        if self._dataset_store.exists(output_dataset_id):
-            dataset_out = self._dataset_store.get(
-                name=self._config.source.name,
-                stage=self._config.source.stage
-            )
+        dataset_id_out = DatasetID.from_passport(self._config.target)
+        if self._dataset_store.exists(dataset_id=dataset_id_out) and not force:
+            dataset_out = self._dataset_store.get(dataset_id=dataset_id_out)
             dataset_out = cast(Dataset, dataset_out)
             result.status = Status.EXISTS.value
             result.end_task()
@@ -312,33 +233,22 @@ class SISODatasetTask(DatasetTask):
 
             # 3. Create the output dataset object and count output records.
             result.dataset = Dataset(passport=self._config.target, df=df_out)
-            result.records_out = cast(int, result.dataset.nrows)            
+            result.records_out = cast(int, result.dataset.nrows)
 
-            # 4. Validate the result 
+            # 4. Validate the result
             result = self._validate_result(result=result)
-            result = cast(DatasetTaskResult, result)
+            result = cast(DataPrepTaskResult, result)
 
-            # Handle validation failure.
-            if not result.validation.is_valid:  # type: ignore
-                result.status = Status.FAILURE.value
-                self._handle_validation_failure(validation=result.validation)
-            else:
+            # Store data if valid otherwise handle failure
+            if result.validation.is_valid:
                 result.status = Status.SUCCESS.value
                 self._dataset_store.add(dataset=result.dataset)
-                
-        finally: 
+            else:
+                result.status = Status.FAILURE.value
+                self._handle_validation_failure(validation=result.validation)
+
+        finally:
             result.end_task()
-            logger.info(result)     
-            result = cast(DatasetTaskResult, result)
+            logger.info(result)
+            result = cast(DataPrepTaskResult, result)
             return result.dataset
-                   
-            
-        
-
-    
-    def _finalize(self, dataset: Dataset, status: Status) -> None:
-
-        self._result.dataset = dataset
-        self._result.records_out = cast(int, dataset.nrows)        
-        self._dataset_store.add(dataset=dataset)
-        self._result.end_task(status=status)        

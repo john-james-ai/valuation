@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday October 10th 2025 02:27:30 am                                                #
-# Modified   : Sunday October 19th 2025 03:10:23 pm                                                #
+# Modified   : Sunday October 19th 2025 06:30:08 pm                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -28,7 +28,6 @@ from datetime import datetime
 from valuation.app.state import Status
 from valuation.asset.base import Asset
 from valuation.core.structure import DataClass
-from valuation.infra.file.io import IOService
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -101,24 +100,6 @@ class Task(ABC):
         config (TaskConfig): The task configuration.
         task_name (str): The task's class name.
     """
-
-    def __init__(
-        self,
-        config: TaskConfig,
-        io: type[IOService] = IOService,
-    ) -> None:
-
-        self._config = config
-        self._io = io()
-
-    @property
-    def config(self) -> TaskConfig:
-        """Return the TaskConfig associated with this task.
-
-        Returns:
-            TaskConfig: The task configuration.
-        """
-        return self._config
 
     @property
     def task_name(self) -> str:
