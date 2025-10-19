@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday October 17th 2025 11:19:18 pm                                                #
-# Modified   : Sunday October 19th 2025 12:27:24 am                                                #
+# Modified   : Sunday October 19th 2025 03:29:19 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -138,7 +138,7 @@ class AssetStoreBase(AssetStore):
         passport = self._get_passport(filepath=passport_filepath)
 
         # Get the asset filepath
-        asset_filepath = self._file_system.get_asset_filepath(passport=passport)
+        asset_filepath = self._file_system.get_asset_filepath(passport_or_stage=passport)
 
         # Remove asset data file and passport
         self._remove_file(filepath=asset_filepath)

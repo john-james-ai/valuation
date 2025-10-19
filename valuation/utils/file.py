@@ -4,43 +4,23 @@
 # Project    : Valuation - Discounted Cash Flow Method                                             #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
-# Filename   : /valuation/asset/store.py                                                           #
+# Filename   : /valuation/utils/file.py                                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
-# Created    : Saturday October 18th 2025 08:00:53 pm                                              #
-# Modified   : Sunday October 19th 2025 03:26:37 am                                                #
+# Created    : Sunday October 19th 2025 12:50:02 am                                                #
+# Modified   : Sunday October 19th 2025 12:57:32 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
 # ================================================================================================ #
-"""Defines the AssetStore abstract base class."""
-from typing import Optional
+from pathlib import Path
 
-from abc import ABC, abstractmethod
-
-from valuation.asset.base import Asset
-from valuation.asset.stage import Stage
 
 # ------------------------------------------------------------------------------------------------ #
-
-
-class AssetStore(ABC):
-
-    @abstractmethod
-    def add(self, asset: Asset, overwrite: bool = False) -> None:
-        pass
-
-    @abstractmethod
-    def get(self, name: str, stage: Stage) -> Optional[Asset]:
-        pass
-
-    @abstractmethod
-    def remove(self, name: str, stage: Stage) -> None:
-        pass
-
-    @abstractmethod
-    def exists(self, name: str, stage: Stage) -> bool:
-        pass
+def get_filenames_in_directory(directory):
+    path = Path(directory)
+    filenames = [entry.name for entry in path.iterdir() if entry.is_file()]
+    return filenames

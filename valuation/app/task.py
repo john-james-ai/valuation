@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday October 10th 2025 02:27:30 am                                                #
-# Modified   : Saturday October 18th 2025 11:16:37 pm                                              #
+# Modified   : Sunday October 19th 2025 03:25:07 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -32,13 +32,12 @@ from loguru import logger
 import pandas as pd
 
 from valuation.app.state import Status
-from valuation.asset.data import DTYPES
-from valuation.asset.dataset import Dataset
+from valuation.app.validation import Validation
+from valuation.asset.dataset.base import DTYPES, Dataset
 from valuation.asset.identity import Passport
 from valuation.core.structure import DataClass
-from valuation.utils.db.dataset import DatasetStore
-from valuation.utils.io.service import IOService
-from valuation.workflow.validation import Validation
+from valuation.infra.file.io import IOService
+from valuation.infra.store.dataset import DatasetStore
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -385,9 +384,6 @@ class Task(ABC):
             TaskResult: The updated TaskResult object with final metrics.
         """
         passport = dataset.passport
-        passport.complete(
-            created=result.started, completed=result.ended, cost=result.elapsed or 0.0
-        )
         dataset.stamp_passport(passport=passport)
         result.dataset = dataset
         result.records_out = cast(int, dataset.nrows)

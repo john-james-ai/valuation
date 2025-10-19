@@ -11,11 +11,13 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Saturday October 18th 2025 06:47:58 pm                                              #
-# Modified   : Sunday October 19th 2025 12:26:46 am                                                #
+# Modified   : Sunday October 19th 2025 03:00:07 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
 # ================================================================================================ #
+
+from typing import Optional, Union
 
 import os
 from pathlib import Path
@@ -49,6 +51,9 @@ class FileSystem:
     This class encapsulates the logic for building consistent filepaths for asset data
     and passport JSON files on a local filesystem.
 
+    Args:
+        asset_type (AssetType): The asset type used to determine store and asset base locations.
+
     Methods:
         get_asset_filepath: Build the full path for an asset data file and ensure the stage directory exists.
         get_passport_filepath: Build the passport JSON filepath for an asset.
@@ -77,30 +82,58 @@ class FileSystem:
     @property
     def asset_location(self) -> Path:
         """The base location for asset data files."""
+        return self._asset_location
+
+    @property
+    def asset_location_current_mode(self) -> Path:
+        """The base location for asset data files."""
         return self._asset_location / MODE
 
     @property
     def store_location(self) -> Path:
         """The base location for asset data files."""
+        return self._store_location
+
+    @property
+    def store_location_current_mode(self) -> Path:
+        """The base location for asset data files."""
         return self._store_location / MODE
 
-    def get_asset_filepath(self, passport: Passport) -> Path:
-        """Construct the filepath for an asset data file and ensure directories exist.
+    def get_asset_filepath(
+        self,
+        passport_or_stage: Union[Passport, Stage],
+        name: Optional[str] = None,
+        format: str = "parquet",
+        mode: str = MODE,
+    ) -> Path:
+        """Construct the filepath for an asset's data file.
 
         Args:
-            passport (Passport): Passport describing the asset (provides stage, name, format, etc.).
+            passport_or_stage (Union[Passport, Stage]): Either a Passport instance (contains name and stage)
+                or a Stage enum value specifying the asset stage.
+            name (str, optional): The asset name; when a Passport is provided this is ignored.
+            format (str): The file format/extension to use (default "parquet").
+            mode (str): The operating mode subdirectory (default from MODE environment).
 
         Returns:
-            Path: Full path to the asset data file.
+            Path: The path to the asset data file.
         """
-        return Path(
-            self._asset_location
-            / MODE
-            / self._asset_type.value
-            / f"{passport.asset_type.value}_{passport.stage.value}_{passport.name}_{passport.created}.{passport.asset_format}"
+        if isinstance(passport_or_stage, Passport):
+            stage = passport_or_stage.stage
+            name = passport_or_stage.name
+        else:
+            stage = passport_or_stage
+
+        asset_filepath = (
+            Path(self._asset_location)
+            / mode
+            / stage.value
+            / f"{name}_{stage.value}_{mode}.{format}"
         )
 
-    def get_passport_filepath(self, stage: Stage, name: str) -> Path:
+        return asset_filepath
+
+    def get_passport_filepath(self, stage: Stage, name: str, mode: str = MODE) -> Path:
         """Construct the filepath for an asset's passport JSON file.
 
         Args:
@@ -115,19 +148,7 @@ class FileSystem:
 
         return (
             self._store_location
-            / MODE
+            / mode
             / self._asset_type.value
             / f"{self._asset_type.value}_{stage.value}_{name}.json"
         )
-
-    def get_raw_sales_data_location(self) -> Path:
-        """Returns the filepath for raw sales data."""
-        return DATA_DIR / MODE / "sales"
-
-    def get_raw_customer_data_location(self) -> Path:
-        """Returns the filepath for raw customer data."""
-        return DATA_DIR / MODE / "customer"
-
-    def get_raw_store_data_location(self) -> Path:
-        """Returns the filepath for raw store data."""
-        return DATA_DIR / MODE / "store"
