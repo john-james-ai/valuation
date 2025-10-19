@@ -4,82 +4,182 @@
 # Project    : Valuation - Discounted Cash Flow Method                                             #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
-# Filename   : /devops/raw_datagen.py                                                              #
+# Filename   : /devops/mode_data.py                                                                #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
-# Created    : Sunday October 19th 2025 04:53:07 am                                                #
-# Modified   : Sunday October 19th 2025 02:15:14 pm                                                #
+# Created    : Sunday October 19th 2025 12:18:21 am                                                #
+# Modified   : Sunday October 19th 2025 05:49:49 pm                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
 # ================================================================================================ #
-
-from typing import cast
+from typing import Set, cast
 
 from dataclasses import dataclass
 from datetime import datetime
+from functools import reduce
 
 from loguru import logger
+import numpy as np
+import pandas as pd
 import typer
 
-from valuation.app.dataprep.task import DatasetTaskResult
+from valuation.app.dataprep.task import DatasetTaskResult, TaskResult
 from valuation.app.state import Status
+from valuation.asset.entity import Entity
+from valuation.asset.identity.dataset import DatasetID
 from valuation.asset.stage import DatasetStage
 from valuation.asset.types import AssetType
 from valuation.core.structure import DataClass
-from valuation.infra.file.base import FileSystem
+from valuation.infra.file.dataset import DatasetFileSystem
 from valuation.infra.file.io import IOService
 from valuation.infra.loggers import configure_logging
 
 
 @dataclass
-class RawDataGeneratorConfig(DataClass):
+class RawSalesDataConfig(DataClass):
     """Holds data related to the current operating mode."""
 
+    source_dataset: str = "data/prod/ingest/sales_ingest.parquet"
     category_config_filepath: str = "config.yaml"
+    target_sample_size: int = 10000
+    window_size: int = 52
 
 
 # ------------------------------------------------------------------------------------------------ #
-class RawDataGenerator:
+class RawSalesDataGenerator:
     """Generates ModeSalesDataConfig based on the current operating mode."""
 
-    def __init__(self, config: RawDataGeneratorConfig, io: IOService = IOService) -> None:
+    def __init__(
+        self, config: RawSalesDataConfig, mode: str, io: IOService = IOService, force: bool = False
+    ) -> None:
         self._config = config
+        self._mode = mode
         self._io = io
-        self._file_system = FileSystem(asset_type=AssetType.DATASET)
-        self._result = DatasetTaskResult(task_name=self.__class__.__name__, dataset_name="sales")
+        self._force = force
+        self._file_system = DatasetFileSystem()
 
-    def run(self, mode: str) -> DatasetTaskResult:
+        self._dataset_id = None  # Ingest dataset createadd during processing
+
+    def run(self) -> None:
         """Generates the mode sales data."""
-        if mode == "prod":
-            raise RuntimeError("Raw data generation is not allowed in 'prod' mode.")
 
-        self._result.started = datetime.now()
+        # Check if dataset already exists
+        if self._exists() and not self._force:
+            logger.info("Raw sales data already exists. Use --force to regenerate.")
+            return
+
+        # Generate stratified sample
+        stratified_sample_result = self.generate_stratified_sample()
+        logger.info(stratified_sample_result)
+
+        # Generate raw zipped files
+        zipped_files_result = self.generate_raw_zipped_files()
+        logger.info(zipped_files_result)
+
+    def generate_stratified_sample(self) -> TaskResult:
+        """Generates the mode sales data."""
+        result = DatasetTaskResult(task_name="GenrateStratifiedSample", dataset_name="sales")
+        if self._mode == "prod":
+            raise RuntimeError("Mode sales data generation is not allowed in 'prod' mode.")
+
+        result.started = datetime.now()
+
+        # Load raw sales data
+        df = self._io.read(filepath=self._config.source_dataset)
+        result.records_in = len(df)
+        logger.info(f"Loaded raw sales data with {len(df)} records.")
+
+        # Identify common weeks across all categories
+        common_weeks = self._get_common_weeks(df)
+        logger.info(f"Identified {len(common_weeks)} common weeks across all categories.")
+
+        # Randomly select a sequential window of weeks
+        selected_weeks = self._randomly_select_window(
+            common_weeks=common_weeks, window_size=self._config.window_size
+        )
+        logger.info(f"Selected weeks for sampling: {sorted(selected_weeks)}")
+
+        # Filter dataset to selected weeks
+        filtered_df = self._filter_dataset(df, weeks=selected_weeks)
+        logger.info(f"Filtered dataset to {len(filtered_df)} records for selected weeks.")
+
+        # Determine sample proportion
+        n = len(filtered_df)
+        p = self._get_sample_proportion(n=n, target_sample_size=self._config.target_sample_size)
+
+        # Perform stratified sampling
+        sampled_df = self._stratified_sample(filtered_df, p=p)
+        logger.info(f"Stratified sampled dataset to {len(sampled_df)} records.")
+
+        # Create dataset passport
+        self._dataset_id = DatasetID(
+            name="sales",
+            stage=DatasetStage.INGEST,
+            asset_type=AssetType.DATASET,
+            entity=Entity.SALES,
+        )
+
+        # Save the sampled dataset
+        output_location = self._file_system.get_asset_filepath(
+            id_or_passport=self._dataset_id, format="parquet", mode=self._mode
+        )
+
+        self._io.write(data=sampled_df, filepath=output_location)
+        logger.info(f"Saved sampled dataset to {output_location}.")
+
+        # Update task result
+        result.records_out = len(sampled_df)
+        result.ended = datetime.now()
+        result.elapsed = (result.ended - result.started).total_seconds()
+        result.status = Status.SUCCESS.value
+        # Finalize the task result
+        result.end_task()
+
+        return result
+
+    def generate_raw_zipped_files(self) -> TaskResult:
+        """Generates the mode sales data."""
+
+        if self._mode == "prod":
+            raise RuntimeError("Mode sales data generation is not allowed in 'prod' mode.")
+
+        result = DatasetTaskResult(task_name="Generate Zipped Files", dataset_name="sales")
+        result.started = datetime.now()
+
+        # Get the filepath for the previously ingested dataset
+        ingested_data_filepath = self._file_system.get_asset_filepath(
+            id_or_passport=self._dataset_id, mode=self._mode, format="parquet"
+        )
+
+        # Load the previously ingested dataset
+        df = self._io.read(filepath=ingested_data_filepath)
+        result.records_in = len(df)
+        logger.info(f"Loaded ingested dataset with {len(df)} records.")
 
         # Read the config file
         category_config = self._io.read(filepath=self._config.category_config_filepath)
 
-        # Get the dataset path
-        dataset_path = self._file_system.get_asset_filepath(
-            passport_or_stage=DatasetStage.INGEST, name="sales", format="parquet", mode=mode
-        )
-
-        # Read the dataset
-        df = self._io.read(filepath=dataset_path)
-        self._result.records_in = len(df)
-
+        # Iterate through  each category and save the filtered dataset
         for _, category_info in category_config["category_filenames"].items():
             category = category_info["category"]
             name, format = category_info["filename"].split(".")
             filepath = self._file_system.get_asset_filepath(
-                passport_or_stage=DatasetStage.RAW, name=name, format=format, mode=mode
+                id_or_passport=DatasetID(
+                    name=name,
+                    stage=DatasetStage.RAW,
+                    asset_type=AssetType.DATASET,
+                    entity=Entity.SALES,
+                ),
+                format=format,
+                mode=self._mode,
             )
 
             # Remove stage and mode from filenames
-            substring = f"_{DatasetStage.RAW.value}_{mode}"
+            substring = f"_{DatasetStage.RAW.value}_{self._mode}"
             filepath = filepath.with_name(filepath.name.replace(substring, ""))
 
             # Filter dataset by category
@@ -87,15 +187,82 @@ class RawDataGenerator:
             if df_category.empty or df_category is None:
                 logger.warning(f"No records found for category '{category}'. Skipping.")
                 continue
-            self._result.records_out = cast(int, self._result.records_out)
-            self._result.records_out += len(df_category)
+
+            # Cast records_out to int
+            result.records_out = cast(int, result.records_out)
+            result.records_out += len(df_category)
             # Save the category dataset
             self._io.write(data=df_category, filepath=filepath)
+            logger.info(f"Saved raw data for category '{category}' to {filepath}.")
 
-        # Update task result
-        self._result.end_task(status=Status.SUCCESS)
+        result.status = Status.SUCCESS.value
+        result.end_task()
 
-        return self._result
+        return result
+
+    def _exists(self) -> bool:
+        """Checks if the target dataset already exists.
+
+        Returns:
+            bool: True if the dataset exists, False otherwise.
+        """
+        return self._file_system.asset_location.exists()
+
+    def _randomly_select_window(self, common_weeks: Set[int], window_size: int) -> Set[int]:
+        """Randomly selects a sequential set of week indices from the set of common weeks.
+
+        Args:
+            common_weeks (Set[int]): The set of week indices that exist for all categories.
+            window_size (int): The size of the window to select.
+        Returns:
+            Set[int]: The randomly selected set of week indices.
+        """
+        weeks_list = sorted(common_weeks)
+        max_start_index = len(weeks_list) - window_size
+        start_index = np.random.randint(0, max_start_index + 1)
+        selected_weeks = set(weeks_list[start_index : start_index + window_size])
+        return selected_weeks
+
+    def _get_sample_proportion(self, n: int, target_sample_size: int) -> float:
+        """Calculates the sample proportion needed to achieve the target sample size.
+
+        Args:
+            n (int): The total number of available records.
+            target_sample_size (int): The desired sample size.
+
+        Returns:
+            float: The sample proportion.
+        """
+
+        return target_sample_size / n
+
+    def _get_common_weeks(self, df: pd.DataFrame) -> Set[int]:
+        """Finds the set of sequential week indices that exist for ALL categories."""
+
+        return (
+            df.groupby("CATEGORY")["WEEK"]
+            .apply(lambda x: set(x))
+            .pipe(lambda s: reduce(set.intersection, s))
+        )
+
+    def _filter_dataset(self, df: pd.DataFrame, weeks: Set[int]) -> pd.DataFrame:
+        """Filters the dataset to include only records from the specified weeks."""
+
+        return df[df["WEEK"].isin(weeks)]
+
+    def _stratified_sample(self, df: pd.DataFrame, p: float) -> pd.DataFrame:
+        """Performs stratified sampling by CATEGORY and WEEK and returns a sampled DataFrame.
+
+        Args:
+            df (pd.DataFrame): The input dataframe to sample from.
+            p (float): The fraction of samples to draw from each group.
+
+        Returns:
+            pd.DataFrame: The stratified sampled dataframe with reset index.
+        """
+        return (
+            df.groupby(["CATEGORY", "WEEK"], group_keys=False).sample(frac=p).reset_index(drop=True)
+        )
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -124,14 +291,9 @@ def main(
     # Configure logging
     configure_logging()
     # Create the mode sales data generator
-    config = RawDataGeneratorConfig()
-    generator = RawDataGenerator(config=config)
-
-    # Generate the mode sales data
-    result = generator.run(mode=mode)
-
-    # Log the result
-    logger.info(result)
+    config = RawSalesDataConfig()
+    generator = RawSalesDataGenerator(config=config, mode=mode, force=force)
+    generator.run()
 
 
 if __name__ == "__main__":
