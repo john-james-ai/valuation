@@ -4,14 +4,14 @@
 # Project    : Valuation - Discounted Cash Flow Method                                             #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
-# Filename   : /valuation/__main__.py                                                              #
+# Filename   : /valuation/core/state.py                                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 9th 2025 11:01:16 pm                                               #
-# Modified   : Saturday October 18th 2025 07:35:36 am                                              #
+# Modified   : Saturday October 18th 2025 08:20:20 pm                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -20,6 +20,7 @@
 
 import typer
 
+from valuation.asset.identity import AssetType, DatasetStage, Passport
 from valuation.config.data import DTYPES
 from valuation.config.filepaths import (
     CONFIG_FILEPATH,
@@ -29,7 +30,6 @@ from valuation.config.filepaths import (
     WEEK_DECODE_TABLE_FILEPATH,
 )
 from valuation.config.loggers import configure_logging
-from valuation.core.entity import DatasetStage, EntityType, Passport
 from valuation.utils.db.dataset import DatasetStore
 from valuation.utils.io.service import IOService
 from valuation.workflow.dataprep.sales.aggregate import AggregateSalesDataTask
@@ -92,7 +92,7 @@ def get_aggregate_sales_data_task(source: Passport) -> Task:
         name="sales_aggregated",
         description="Dominick's Aggregated Sales Data Dataset",
         stage=DatasetStage.PROCESSED,
-        type=EntityType.DATASET,
+        type=AssetType.DATASET,
         format="csv",
     )
 
@@ -120,7 +120,7 @@ def get_clean_sales_data_task(source: Passport) -> Task:
         name="sales_clean",
         description="Dominick's Clean Sales Data Dataset",
         stage=DatasetStage.CLEAN,
-        type=EntityType.DATASET,
+        type=AssetType.DATASET,
         format="parquet",
     )
 
@@ -155,7 +155,7 @@ def get_ingest_sales_data_task() -> Task:
         name="sales_ingestion",
         description="Dominick's Sales Data Ingestion Dataset",
         stage=DatasetStage.INGEST,
-        type=EntityType.DATASET,
+        type=AssetType.DATASET,
         format="parquet",
     )
 

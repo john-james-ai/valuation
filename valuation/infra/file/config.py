@@ -4,14 +4,14 @@
 # Project    : Valuation - Discounted Cash Flow Method                                             #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
-# Filename   : /valuation/utils/io/config.py                                                       #
+# Filename   : /valuation/infra/file/config.py                                                     #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday October 17th 2025 02:03:56 am                                                #
-# Modified   : Saturday October 18th 2025 06:30:49 am                                              #
+# Modified   : Saturday October 18th 2025 08:20:23 pm                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -23,7 +23,7 @@ from typing import Any, Dict, List, Optional, Union
 
 from dataclasses import asdict, dataclass, field
 
-from valuation.utils.data import DataClass
+from valuation.core.data import DataClass
 
 # ------------------------------------------------------------------------------------------------ #
 # pylint: disable=missing-class-docstring, unused-argument

@@ -4,15 +4,46 @@
 # Project    : Valuation - Discounted Cash Flow Method                                             #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
-# Filename   : /valuation/config/__init__.py                                                       #
+# Filename   : /valuation/asset/stage.py                                                           #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
-# Created    : Friday October 10th 2025 11:32:52 pm                                                #
-# Modified   : Saturday October 18th 2025 07:59:53 pm                                              #
+# Created    : Saturday October 18th 2025 08:07:16 pm                                              #
+# Modified   : Saturday October 18th 2025 08:07:46 pm                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
 # ================================================================================================ #
+from enum import StrEnum
+
+
+# ------------------------------------------------------------------------------------------------ #
+class Stage(StrEnum):
+    """Defines the recognized types of Entities."""
+
+
+class DatasetStage(Stage):
+
+    RAW = "raw"
+    INGEST = "ingest"
+    CLEAN = "clean"
+    PROCESSED = "processed"
+    FEATURES = "feature_engineered"
+    ENRICHED = "enriched"
+    EXTERNAL = "external"
+    REFERENCE = "reference"
+    FINAL = "final"
+
+    def __str__(self):
+        return self.value
+
+
+class ModelStage(Stage):
+    INITIAL = "initial"
+    TUNED = "tuned"
+    FINAL = "final"
+
+    def __str__(self):
+        return self.value

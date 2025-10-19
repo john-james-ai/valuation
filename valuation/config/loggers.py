@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
 # ================================================================================================ #
-# Project    : Valuation of Dominick's Fine Foods, Inc. 1997-2003                                  #
+# Project    : Valuation - Discounted Cash Flow Method                                             #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
 # Filename   : /valuation/config/loggers.py                                                        #
@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Wednesday October 8th 2025 02:52:13 pm                                              #
-# Modified   : Tuesday October 14th 2025 09:40:40 pm                                               #
+# Modified   : Saturday October 18th 2025 06:11:08 pm                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -27,11 +27,6 @@ from valuation.config.filepaths import LOGS_DATASET
 
 def configure_logging():
     """Configures logging for the application."""
-
-    # Define module names for filtering logs
-    # PROFILE_MODULE = "valuation.dataset.profile"
-    # SALES_MODULE = "valuation.dataset.sales"
-    # SPLIT_MODULE = "valuation.dataset.split"
 
     try:
         logger.remove()  # Remove all previously added handlers

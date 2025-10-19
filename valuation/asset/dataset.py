@@ -4,14 +4,14 @@
 # Project    : Valuation - Discounted Cash Flow Method                                             #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
-# Filename   : /valuation/core/dataset.py                                                          #
+# Filename   : /valuation/asset/dataset.py                                                         #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 9th 2025 07:11:18 pm                                               #
-# Modified   : Saturday October 18th 2025 07:42:54 am                                              #
+# Modified   : Saturday October 18th 2025 08:20:20 pm                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -19,17 +19,17 @@
 """Provides data utilities."""
 from __future__ import annotations
 
-from typing import Any, Dict, Optional, Union
+from typing import Optional, Union
 
 from dataclasses import dataclass
 from pathlib import Path
 
-from loguru import logger
 import pandas as pd
 
-from valuation.core.entity import Entity, Passport
-from valuation.utils.data import DataClass
-from valuation.utils.exception import DatasetExistsError
+from valuation.asset.base import Asset, Passport
+from valuation.asset.identity import AssetType
+from valuation.infra.db.file_system import FileSystem
+from valuation.core.data import DataClass
 from valuation.utils.io.service import IOService
 
 
@@ -166,7 +166,9 @@ class DatasetProfile(DataClass):
 # ------------------------------------------------------------------------------------------------ #
 
 
-class Dataset(Entity):
+class Dataset(Asset):
+    
+    __ASSET_TYPE = AssetType.DATASET
 
     def __init__(
         self,
@@ -177,6 +179,7 @@ class Dataset(Entity):
         self._passport = passport
         self._df = df
         self._io = io()
+        self._file_system = FileSystem(Dataset.__ASSET_TYPE)
 
         self._fileinfo: Optional[FileInfo] = None
         self._profile: Optional[DatasetProfile] = None
@@ -190,7 +193,7 @@ class Dataset(Entity):
 
     @property
     def passport(self) -> Passport:
-        """The dataset's unique identity."""
+        """The dataset's unique idasset."""
         return self._passport
 
     @property
@@ -236,6 +239,7 @@ class Dataset(Entity):
         """
         stale = self._fileinfo.is_stale if self._fileinfo else False
         if self._df is None or self._df.empty or stale or force:
+            asset_filepath = self._file_system.get_(location=self.
             if self._passport.filepath:
                 self.load()
             else:

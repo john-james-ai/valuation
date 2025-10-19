@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Tuesday October 14th 2025 10:53:05 pm                                               #
-# Modified   : Saturday October 18th 2025 06:56:21 am                                              #
+# Modified   : Saturday October 18th 2025 08:20:23 pm                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -32,8 +32,8 @@ import traceback
 from loguru import logger
 import pandas as pd
 
-from valuation.core.dataset import Dataset
-from valuation.utils.data import DataClass
+from valuation.asset.dataset import Dataset
+from valuation.core.data import DataClass
 from valuation.workflow import Status
 from valuation.workflow.task import TaskResult
 

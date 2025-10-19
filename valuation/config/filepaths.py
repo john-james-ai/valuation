@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Wednesday October 8th 2025 02:52:13 pm                                              #
-# Modified   : Saturday October 18th 2025 06:40:06 am                                              #
+# Modified   : Saturday October 18th 2025 08:20:23 pm                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -22,22 +22,6 @@ from pathlib import Path
 # --- 1. Directories and Filepaths ---
 PROJ_ROOT = Path(__file__).resolve().parents[2]
 
-# DIRECTORIES
-DATA_DIR = PROJ_ROOT / "data"
-RAW_DATA_DIR = DATA_DIR / "raw"
-INGEST_DATA_DIR = DATA_DIR / "ingest"
-CLEAN_DATA_DIR = DATA_DIR / "clean"
-PROCESSED_DATA_DIR = DATA_DIR / "processed"
-ENRICH_DATA_DIR = DATA_DIR / "enrich"
-EXTERNAL_DATA_DIR = DATA_DIR / "external"
-REFERENCES_DIR = PROJ_ROOT / "references"
-
-# ENTITY STORE
-ENTITY_STORE_DIR = PROJ_ROOT / "entities"
-DATASET_STORE_DIR = ENTITY_STORE_DIR / "datasets"
-
-# MODELS
-MODELS_DIR = PROJ_ROOT / "models"
 
 # LOG FILES
 LOGS_DIR = PROJ_ROOT / "logs"

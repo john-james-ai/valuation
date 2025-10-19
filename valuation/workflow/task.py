@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday October 10th 2025 02:27:30 am                                                #
-# Modified   : Saturday October 18th 2025 06:53:52 am                                              #
+# Modified   : Saturday October 18th 2025 08:20:20 pm                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -31,10 +31,10 @@ import traceback
 from loguru import logger
 import pandas as pd
 
+from valuation.asset.dataset import Dataset
+from valuation.asset.identity import Passport
 from valuation.config.data import DTYPES
-from valuation.core.dataset import Dataset
-from valuation.core.entity import Passport
-from valuation.utils.data import DataClass
+from valuation.core.data import DataClass
 from valuation.utils.db.dataset import DatasetStore
 from valuation.utils.io.service import IOService
 from valuation.workflow import Status
@@ -251,7 +251,7 @@ class Task(ABC):
         config (TaskConfig): The configuration object for the task.
         io (type[IOService], optional): The IO service class to use for data
             loading and saving. Defaults to `IOService`.
-        dataset_store (type[DatasetStore], optional): The entity store class to use
+        dataset_store (type[DatasetStore], optional): The asset store class to use
             for managing data entities. Defaults to `DatasetStore`.
     """
 
@@ -343,7 +343,7 @@ class Task(ABC):
                 ):
 
                     result.status = Status.EXISTS.value
-                    # Get the output dataset from the entity store
+                    # Get the output dataset from the asset store
                     dataset_out = self._dataset_store.get(
                         name=self._config.target.name,
                         stage=self._config.target.stage,
