@@ -11,12 +11,13 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday October 19th 2025 02:01:46 pm                                                #
-# Modified   : Sunday October 19th 2025 02:15:13 pm                                                #
+# Modified   : Sunday October 19th 2025 02:33:20 pm                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
 # ================================================================================================ #
 from pathlib import Path
+
 from valuation.asset.identity.dataset import DatasetID, DatasetPassport
 from valuation.asset.types import AssetType
 from valuation.infra.file.base import MODE, FileSystem
@@ -45,6 +46,29 @@ class DatasetFileSystem(FileSystem):
     @property
     def asset_type(self) -> AssetType:
         return AssetType.DATASET
-    
-    def get_asset_filepath(self, asset_id: DatasetPassport | DatasetID, format: str = "parquet", mode: str = MODE, **kwargs) -> Path:
-        
+
+    def get_asset_filepath(
+        self,
+        asset_id: DatasetPassport | DatasetID,
+        format: str = "parquet",
+        mode: str = MODE,
+        **kwargs,
+    ) -> Path:
+
+        return Path(
+            self._asset_location
+            / mode
+            / str(asset_id.asset_type)
+            / str(asset_id.entity)
+            / f"{str(asset_id.stage)}_{asset_id.name}.{format}"
+        )
+
+    def get_passport_filepath(
+        self, asset_id: DatasetPassport | DatasetID, mode: str = MODE, **kwargs
+    ) -> Path:
+
+        return Path(
+            self._store_location
+            / mode
+            / f"{str(asset_id.asset_type)}_{str(asset_id.entity)}_{str(asset_id.stage)}_{asset_id.name}_passport.json"
+        )

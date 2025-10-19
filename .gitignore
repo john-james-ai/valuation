@@ -1,6 +1,7 @@
 # Data
 /data/
-
+tests/data
+entities/
 # Mac OS-specific storage files
 .DS_Store
 
@@ -21,8 +22,7 @@ __pycache__/
 # Logs
 logs
 
-# Test Data
-tests/data
+
 # Distribution / packaging
 .Python
 build/

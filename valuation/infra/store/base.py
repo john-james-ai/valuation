@@ -11,13 +11,13 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday October 17th 2025 11:19:18 pm                                                #
-# Modified   : Sunday October 19th 2025 02:15:13 pm                                                #
+# Modified   : Sunday October 19th 2025 02:52:23 pm                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
 # ================================================================================================ #
 """Manages the Dataset Store."""
-from typing import Optional, Union
+from typing import Any, Dict, Optional
 
 from abc import abstractmethod
 from pathlib import Path
@@ -26,8 +26,9 @@ from loguru import logger
 import pandas as pd
 
 from valuation.asset.base import Asset
-from valuation.asset.identity import AssetType, Passport, Stage
+from valuation.asset.identity.base import ID, Passport
 from valuation.asset.store import AssetStore
+from valuation.asset.types import AssetType
 from valuation.infra.exception import AssetStoreNotFoundError
 from valuation.infra.file.base import FileSystem
 from valuation.infra.file.io import IOService
@@ -44,10 +45,10 @@ class AssetStoreBase(AssetStore):
         _io (IOService): IO service used to read/write passport files.
     """
 
-    def __init__(self, io: IOService = IOService) -> None:
+    def __init__(self, filesystem: FileSystem, io: IOService = IOService) -> None:
 
         self._io = io
-        self._file_system = FileSystem(self.asset_type)
+        self._file_system = filesystem
 
     @property
     @abstractmethod
@@ -60,6 +61,15 @@ class AssetStoreBase(AssetStore):
         pass
 
     @abstractmethod
+    def passport_from_dict(self, passport_dict: Dict[str, Any]) -> Passport:
+        """ "Create a Passport instance from a dictionary.
+
+        Args:
+            passport_dict (Dict[str, Any]): The dictionary representation of the passport.
+        Returns:
+            Passport: The created Passport instance.
+        """
+
     def add(self, asset: Asset, overwrite: bool = False) -> None:
         """Add an asset to the store.
 
@@ -76,9 +86,7 @@ class AssetStoreBase(AssetStore):
         Raises:
             FileExistsError: If an asset with the same passport already exists and overwrite is False.
         """
-        passport_filepath = self._file_system.get_passport_filepath(
-            stage=asset.passport.stage, name=asset.passport.name
-        )
+        passport_filepath = self._file_system.get_passport_filepath(asset_id=asset.passport)
 
         if passport_filepath.exists() and not overwrite:
             raise FileExistsError(f"{asset.passport.label} already exists in the store.")
@@ -91,59 +99,33 @@ class AssetStoreBase(AssetStore):
 
         logger.debug(f"Added {asset.passport.label} to the store.")
 
-    @abstractmethod
-    def get(self, name: str, stage: Stage, **kwargs) -> Optional[Asset]:
-        """Retrieve an asset from the store by name and stage.
+    def get(self, asset_id: ID, **kwargs) -> Optional[Asset]:
 
-        Args:
-            name (str): The name of the asset to retrieve.
-            stage (Stage): The stage of the asset to retrieve.
-
-        Returns:
-            Optional[Asset]: The retrieved asset instance, or None if not found.
-
-        Raises:
-            FileNotFoundError: If the passport file for the requested asset does not exist.
-        """
         # Get the filepath for the passport
-        passport_filepath = self._file_system.get_passport_filepath(stage=stage, name=name)
+        passport_filepath = self._file_system.get_passport_filepath(asset_id=asset_id)
         # Check existence
         if not passport_filepath.exists():
             raise FileNotFoundError(
-                f"Passport file for '{name}' (stage={stage}) not found at '{passport_filepath}'"
+                f"Passport file for '{asset_id.name}' (stage={str(asset_id.stage)}) not found."
             )
         # Obtain the passport dictionary
         passport_dict = self._io.read(filepath=passport_filepath)
         # Create the passport
-        passport = Passport.from_dict(passport_dict)
+        passport = self.passport_from_dict(passport_dict=passport_dict)
         # Instantiate the appropriate asset type
         asset = self.create_asset(passport=passport)
         return asset
 
-    @abstractmethod
-    def remove(self, name: str, stage: Stage, **kwargs) -> None:
-        """Removes an asset from the store by name and stage.
+    def remove(self, asset_id: ID, **kwargs) -> None:
 
-        Deletes both the asset data file (if present) and its passport.
-
-        Args:
-            name (str): The name of the asset to remove.
-            stage (Stage): The stage of the asset to remove.
-
-        Returns:
-            None
-
-        Raises:
-            FileNotFoundError: If the passport file for the requested asset does not exist.
-        """
         # Get the filepath for the passport
-        passport_filepath = self._file_system.get_passport_filepath(stage=stage, name=name)
+        passport_filepath = self._file_system.get_passport_filepath(asset_id=asset_id)
 
         # Get the passport
         passport = self._get_passport(filepath=passport_filepath)
 
         # Get the asset filepath
-        asset_filepath = self._file_system.get_asset_filepath(passport_or_stage=passport)
+        asset_filepath = self._file_system.get_asset_filepath(asset_id=passport)
 
         # Remove asset data file and passport
         self._remove_file(filepath=asset_filepath)
@@ -191,25 +173,16 @@ class AssetStoreBase(AssetStore):
 
         return pd.DataFrame(registry)
 
-    def exists(self, name: str, stage: Stage, **kwargs) -> bool:
-        """Check if an asset exists in the store by name and stage.
-
-        Args:
-            name (str): The name of the asset to check.
-            stage (Stage): The stage of the asset to check.
-
-        Returns:
-            bool: True if the asset exists, False otherwise.
-        """
-        passport_filepath = self._file_system.get_passport_filepath(name=name, stage=stage)
+    def exists(self, asset_id: ID, **kwargs) -> bool:
+        passport_filepath = self._file_system.get_passport_filepath(asset_id=asset_id)
 
         return passport_filepath.exists()
 
-    def _remove_file(self, filepath: Union[str, Path]) -> None:
+    def _remove_file(self, filepath: str | Path) -> None:
         """Remove a file if it exists.
 
         Args:
-            filepath (Union[str, Path]): The path to the file to remove.
+            filepath (str | Path): The path to the file to remove.
 
         Returns:
             None
@@ -237,7 +210,7 @@ class AssetStoreBase(AssetStore):
         """
         try:
             passport_dict = self._io.read(filepath=filepath)
-            return Passport.from_dict(passport_dict)
+            return self.passport_from_dict(passport_dict)
         except Exception as e:
             logger.error(f"Failed to read passport from '{filepath}': {e}")
             raise

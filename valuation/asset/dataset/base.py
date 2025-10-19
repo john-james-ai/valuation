@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 9th 2025 07:11:18 pm                                               #
-# Modified   : Sunday October 19th 2025 02:15:13 pm                                                #
+# Modified   : Sunday October 19th 2025 02:18:34 pm                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -19,7 +19,7 @@
 """Provides data utilities."""
 from __future__ import annotations
 
-from typing import Optional, Union
+from typing import Optional
 
 from dataclasses import dataclass
 from pathlib import Path
@@ -106,7 +106,7 @@ class FileInfo(DataClass):
         return current_mod_time > self.modified_timestamp
 
     @classmethod
-    def from_filepath(cls, filepath: Union[Path, str]) -> FileInfo:
+    def from_filepath(cls, filepath: Path | str) -> FileInfo:
         """Creates a FileInfo instance by reading metadata from a file path.
 
         Args:
@@ -339,7 +339,7 @@ class Dataset(Asset):
         """
         self.save_as(self._asset_filepath, overwrite=overwrite, **kwargs)
 
-    def save_as(self, filepath: Union[Path, str], overwrite: bool = False, **kwargs) -> None:
+    def save_as(self, filepath: Path | str, overwrite: bool = False, **kwargs) -> None:
         """Saves the in-memory DataFrame to a specified location.
 
         Fails safely by default if a file already exists at the location.

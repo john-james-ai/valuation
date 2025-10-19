@@ -11,13 +11,12 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Saturday October 18th 2025 06:47:58 pm                                              #
-# Modified   : Sunday October 19th 2025 02:01:29 pm                                                #
+# Modified   : Sunday October 19th 2025 02:18:35 pm                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
 # ================================================================================================ #
 
-from typing import Union
 
 from abc import ABC, abstractmethod
 import os
@@ -85,7 +84,7 @@ class FileSystem(ABC):
     @abstractmethod
     def get_asset_filepath(
         self,
-        asset_id: Union[Passport, ID],
+        asset_id: Passport | ID,
         format: str = "parquet",
         mode: str = MODE,
         **kwargs,

@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday October 10th 2025 02:27:30 am                                                #
-# Modified   : Sunday October 19th 2025 01:22:33 pm                                                #
+# Modified   : Sunday October 19th 2025 02:18:32 pm                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -40,7 +40,7 @@ from valuation.infra.store.dataset import DatasetStore
 class DatasetTaskConfig(TaskConfig):
     """Base configuration class for tasks."""
 
-    source: Union[DatasetPassport, Dict[str, str]]
+    source: DatasetPassport | Dict[str, str]
     target: DatasetPassport
 
 
