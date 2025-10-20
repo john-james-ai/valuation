@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 9th 2025 07:11:18 pm                                               #
-# Modified   : Monday October 20th 2025 01:13:28 am                                                #
+# Modified   : Monday October 20th 2025 01:56:03 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -29,8 +29,8 @@ import pandas as pd
 
 from valuation.asset.base import Asset, Passport
 from valuation.asset.identity.dataset import DatasetPassport
-from valuation.asset.types import AssetType
 from valuation.core.structure import DataClass
+from valuation.core.types import AssetType
 from valuation.infra.exception import DatasetExistsError
 from valuation.infra.file.dataset import DatasetFileSystem
 from valuation.infra.file.io import IOService
@@ -249,7 +249,7 @@ class Dataset(Asset):
     @property
     def asset_type(self) -> AssetType:
         """The type of asset."""
-        return AssetType.DATASET
+        return AssetType.DATASET  # type: ignore
 
     @property
     def data_in_memory(self) -> bool:
@@ -350,6 +350,7 @@ class Dataset(Asset):
             raise ValueError("Filepath is not set. No file to delete.")
         logger.debug(f"Deleting file {self._asset_filepath}")
         self._asset_filepath.unlink(missing_ok=True)
+        self._fileinfo = None
 
     def exists(self) -> bool:
         """Checks if a file exists at the Dataset's canonical filepath.

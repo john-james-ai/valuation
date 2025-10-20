@@ -4,14 +4,14 @@
 # Project    : Valuation - Discounted Cash Flow Method                                             #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
-# Filename   : /valuation/app/base/pipeline.py                                                     #
+# Filename   : /valuation/app/dataprep/pipeline.py                                                 #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Tuesday October 14th 2025 10:53:05 pm                                               #
-# Modified   : Monday October 20th 2025 04:40:55 am                                                #
+# Modified   : Monday October 20th 2025 04:57:11 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -19,61 +19,29 @@
 """Pipeline Base Module"""
 from __future__ import annotations
 
-from typing import List, Optional
-
-from abc import abstractmethod
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 
 from loguru import logger
-import pandas as pd
 
-from valuation.app.base.task import TaskResult
+from valuation.app.base.pipeline import Pipeline, PipelineConfig, PipelineResult
 from valuation.core.state import Status
-from valuation.core.structure import DataClass
 
 
 # ------------------------------------------------------------------------------------------------ #
 @dataclass
-class PipelineConfig(DataClass):
+class DatePrepPipelineConfig(PipelineConfig):
     """Holds all parameters for the pipeline."""
 
-    name: str
-
 
 # ------------------------------------------------------------------------------------------------ #
 @dataclass
-class PipelineResult(DataClass):
+class DataPrepPipelineResult(PipelineResult):
     """Holds the results of a pipeline execution."""
-
-    name: str
-    # Timestamps
-    started: Optional[datetime] = field(default=None)  # Optional until setup
-    ended: Optional[datetime] = field(default=None)  # Optional until teardown
-    elapsed: Optional[float] = field(default=None)  # Optional until teardown
-
-    # State
-    status: Optional[str] = field(default=None)
-    status_obj = Status.PENDING
-    # Pipeline task results
-    task_results: List[TaskResult] = field(default_factory=list)
-
-    def add_task_result(self, result: TaskResult) -> PipelineResult:
-        """Adds a task result to the pipeline result.
-
-        Args:
-            result (TaskResult): The result of a task execution.
-        """
-        self.task_results.append(result)
-        return self
-
-    def end_pipeline(self) -> None:
-        results = [result.to_dict() for result in self.task_results]
-        print(pd.DataFrame(results))
 
 
 # ------------------------------------------------------------------------------------------------ #
-class Pipeline:
+class DataPrepPipeline(Pipeline):
     """Pipeline class for managing data processing and modeling workflows.
 
     This class provides a structured way to define, execute, and manage
@@ -97,11 +65,12 @@ class Pipeline:
 
     """
 
-    def __init__(self, config: PipelineConfig):
-        self._config = config
-        self._tasks = []
+    def __init__(self, config: DatePrepPipelineConfig):
+        super().__init__(config=config)
 
-    def _execute(self, pipeline_result: PipelineResult, force: bool = False) -> PipelineResult:
+    def _execute(
+        self, pipeline_result: PipelineResult, force: bool = False
+    ) -> DataPrepPipelineResult:
         """ "Executes the pipeline logic.
         Args:
             data (pd.DataFrame): The input data for the pipeline.
@@ -119,9 +88,9 @@ class Pipeline:
                 raise RuntimeError(msg)
             dataset = task_result.dataset
 
-        return pipeline_result
+        return pipeline_result  # type: ignore
 
-    def add_task(self, task) -> Pipeline:
+    def add_task(self, task) -> DataPrepPipeline:
         """Adds a task to the pipeline.
 
         Args:
@@ -133,12 +102,24 @@ class Pipeline:
         self._tasks.append(task)
         return self
 
-    @abstractmethod
-    def run(self, force: bool = False) -> PipelineResult:
+    def run(self, force: bool = False) -> DataPrepPipelineResult:
         """Runs all tasks in the pipeline.
 
         Args:
-            force (bool): Whether to force reprocessing if the file already exists.
+            force (bool): If True, forces re-execution of all tasks.
+
         Returns:
             PipelineResult: The result of the pipeline execution.
         """
+        pipeline_result = DataPrepPipelineResult(name=self._config.name)
+        pipeline_result.started = datetime.now()
+        try:
+
+            # Execute the pipeline
+            pipeline_result = self._execute(pipeline_result=pipeline_result, force=force)
+        except Exception as e:
+            logger.critical(f"Pipeline {self._config.name} failed with exception: {e}")
+            pipeline_result.status_obj = Status.FAIL
+            raise e
+        finally:
+            return pipeline_result

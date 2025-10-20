@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Saturday October 18th 2025 10:52:13 pm                                              #
-# Modified   : Sunday October 19th 2025 06:43:37 am                                                #
+# Modified   : Monday October 20th 2025 03:46:08 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -23,7 +23,7 @@ from dataclasses import dataclass
 
 import pandas as pd
 
-from valuation.app.dataprep.task import Task, TaskContext
+from valuation.app.dataprep.task import SISODataPrepTask
 from valuation.core.structure import DataClass
 from valuation.infra.file.io import IOService
 from valuation.infra.store.dataset import DatasetStore
@@ -43,7 +43,7 @@ class FilterPartialYearsTaskConfig(DataClass):
 
 
 # ------------------------------------------------------------------------------------------------ #
-class FilterPartialYearsTask(Task):
+class FilterPartialYearsTask(SISODataPrepTask):
 
     def __init__(
         self,
@@ -52,7 +52,7 @@ class FilterPartialYearsTask(Task):
         io: type[IOService] = IOService,
     ) -> None:
         super().__init__(config=config, dataset_store=dataset_store)
-        self._task_context = TaskContext(config=config)
+
         self._io = io
 
     def _execute(self, df: pd.DataFrame) -> pd.DataFrame:

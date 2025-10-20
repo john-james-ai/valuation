@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday October 19th 2025 09:13:25 pm                                                #
-# Modified   : Monday October 20th 2025 01:17:08 am                                                #
+# Modified   : Monday October 20th 2025 03:03:38 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -19,6 +19,7 @@
 from copy import copy
 from datetime import datetime
 import inspect
+from pathlib import Path
 import shutil
 
 from loguru import logger
@@ -27,8 +28,8 @@ from pandas.testing import assert_frame_equal
 import pytest
 
 from valuation.asset.dataset.base import Dataset, DatasetProfile
-from valuation.asset.entity import Entity
-from valuation.asset.types import AssetType
+from valuation.core.entity import Entity
+from valuation.core.types import AssetType
 from valuation.infra.exception import DatasetExistsError, DatasetNotFoundError
 from valuation.infra.file.dataset import DatasetFileSystem
 from valuation.infra.file.io import IOService
@@ -37,6 +38,8 @@ from valuation.infra.file.io import IOService
 # pylint: disable=missing-class-docstring, line-too-long
 # mypy: ignore-errors
 # ------------------------------------------------------------------------------------------------ #
+DATASET_FILEPATH = Path("tests/data/test_assets/test_datasets/test_dataset.csv")
+
 double_line = f"\n{100 * '='}"
 single_line = f"\n{100 * '-'}"
 
@@ -93,37 +96,6 @@ class TestSalesDataset:  # pragma: no cover
         with pytest.raises((DatasetNotFoundError, FileNotFoundError)):
             Dataset(passport=passport)
 
-        dataset = Dataset(
-            passport=dataset_passport,
-            df=sales_df,
-        )
-        assert isinstance(dataset, Dataset)
-        assert dataset.data.equals(sales_df)
-        assert dataset.passport == dataset_passport
-        assert dataset.asset_type == AssetType.DATASET
-        assert isinstance(dataset.passport.entity, Entity)  # type: ignore
-        assert dataset.passport.entity == Entity.SALES  # type: ignore
-
-        # Profile
-        assert isinstance(dataset.profile, DatasetProfile)
-        assert dataset.profile.nrows == nrows
-        assert dataset.profile.ncols == ncols
-        assert dataset.profile.n_duplicates == 0
-        assert dataset.profile.missing_values > 0
-        assert dataset.profile.missing_values > 0
-        assert dataset.profile.memory_usage_mb > 0.0
-        assert isinstance(dataset.profile.info, pd.DataFrame)
-
-        # Fileinfo
-        assert dataset.fileinfo is None
-
-        # Logging
-        for record in caplog.records:
-            logger.info(f"LOG: {record.msg}")
-
-        logger.info(f"Dataset Profile:\n{dataset.profile}")
-        logger.info(f"Dataset Info:\n{dataset.profile.info}")
-
         # ---------------------------------------------------------------------------------------- #
         end = datetime.now()
         duration = round((end - start).total_seconds(), 1)
@@ -134,7 +106,7 @@ class TestSalesDataset:  # pragma: no cover
         logger.info(single_line)
 
     # ============================================================================================ #
-    def test_dataset_init_wo_data(self, dataset, caplog) -> None:
+    def test_passport_existing_file(self, dataset, caplog) -> None:
         start = datetime.now()
         logger.info(
             f"\n\nStarted {self.__class__.__name__} {inspect.stack()[0][3]} at {start.strftime('%I:%M:%S %p')} on {start.strftime('%m/%d/%Y')}"
@@ -194,6 +166,66 @@ class TestSalesDataset:  # pragma: no cover
         logger.info(single_line)
 
     # ============================================================================================ #
+    def test_df_passport_no_file(self, dataset_passport, sales_df, caplog) -> None:
+        start = datetime.now()
+        logger.info(
+            f"\n\nStarted {self.__class__.__name__} {inspect.stack()[0][3]} at {start.strftime('%I:%M:%S %p')} on {start.strftime('%m/%d/%Y')}"
+        )
+        logger.info(double_line)
+        # ---------------------------------------------------------------------------------------- #
+        passport = copy(dataset_passport)
+        passport.entity = Entity.CUSTOMER
+        dataset = Dataset(passport=dataset_passport, df=sales_df)
+        assert dataset.passport == dataset_passport
+        assert_frame_equal(dataset.data, sales_df)
+
+        # Profile
+        assert dataset.profile is not None
+        assert isinstance(dataset.profile, DatasetProfile)
+        assert dataset.profile.nrows == sales_df.shape[0]
+        assert dataset.profile.ncols == sales_df.shape[1]
+        assert dataset.profile.n_duplicates == 0
+        assert dataset.profile.missing_values == sales_df.isna().sum().sum()
+        assert dataset.profile.memory_usage_mb > 0.0
+        assert isinstance(dataset.profile.info, pd.DataFrame)
+
+        # Fileinfo
+        assert dataset.fileinfo is None
+        # Properties
+        assert dataset.asset_type == AssetType.DATASET
+        assert dataset.data_in_memory is True
+        assert dataset.file_exists is False
+        assert dataset.file_fresh is False
+        assert dataset.nrows == sales_df.shape[0]
+        assert dataset.ncols == sales_df.shape[1]
+
+        # Save dataset to file
+        dataset.save()
+        assert dataset.fileinfo is not None
+        assert dataset.fileinfo.filepath.exists()
+        assert dataset.exists()
+        assert dataset.data_in_memory is True
+        assert dataset.file_exists is True
+        assert dataset.file_fresh is True
+
+        # Save in an alternative location and format
+        dataset.save_as(filepath=DATASET_FILEPATH)
+        assert DATASET_FILEPATH.exists()
+
+        assert dataset.data is not None
+        assert isinstance(dataset.data, pd.DataFrame)
+        assert not dataset.exists()
+
+        # ---------------------------------------------------------------------------------------- #
+        end = datetime.now()
+        duration = round((end - start).total_seconds(), 1)
+
+        logger.info(
+            f"\n\nCompleted {self.__class__.__name__} {inspect.stack()[0][3]} in {duration} seconds at {start.strftime('%I:%M:%S %p')} on {start.strftime('%m/%d/%Y')}"
+        )
+        logger.info(single_line)
+
+    # ============================================================================================ #
     def test_stale_dataset(self, dataset, caplog) -> None:
         start = datetime.now()
         logger.info(
@@ -202,7 +234,9 @@ class TestSalesDataset:  # pragma: no cover
         logger.info(double_line)
         # ---------------------------------------------------------------------------------------- #
         # Save the dataset to file
-        dataset.save()
+        dataset.save(overwrite=True)
+        assert dataset.fileinfo is not None
+        assert dataset.fileinfo.is_stale is False
 
         # Print fileinfo
         logger.info(f"Dataset Fileinfo before modification:\n{dataset.fileinfo}")
@@ -213,17 +247,18 @@ class TestSalesDataset:  # pragma: no cover
         IOService.write(data=df, filepath=dataset._asset_filepath)
 
         logger.info(f"Dataset FileInfo after modification:\n{dataset.fileinfo}")
-
         # Determine staleness
-        dataset.refresh_fileinfo()
-        logger.info(f"Dataset Fileinfo after refresh:\n{dataset.fileinfo}")
-
         assert dataset.fileinfo.is_stale is True
         logger.info(f"Dataset file is stale: {dataset.fileinfo.is_stale}")
+        # Refresh fileinfo
+        dataset.load()
+        logger.info(f"Dataset Fileinfo after refresh:\n{dataset.fileinfo}")
+        assert dataset.fileinfo.is_stale is False
 
         dataset.delete()
         assert not dataset.fileinfo.filepath.exists()
         assert not dataset.exists()
+        assert dataset.fileinfo is None
 
         # ---------------------------------------------------------------------------------------- #
         end = datetime.now()

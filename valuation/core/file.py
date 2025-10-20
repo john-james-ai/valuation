@@ -4,47 +4,27 @@
 # Project    : Valuation - Discounted Cash Flow Method                                             #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
-# Filename   : /valuation/asset/stage.py                                                           #
+# Filename   : /valuation/core/file.py                                                             #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
-# Created    : Saturday October 18th 2025 08:07:16 pm                                              #
-# Modified   : Sunday October 19th 2025 09:08:03 pm                                                #
+# Created    : Monday October 20th 2025 01:49:48 am                                                #
+# Modified   : Monday October 20th 2025 01:58:11 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
 # ================================================================================================ #
+"""Core file structures."""
 from enum import StrEnum
 
-
 # ------------------------------------------------------------------------------------------------ #
-class Stage(StrEnum):
-    """Defines the recognized types of Entities."""
 
 
-class DatasetStage(Stage):
+class FileFormat(StrEnum):
+    """Enumeration of supported file formats."""
 
-    RAW = "raw"
-    INGEST = "ingest"
-    CLEAN = "clean"
-    PROCESSED = "processed"
-    FEATURES = "feature_engineered"
-    ENRICHED = "enriched"
-    EXTERNAL = "external"
-    REFERENCE = "reference"
-    FINAL = "final"
-    TEST = "test"
-
-    def __str__(self):
-        return self.value
-
-
-class ModelStage(Stage):
-    INITIAL = "initial"
-    TUNED = "tuned"
-    FINAL = "final"
-
-    def __str__(self):
-        return self.value
+    PARQUET = "parquet"
+    CSV = "csv"
+    JSON = "json"

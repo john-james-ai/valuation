@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday October 10th 2025 02:27:30 am                                                #
-# Modified   : Sunday October 19th 2025 06:30:08 pm                                                #
+# Modified   : Monday October 20th 2025 04:04:29 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -19,14 +19,14 @@
 """Base classes for data preparation tasks."""
 from __future__ import annotations
 
-from typing import Optional
+from typing import Any, Dict, Optional
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime
 
-from valuation.app.state import Status
 from valuation.asset.base import Asset
+from valuation.core.state import Status
 from valuation.core.structure import DataClass
 
 
@@ -63,7 +63,8 @@ class TaskResult(DataClass, ABC):
     elapsed: Optional[float] = field(default=0.0)
 
     # Status
-    status: Optional[str] = field(default=Status.PENDING.value)
+    status: Optional[str] = field(default=None)
+    status_obj = Status.PENDING
 
     def start_task(self) -> None:
         """Mark the task as started and record the start time.
@@ -72,7 +73,7 @@ class TaskResult(DataClass, ABC):
             None
         """
         self.started = datetime.now()
-        self.status = Status.RUNNING.value
+        self.status = Status.RUNNING.value[0]
 
     def end_task(self) -> None:
         """Mark the task as ended and compute elapsed time.
@@ -86,6 +87,22 @@ class TaskResult(DataClass, ABC):
         self.ended = datetime.now()
         if self.started:
             self.elapsed = (self.ended - self.started).total_seconds()
+
+        self.status = self.status_obj.value[0] if self.status_obj else Status.PENDING.value[0]
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert the TaskResult to a dictionary, including inherited fields.
+
+        Returns:
+            Dict[str, Any]: Dictionary representation of the TaskResult.
+        """
+        return {
+            "task_name": self.task_name,
+            "started": self.started.strftime("%Y-%m-%d %H:%M:%S") if self.started else None,
+            "ended": self.ended.strftime("%Y-%m-%d %H:%M:%S") if self.ended else None,
+            "elapsed": round(float(self.elapsed), 2) if self.elapsed is not None else 0.0,
+            "status": self.status,
+        }
 
 
 # ------------------------------------------------------------------------------------------------ #

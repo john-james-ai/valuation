@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday October 10th 2025 02:27:30 am                                                #
-# Modified   : Sunday October 19th 2025 06:44:14 pm                                                #
+# Modified   : Monday October 20th 2025 04:54:58 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -28,11 +28,17 @@ from loguru import logger
 import pandas as pd
 
 from valuation.app.base.task import Task, TaskConfig, TaskResult
-from valuation.app.state import Status
 from valuation.app.validation import Validation
 from valuation.asset.dataset.base import DTYPES, Dataset
 from valuation.asset.identity.dataset import DatasetID, DatasetPassport
+from valuation.core.state import Status
 from valuation.infra.store.dataset import DatasetStore
+
+
+# ------------------------------------------------------------------------------------------------ #
+@dataclass
+class DataPrepTaskConfig(TaskConfig):
+    """Base configuration class for tasks."""
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -81,7 +87,7 @@ class DataPrepTask(Task):
         """
 
     @abstractmethod
-    def _validate_result(self, result: TaskResult) -> TaskResult:
+    def _validate_result(self, result: TaskResult) -> DataPrepTaskResult:
         """Validates the output data and updates the TaskResult.
 
         Subclasses must implement specific validation logic to ensure
@@ -99,7 +105,7 @@ class DataPrepTask(Task):
         pass
 
     @abstractmethod
-    def run(self, dataset: Dataset, force: bool = False) -> Dataset:
+    def run(self, dataset: Dataset, force: bool = False) -> DataPrepTaskResult:
         """Executes the full task lifecycle: execution, validation, and reporting.
 
         This method orchestrates the task's operation within a context that
@@ -159,7 +165,7 @@ class DataPrepTask(Task):
 
 # ------------------------------------------------------------------------------------------------ #
 @dataclass
-class SISODataPrepTaskConfig(TaskConfig):
+class SISODataPrepTaskConfig(DataPrepTaskConfig):
     """Base configuration class for tasks."""
 
     source: DatasetPassport
@@ -171,10 +177,19 @@ class SISODataPrepTask(DataPrepTask):
     def __init__(
         self,
         config: SISODataPrepTaskConfig,
-        dataset_store: type[DatasetStore] = DatasetStore,
+        dataset_store: DatasetStore = DatasetStore,
     ) -> None:
         self._config = config
-        self._dataset_store = dataset_store()
+        self._dataset_store = dataset_store
+
+    @property
+    def config(self) -> SISODataPrepTaskConfig:
+        """Return the task configuration.
+
+        Returns:
+            SISODataPrepTaskConfig: The task configuration.
+        """
+        return self._config
 
     @abstractmethod
     def _execute(self, df: pd.DataFrame, **kwargs) -> Dataset:
@@ -191,7 +206,7 @@ class SISODataPrepTask(DataPrepTask):
         """
 
     @abstractmethod
-    def _validate_result(self, result: TaskResult) -> TaskResult:
+    def _validate_result(self, result: TaskResult) -> DataPrepTaskResult:
         """Validates the output data and updates the TaskResult.
 
         Subclasses must implement specific validation logic to ensure
@@ -208,7 +223,7 @@ class SISODataPrepTask(DataPrepTask):
         """
         pass
 
-    def run(self, dataset: Dataset, force: bool = False) -> Optional[Dataset]:
+    def run(self, dataset: Dataset, force: bool = False) -> DataPrepTaskResult:
 
         # Initialize the result object and start the task
         result = DataPrepTaskResult(task_name=self.task_name, config=self._config)
@@ -218,11 +233,12 @@ class SISODataPrepTask(DataPrepTask):
         dataset_id_out = DatasetID.from_passport(self._config.target)
         if self._dataset_store.exists(dataset_id=dataset_id_out) and not force:
             dataset_out = self._dataset_store.get(dataset_id=dataset_id_out)
-            dataset_out = cast(Dataset, dataset_out)
-            result.status = Status.EXISTS.value
+            result.status_obj = Status.SKIPPED
             result.end_task()
             logger.info(result)
-            return dataset_out
+            if isinstance(dataset_out, Dataset):
+                result.dataset = dataset_out
+            return result
         try:
 
             # 1. Capture the size of the input dataset.
@@ -237,18 +253,19 @@ class SISODataPrepTask(DataPrepTask):
 
             # 4. Validate the result
             result = self._validate_result(result=result)
-            result = cast(DataPrepTaskResult, result)
 
             # Store data if valid otherwise handle failure
-            if result.validation.is_valid:
-                result.status = Status.SUCCESS.value
-                self._dataset_store.add(dataset=result.dataset)
+            if isinstance(result, DataPrepTaskResult):
+                if result.validation.is_valid:
+                    result.status_obj = Status.SUCCESS
+                    self._dataset_store.add(dataset=result.dataset)
+                else:
+                    result.status_obj = Status.FAIL
+                    self._handle_validation_failure(validation=result.validation)
             else:
-                result.status = Status.FAILURE.value
-                self._handle_validation_failure(validation=result.validation)
+                raise TypeError("Result is not of type DataPrepTaskResult.")
 
         finally:
             result.end_task()
             logger.info(result)
-            result = cast(DataPrepTaskResult, result)
-            return result.dataset
+            return result

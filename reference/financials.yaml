@@ -1,0 +1,97 @@
+#!/usr/bin/env python3
+# -*- coding:utf-8 -*-
+# ================================================================================================ #
+# Project    : Valuation of Dominick's Fine Foods, Inc. 1997-2003                                  #
+# Version    : 0.1.0                                                                               #
+# Python     : 3.12.11                                                                             #
+# Filename   : /data/external/financials.yaml                                                      #
+# ------------------------------------------------------------------------------------------------ #
+# Author     : John James                                                                          #
+# Email      : john.james.ai.studio@gmail.com                                                      #
+# URL        : https://github.com/john-james-ai/valuation                                          #
+# ------------------------------------------------------------------------------------------------ #
+# Created    : Saturday October 11th 2025 02:19:46 pm                                              #
+# Modified   : Sunday October 12th 2025 02:42:40 am                                                #
+# ------------------------------------------------------------------------------------------------ #
+# License    : MIT License                                                                         #
+# Copyright  : (c) 2025 John James                                                                 #
+# ================================================================================================ #
+# Dominick's Fine Foods, Inc. (DFF) 10-K Financial Data
+# ------------------------------------------------------------------------------------------------ #
+# This YAML file contains the financial data extracted from Dominick's Fine Foods, Inc.'s
+# 10-K filings for the fiscal years ending October 28, 1995 and November 2, 1996. The data includes
+# key financial statements such as the Income Statement, Balance Sheet, and Cash Flow Statement.
+# ================================================================================================ #
+financials:
+  name: Dominick's Fine Foods, Inc.  
+  fiscal_year: 1997
+  # INCOME STATEMENT
+  revenue:  2511962.00
+  cogs: 1932994.00
+  sga: 491359.00
+  gross_profit: 578968.00
+  operating_income: 77109.00
+  interest_expense:  67555.00
+  earnings_before_taxes:  6813.00
+  income_tax_expense:  7385.00
+  net_income: -6932.00
+
+  # BALANCE SHEET
+  # Assets
+  cash_and_equivalents:  32735.00
+  accounts_receivable:   16723.00
+  inventory:  203411.00      
+  prepaid_expenses:  21860.00
+  other_current_assets:  459252.00
+  current_assets:  274729.00
+  property_plant_equipment:  368224.00
+  total_assets:  1102205.00
+  # Liabilities
+  accounts_payable:   187787.00        
+  short_term_debt:  16723
+  long_term_debt:  400644.00
+  current_liabilities:  308434.00
+  current_liabilities_excl_debt:  298382.00
+  total_liabilities:  1102205.00
+  # Equity
+  total_equity:  179071.00
+    
+  # cash_flow_statement
+  net_income:  -6932.00
+  operating_activities:  41120.00  
+  investing_activities:  -48561.00
+  financing_activities:  -15375.00
+  net_change_in_cash:  -22816.00
+  capital_expenditures:  -49588.00
+  deprecated_and_amortization:  45924.00   
+
+  # TAXES
+  tax_rate:  0.35   
+
+  # INTEREST
+  effective_interest_rate:  9.2
+
+  # HISTORICAL FIGURES
+  prior_total_assets:  1086423.00
+  prior_current_assets:  274318.00
+  prior_inventory:  182880.00
+  prior_cogs:   1884161.00 
+  prior_revenue:   2433724.00 
+  prior_current_liabilities:  308504.00
+  prior_total_equity:  139850.00
+  
+
+
+  # PROFITABILITY METRICS
+  ebitda:  114900.00
+  
+  # DEBT METRICS
+  total_debt:  540700.00
+
+
+    
+    
+    
+
+
+    

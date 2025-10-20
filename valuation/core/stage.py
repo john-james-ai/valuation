@@ -4,29 +4,49 @@
 # Project    : Valuation - Discounted Cash Flow Method                                             #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
-# Filename   : /valuation/asset/dataset/sales.py                                                   #
+# Filename   : /valuation/core/stage.py                                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
-# Created    : Sunday October 19th 2025 05:27:10 am                                                #
-# Modified   : Monday October 20th 2025 03:03:38 am                                                #
+# Created    : Saturday October 18th 2025 08:07:16 pm                                              #
+# Modified   : Monday October 20th 2025 01:58:37 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
 # ================================================================================================ #
-"""Defines the SalesDataset class."""
-
-from valuation.asset.dataset.base import Dataset
-from valuation.core.entity import Entity
+"""Defines the recognized stages of asset development."""
+from enum import StrEnum
 
 # ------------------------------------------------------------------------------------------------ #
 
 
-class SalesDataset(Dataset):
-    """Manages sales datasets."""
+class Stage(StrEnum):
+    """Defines the recognized types of Entities."""
 
-    @property
-    def entity(self) -> Entity:
-        return Entity.SALES
+
+class DatasetStage(Stage):
+
+    RAW = "raw"
+    INGEST = "ingest"
+    CLEAN = "clean"
+    PROCESSED = "processed"
+    FEATURES = "feature_engineered"
+    ENRICHED = "enriched"
+    EXTERNAL = "external"
+    REFERENCE = "reference"
+    FINAL = "final"
+    TEST = "test"
+
+    def __str__(self):
+        return self.value
+
+
+class ModelStage(Stage):
+    INITIAL = "initial"
+    TUNED = "tuned"
+    FINAL = "final"
+
+    def __str__(self):
+        return self.value

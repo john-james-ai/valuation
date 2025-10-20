@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 9th 2025 11:01:16 pm                                               #
-# Modified   : Monday October 20th 2025 12:54:10 am                                                #
+# Modified   : Monday October 20th 2025 04:53:42 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -20,24 +20,23 @@
 
 import typer
 
-from valuation.asset.data import DTYPES
-from valuation.asset.identity import AssetType, DatasetStage, Passport
-from valuation.config.filepaths import (
+from valuation.app.base.pipeline import PipelineConfig, PipelineResult
+from valuation.app.dataprep.pipeline import DataPrepPipeline
+from valuation.app.dataprep.sales.aggregate import AggregateSalesDataTask
+from valuation.app.dataprep.sales.clean import CleanSalesDataTask
+from valuation.app.dataprep.sales.ingest import (
     CONFIG_FILEPATH,
-    DATASET_STORE_DIR,
-    FILEPATH_SALES_PROCESSED_SCW,
-    RAW_DATA_DIR,
     WEEK_DECODE_TABLE_FILEPATH,
+    IngestSalesDataTask,
+    IngestSalesDataTaskConfig,
 )
-from valuation.infra.file.base import FileFormat
+from valuation.app.dataprep.task import DataPrepTask, SISODataPrepTaskConfig
+from valuation.asset.identity.dataset import DatasetPassport
+from valuation.core.entity import Entity
+from valuation.core.file import FileFormat
+from valuation.core.stage import DatasetStage
 from valuation.infra.loggers import configure_logging
-from valuation.utils.db.dataset import DatasetStore
-from valuation.utils.io.service import IOService
-from valuation.workflow.dataprep.sales.aggregate import AggregateSalesDataTask
-from valuation.workflow.dataprep.sales.clean import CleanSalesDataTask
-from valuation.workflow.dataprep.sales.ingest import IngestSalesDataTask, IngestSalesDataTaskConfig
-from valuation.workflow.pipeline import Pipeline, PipelineConfig, PipelineResult
-from valuation.workflow.task import Task, TaskConfig
+from valuation.infra.store.dataset import DatasetStore
 
 # ------------------------------------------------------------------------------------------------ #
 app = typer.Typer()
@@ -82,95 +81,81 @@ app = typer.Typer()
 # ------------------------------------------------------------------------------------------------ #
 #                                   SALES DATA PIPELINE                                            #
 # ------------------------------------------------------------------------------------------------ #
-def get_aggregate_sales_data_task(source: Passport) -> Task:
+def get_aggregate_sales_data_task(source: DatasetPassport) -> DataPrepTask:
     """Aggregates cleaned sales data to the store-category-week level.
 
     Args:
         force (bool): Whether to force reprocessing if the file already exists.
     """
-    # Create the output Passport for the aggregated sales data
-    passport = Passport.create(
+    # Create the output DatasetPassport for the aggregated sales data
+    passport = DatasetPassport.create(
         name="sales_aggregated",
         description="Dominick's Aggregated Sales Data Dataset",
         stage=DatasetStage.PROCESSED,
-        type=AssetType.DATASET,
-        format=FileFormat.PARQUET,
+        entity=Entity.SALES,
+        file_format=FileFormat.PARQUET,
     )
 
     # Create configuration for sales data processing
-    config = TaskConfig(
-        task_name="AggregateSalesDataTask",
-        dataset_name=passport.name,
-        description=passport.description,
+    config = SISODataPrepTaskConfig(
         source=source,
         target=passport,
     )
 
     # Instantiate Dataset Store
-    dataset_store = DatasetStore(location=DATASET_STORE_DIR)
+    dataset_store = DatasetStore()
 
     # Run the sales data processing task
     return AggregateSalesDataTask(config=config, dataset_store=dataset_store)
 
 
 # ------------------------------------------------------------------------------------------------ #
-def get_clean_sales_data_task(source: Passport) -> Task:
+def get_clean_sales_data_task(source: DatasetPassport) -> CleanSalesDataTask:
 
-    # Create the output Passport for the cleaned sales data
-    passport = Passport.create(
+    # Create the output DatasetPassport for the cleaned sales data
+    passport = DatasetPassport.create(
         name="sales_clean",
         description="Dominick's Clean Sales Data Dataset",
         stage=DatasetStage.CLEAN,
-        type=AssetType.DATASET,
-        format=FileFormat.PARQUET,
+        entity=Entity.SALES,
+        file_format=FileFormat.PARQUET,
     )
-
     # Create configuration for sales data processing
-    config = TaskConfig(
-        task_name="CleanSalesDataTask",
-        dataset_name=passport.name,
-        description=passport.description,
+    config = SISODataPrepTaskConfig(
         source=source,
         target=passport,
     )
 
     # Instantiate Dataset Store
-    dataset_store = DatasetStore(location=DATASET_STORE_DIR)
+    dataset_store = DatasetStore()
 
     # Run the sales data processing task
     return CleanSalesDataTask(config=config, dataset_store=dataset_store)
 
 
 # ------------------------------------------------------------------------------------------------ #
-def get_ingest_sales_data_task() -> Task:
+def get_ingest_sales_data_task() -> IngestSalesDataTask:
     """Ingests raw sales data files.
 
     Args:
         force (bool): Whether to force reprocessing if the file already exists.
     """
-    # Obtain prerequisite data
-    week_dates = IOService.read(filepath=WEEK_DECODE_TABLE_FILEPATH, dtype=DTYPES)
-    filepaths = IOService.read(filepath=CONFIG_FILEPATH)
-    # Create Passport for Target Dataset
-    passport = Passport.create(
-        name="sales_ingestion",
-        description="Dominick's Sales Data Ingestion Dataset",
+    # Create DatasetPassport for Target Dataset
+    passport = DatasetPassport.create(
+        name="sales_ingest",
+        description="Dominick's Ingested Sales Data Dataset",
         stage=DatasetStage.INGEST,
-        type=AssetType.DATASET,
-        format=FileFormat.PARQUET,
+        entity=Entity.SALES,
+        file_format=FileFormat.PARQUET,
     )
 
     config = IngestSalesDataTaskConfig(
-        task_name="IngestSalesDataTask",
-        description=passport.description,
-        dataset_name=passport.name,
         week_decode_table_filepath=WEEK_DECODE_TABLE_FILEPATH,
-        source=filepaths,
+        source=CONFIG_FILEPATH,
         target=passport,
-        raw_data_directory=RAW_DATA_DIR,
     )
     # Instantiate Dataset Store
-    dataset_store = DatasetStore(location=DATASET_STORE_DIR)
+    dataset_store = DatasetStore()
     # Run the sales data processing task
     return IngestSalesDataTask(config=config, dataset_store=dataset_store)
 
@@ -183,23 +168,17 @@ def run_sales_data_pipeline(force: bool) -> PipelineResult:
     """
     # Construct the data preparation pipeline tasks
     ingest_sales_data_task = get_ingest_sales_data_task()
-    clean_sales_data_task = get_clean_sales_data_task(ingest_sales_data_task.config.target)
-    aggregate_sales_data_task = get_aggregate_sales_data_task(clean_sales_data_task.config.target)
+    clean_sales_data_task = get_clean_sales_data_task(ingest_sales_data_task)  # type: ignore
+    aggregate_sales_data_task = get_aggregate_sales_data_task(clean_sales_data_task)
 
     # Pipeline Configuration
-    config = PipelineConfig(
-        name="Sales Data Preparation Pipeline",
-        dataset_name="Dominick's Sales Data",
-        description="Pipeline to prepare sales data for analysis.",
-        input_filepath=CONFIG_FILEPATH,
-        output_filepath=FILEPATH_SALES_PROCESSED_SCW,
-    )
+    config = PipelineConfig(name="Sales Data Preparation Pipeline")
 
     # Create and run the sales data pipeline
     return (
-        Pipeline(config=config)
+        DataPrepPipeline(config=config)
         .add_task(ingest_sales_data_task)
-        .add_task(clean_sales_data_task)
+        .add_task(clean_sales_data_task)  # type: ignore
         .add_task(aggregate_sales_data_task)
         .run(force=force)
     )
@@ -222,7 +201,6 @@ def main(
     # Construct the data preparation pipeline tasks
     result = run_sales_data_pipeline(force=force)
     print(result)
-    result.summary
 
 
 if __name__ == "__main__":

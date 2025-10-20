@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Saturday October 18th 2025 06:47:58 pm                                              #
-# Modified   : Monday October 20th 2025 12:55:36 am                                                #
+# Modified   : Monday October 20th 2025 02:26:51 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -19,14 +19,16 @@
 """Filesystem path utilities for asset data and passports."""
 
 from abc import ABC, abstractmethod
-from enum import StrEnum
 import os
 from pathlib import Path
 
 from dotenv import load_dotenv
 
 from valuation.asset.identity.base import ID, Passport
-from valuation.asset.types import AssetType
+from valuation.core.entity import Entity
+from valuation.core.file import FileFormat
+from valuation.core.stage import Stage
+from valuation.core.types import AssetType
 
 # ------------------------------------------------------------------------------------------------ #
 load_dotenv()
@@ -45,15 +47,6 @@ ASSET_STORE_DIR = PROJ_ROOT / "asset_store"
 ASSET_STORE_DATASET_PASSPORT_DIR = ASSET_STORE_DIR / "dataset"
 ASSET_STORE_MODEL_PASSPORT_DIR = ASSET_STORE_DIR / "model"
 ASSET_STORE_REPORT_PASSPORT_DIR = ASSET_STORE_DIR / "report"
-
-
-# ------------------------------------------------------------------------------------------------ #
-class FileFormat(StrEnum):
-    """Enumeration of supported file formats."""
-
-    PARQUET = "parquet"
-    CSV = "csv"
-    JSON = "json"
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -105,6 +98,16 @@ class FileSystem(ABC):
     @abstractmethod
     def get_passport_filepath(self, id_or_passport: ID | Passport, mode: str = MODE) -> Path:
         """Builds the full filepath for an asset passport JSON file."""
+        pass
+
+    @abstractmethod
+    def get_stage_location(self, stage: Stage, mode: str = MODE) -> Path:
+        """Builds the full filepath for an asset stage directory."""
+        pass
+
+    @abstractmethod
+    def get_stage_entity_location(self, stage: Stage, entity: Entity, mode: str = MODE) -> Path:
+        """Builds the full filepath for an asset stage/entity directory."""
         pass
 
     @property

@@ -4,14 +4,14 @@
 # Project    : Valuation - Discounted Cash Flow Method                                             #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
-# Filename   : /valuation/workflow/dataprep/sales/aggregate.py                                     #
+# Filename   : /valuation/app/dataprep/sales/aggregate.py                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 16th 2025 06:18:02 pm                                              #
-# Modified   : Saturday October 18th 2025 06:44:43 am                                              #
+# Modified   : Monday October 20th 2025 03:48:13 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -21,12 +21,12 @@
 from loguru import logger
 import pandas as pd
 
-from valuation.utils.db.dataset import DatasetStore
-from valuation.workflow.task import Task, TaskConfig, TaskResult
+from valuation.app.dataprep.task import DataPrepTaskConfig, DataPrepTaskResult, SISODataPrepTask
+from valuation.infra.store.dataset import DatasetStore
 
 
 # ------------------------------------------------------------------------------------------------ #
-class AggregateSalesDataTask(Task):
+class AggregateSalesDataTask(SISODataPrepTask):
     """Aggregates a raw sales data file.
 
     The ingestion adds category and date information to the raw sales data.
@@ -39,7 +39,7 @@ class AggregateSalesDataTask(Task):
 
     def __init__(
         self,
-        config: TaskConfig,
+        config: DataPrepTaskConfig,
         dataset_store: DatasetStore,
     ) -> None:
         super().__init__(config=config, dataset_store=dataset_store)
@@ -78,7 +78,7 @@ class AggregateSalesDataTask(Task):
 
         return aggregated
 
-    def _validate_result(self, result: TaskResult) -> TaskResult:
+    def _validate_result(self, result: DataPrepTaskResult) -> DataPrepTaskResult:
         """
         Validates the output DataFrame for structural integrity and data quality after aggregation.
 

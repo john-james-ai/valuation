@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday October 19th 2025 02:01:46 pm                                                #
-# Modified   : Monday October 20th 2025 12:56:25 am                                                #
+# Modified   : Monday October 20th 2025 05:27:51 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -19,7 +19,9 @@
 from pathlib import Path
 
 from valuation.asset.identity.dataset import DatasetID, DatasetPassport
-from valuation.asset.types import AssetType
+from valuation.core.entity import Entity
+from valuation.core.stage import DatasetStage
+from valuation.core.types import AssetType
 from valuation.infra.file.base import MODE, FileFormat, FileSystem
 
 
@@ -72,3 +74,13 @@ class DatasetFileSystem(FileSystem):
             / mode
             / f"{str(id_or_passport.asset_type)}_{str(id_or_passport.entity)}_{str(id_or_passport.stage)}_{id_or_passport.name}_passport.json"
         )
+
+    def get_stage_location(self, stage: DatasetStage, mode: str = MODE) -> Path:
+        """Builds the full filepath for an asset stage directory."""
+        return Path(self._asset_location) / mode / str(stage)
+
+    def get_stage_entity_location(
+        self, stage: DatasetStage, entity: Entity, mode: str = MODE
+    ) -> Path:
+        """Builds the full filepath for an asset stage/entity directory."""
+        return Path(self._asset_location) / mode / str(stage) / str(entity)

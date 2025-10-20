@@ -4,31 +4,28 @@
 # Project    : Valuation - Discounted Cash Flow Method                                             #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
-# Filename   : /valuation/app/state.py                                                             #
+# Filename   : /valuation/core/types.py                                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
-# Created    : Thursday October 16th 2025 08:04:32 pm                                              #
-# Modified   : Sunday October 19th 2025 09:07:40 pm                                                #
+# Created    : Saturday October 18th 2025 08:09:04 pm                                              #
+# Modified   : Monday October 20th 2025 01:57:06 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
 # ================================================================================================ #
-"""Module defining workflow states."""
+"""Defines the recognized types of assets."""
 from enum import StrEnum
 
 # ------------------------------------------------------------------------------------------------ #
 
 
-class Status(StrEnum):
-    """Enumeration of possible task statuses."""
+class AssetType(StrEnum):
+    """Defines the recognized types of Entities."""
 
-    PENDING = "Pending"
-    RUNNING = "Running"
-    SUCCESS = "Success"
-    FAILURE = "Failure"
-    CRITICAL = "Critical Failure"
-    WARNING = "Warning"
-    EXISTS = "Output Exists"
+    DATASET = "dataset"
+    MODEL = "model"
+    REPORT = "report"
+    PLOT = "plot"

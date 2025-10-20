@@ -4,14 +4,14 @@
 # Project    : Valuation - Discounted Cash Flow Method                                             #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
-# Filename   : /valuation/workflow/dataprep/sales/clean.py                                         #
+# Filename   : /valuation/app/dataprep/sales/clean.py                                              #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday October 12th 2025 11:51:12 pm                                                #
-# Modified   : Saturday October 18th 2025 06:44:25 am                                              #
+# Modified   : Monday October 20th 2025 04:19:20 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -21,12 +21,12 @@ from typing import Any, Union
 from loguru import logger
 import pandas as pd
 
-from valuation.utils.db.dataset import DatasetStore
-from valuation.workflow.task import Task, TaskConfig, TaskResult
+from valuation.app.dataprep.task import DataPrepTaskResult, SISODataPrepTask, SISODataPrepTaskConfig
+from valuation.infra.store.dataset import DatasetStore
 
 
 # ------------------------------------------------------------------------------------------------ #
-class CleanSalesDataTask(Task):
+class CleanSalesDataTask(SISODataPrepTask):
     """Cleans a raw sales data file.
 
     The ingestion adds category and date information to the raw sales data.
@@ -39,7 +39,7 @@ class CleanSalesDataTask(Task):
 
     def __init__(
         self,
-        config: TaskConfig,
+        config: SISODataPrepTaskConfig,
         dataset_store: DatasetStore,
     ) -> None:
         super().__init__(config=config, dataset_store=dataset_store)
@@ -133,7 +133,7 @@ class CleanSalesDataTask(Task):
         df["gross_profit"] = df["revenue"] * (df["gross_margin_pct"] / 100.0)
         return df
 
-    def _validate_result(self, result: TaskResult) -> TaskResult:
+    def _validate_result(self, result: DataPrepTaskResult) -> DataPrepTaskResult:
         """Validates the output DataFrame structure and integrity.
 
         Args:

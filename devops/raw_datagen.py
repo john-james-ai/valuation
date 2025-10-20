@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday October 19th 2025 12:18:21 am                                                #
-# Modified   : Monday October 20th 2025 12:52:23 am                                                #
+# Modified   : Monday October 20th 2025 03:05:24 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -28,12 +28,12 @@ import pandas as pd
 import typer
 
 from valuation.app.dataprep.task import DataPrepTaskResult
-from valuation.app.state import Status
-from valuation.asset.entity import Entity
 from valuation.asset.identity.dataset import DatasetID
-from valuation.asset.stage import DatasetStage
-from valuation.asset.types import AssetType
+from valuation.core.entity import Entity
+from valuation.core.stage import DatasetStage
+from valuation.core.state import Status
 from valuation.core.structure import DataClass
+from valuation.core.types import AssetType
 from valuation.infra.file.dataset import DatasetFileSystem
 from valuation.infra.file.io import IOService
 from valuation.infra.loggers import configure_logging
@@ -125,7 +125,7 @@ class RawSalesDataGenerator:
         result.records_out = len(sampled_df)
         result.ended = datetime.now()
         result.elapsed = (result.ended - result.started).total_seconds()
-        result.status = Status.SUCCESS.value
+        result.status = Status.SUCCESS.value[0]
         # Finalize the task result
         result.end_task()
         logger.info(result)
@@ -180,7 +180,7 @@ class RawSalesDataGenerator:
             self._io.write(data=df_category, filepath=filepath)
             logger.info(f"Saved raw data for category '{category}' to {filepath}.")
 
-        result.status = Status.SUCCESS.value
+        result.status = Status.SUCCESS.value[0]
         result.end_task()
 
         counts = pd.DataFrame(records_per_category)

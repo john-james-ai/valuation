@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday October 17th 2025 11:19:18 pm                                                #
-# Modified   : Sunday October 19th 2025 04:40:14 pm                                                #
+# Modified   : Monday October 20th 2025 03:03:38 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -28,7 +28,7 @@ import pandas as pd
 from valuation.asset.base import Asset
 from valuation.asset.identity.base import ID
 from valuation.asset.store import AssetStore
-from valuation.asset.types import AssetType
+from valuation.core.types import AssetType
 from valuation.infra.exception import AssetStoreNotFoundError
 from valuation.infra.file.base import FileSystem
 from valuation.infra.file.io import IOService

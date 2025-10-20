@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday October 12th 2025 11:51:12 pm                                                #
-# Modified   : Sunday October 19th 2025 07:05:53 pm                                                #
+# Modified   : Monday October 20th 2025 05:34:00 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -25,27 +25,30 @@ from loguru import logger
 import pandas as pd
 from tqdm import tqdm
 
-from valuation.app.dataprep.task import DataPrepTask, DataPrepTaskResult, TaskConfig, TaskResult
-from valuation.app.state import Status
+from valuation.app.dataprep.task import DataPrepTask, DataPrepTaskConfig, DataPrepTaskResult
 from valuation.asset.dataset.base import DTYPES, Dataset
-from valuation.asset.identity.dataset import DatasetID, DatasetPassport
+from valuation.asset.identity.dataset import DatasetPassport
+from valuation.core.entity import Entity
+from valuation.core.stage import DatasetStage
+from valuation.core.state import Status
+from valuation.infra.file.dataset import DatasetFileSystem
 from valuation.infra.file.io import IOService
 from valuation.infra.store.dataset import DatasetStore
 
 # ------------------------------------------------------------------------------------------------ #
+CONFIG_FILEPATH = "config.yaml"
 CONFIG_CATEGORY_INFO_KEY = "category_filenames"
-WEEK_DECODE_TABLE_FILEPATH = "data/external/week_decode_table.csv"
+WEEK_DECODE_TABLE_FILEPATH = "reference/week_decode_table.csv"
 
 
 # ------------------------------------------------------------------------------------------------ #
 @dataclass
-class IngestSalesDataTaskConfig(TaskConfig):
+class IngestSalesDataTaskConfig(DataPrepTaskConfig):
     """Holds all parameters for the sales data ingestion process."""
 
     source: str  # Path to categories and filenames mapping
     target: DatasetPassport  # Target ingested dataset passport
     week_decode_table_filepath: Path
-    raw_data_directory: Path
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -63,12 +66,18 @@ class IngestSalesDataTask(DataPrepTask):
     def __init__(
         self,
         config: IngestSalesDataTaskConfig,
-        dataset_store: type[DatasetStore] = DatasetStore,
+        file_system: type[DatasetFileSystem] = DatasetFileSystem,
+        dataset_store: DatasetStore = DatasetStore,
         io: IOService = IOService,
     ) -> None:
+        """Initializes the ingestion task with the provided configuration."""
         self._config = config
-        self._dataset_store = dataset_store()
+        self._dataset_store = dataset_store
         self._io = io
+        self._file_system = file_system()
+
+    def config(self) -> IngestSalesDataTaskConfig:
+        return self._config
 
     def _execute(self, df: pd.DataFrame, category: str, week_dates: pd.DataFrame) -> pd.DataFrame:
         """Runs the ingestion process on the provided DataFrame.
@@ -87,7 +96,7 @@ class IngestSalesDataTask(DataPrepTask):
             self._add_dates, week_dates=week_dates
         )
 
-    def run(self, dataset: Optional[Dataset] = None, force: bool = False) -> Optional[Dataset]:
+    def run(self, dataset: Optional[Dataset] = None, force: bool = False) -> DataPrepTaskResult:
         """Executes the sales data ingestion task.
 
         Args:
@@ -102,25 +111,27 @@ class IngestSalesDataTask(DataPrepTask):
         result = DataPrepTaskResult(task_name=self.task_name, config=self._config)
         result.start_task()
 
-        # Check if output dataset alread exists
-        dataset_id_out = DatasetID.from_passport(self._config.target)
-        if self._dataset_store.exists(dataset_id=dataset_id_out) and not force:
-            dataset_out = self._dataset_store.get(dataset_id=dataset_id_out)
-            result.status = Status.EXISTS.value
-            result.end_task()
-            logger.info(result)
-            return dataset_out
+        # # Check if output dataset alread exists
+        # dataset_id_out = DatasetID.from_passport(self._config.target)
+        # if self._dataset_store.exists(dataset_id=dataset_id_out) and not force:
+        #     dataset_out = self._dataset_store.get(dataset_id=dataset_id_out)
+        #     result.status_obj = Status.SKIPPED
+        #     result.end_task()
+        #     logger.info(result)
+        #     result.dataset = dataset_out  # type: ignore
+        #     return result
 
         sales_datasets = []
         try:
 
             # Read week decoding table
-            week_dates = self._load(filepath=self._config.week_decode_table_filepath)
+            week_dates = self._load(filepath=WEEK_DECODE_TABLE_FILEPATH)
+            logger.info(f"Week decode table loaded with {len(week_dates)} records.")
+            logger.info(f"Week decode table columns: {week_dates.head()}")  # type: ignore
 
             # Read category filenames mapping
-            category_filenames = self._io.read(filepath=self._config.source)[
-                CONFIG_CATEGORY_INFO_KEY
-            ]
+            category_filenames = self._io.read(filepath=CONFIG_FILEPATH)["category_filenames"]
+            logger.info(f"Category filenames mapping loaded: {len(category_filenames)}")
 
             # Create tqdm progress bar for categories
             pbar = tqdm(
@@ -130,14 +141,23 @@ class IngestSalesDataTask(DataPrepTask):
                 unit="category",
             )
 
+            # Get the stage and entity from the target passport
+            directory = self._file_system.get_stage_entity_location(
+                stage=DatasetStage.RAW, entity=Entity.SALES
+            )
+            logger.info(f"Raw sales data directory: {directory}")
+
+            result.records_in = result.records_in if result.records_in else 0
             # Iterate through category sales files
             for _, category_info in pbar:
                 filename = category_info["filename"]
-                filepath = self._config.raw_data_directory / filename  # type: ignore
+                filepath = directory / filename
                 category = category_info["category"]
                 pbar.set_description(f"Processing category: {category} from file: {filename}")
+                logger.info(f"Processing category: {category} from file: {filename} at {filepath}")
 
                 # Create a temporary dataset for loading the data
+
                 df_in = self._load(filepath=filepath)
                 if isinstance(df_in, pd.DataFrame):
                     result.records_in += len(df_in)  # type: ignore
@@ -163,16 +183,20 @@ class IngestSalesDataTask(DataPrepTask):
             # Save the dataset if validation passed
             if result.validation.is_valid:  # type: ignore
                 self._dataset_store.add(dataset=dataset_out, overwrite=True)
-                logger.debug(f"Saved ingested dataset {dataset_out.passport.label} to the store.")
+                logger.info(f"Saved ingested dataset {dataset_out.passport.label} to the store.")
             else:
                 self._handle_validation_failure(validation=result.validation)  # type: ignore
+        except Exception as e:
+            logger.critical(f"Task {self.task_name} failed with exception: {e}")
+            result.status_obj = Status.FAIL
+            raise e
 
-        finally:
-            result.end_task()
-            logger.info(result)
-            return result.dataset  # type: ignore
+        # finally:
+        #     result.end_task()
+        #     logger.info(result)
+        #     return result
 
-    def _validate_result(self, result: DataPrepTaskResult) -> TaskResult:
+    def _validate_result(self, result: DataPrepTaskResult) -> DataPrepTaskResult:
         """Validates the result of the ingestion process.
 
         Args:
@@ -258,15 +282,15 @@ class IngestSalesDataTask(DataPrepTask):
             Returns:
             Union[pd.DataFrame, Any]: The loaded DataFrame or data object."""
 
-        logger.debug(f"Loading data from {filepath}")
+        logger.info(f"Loading data from {filepath}")
 
         data = self._io.read(filepath=filepath, **kwargs)
         # Ensure correct data types
         if isinstance(data, pd.DataFrame):
-            logger.debug(f"Applying data types to loaded DataFrame")
+            logger.info(f"Applying data types to loaded DataFrame")
             data = data.astype({k: v for k, v in DTYPES.items() if k in data.columns})
         else:
-            logger.debug(
+            logger.info(
                 f"Loaded data is type {type(data)} and not a DataFrame. Skipping dtype application."
             )
         return data
