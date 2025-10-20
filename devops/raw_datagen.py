@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday October 19th 2025 12:18:21 am                                                #
-# Modified   : Sunday October 19th 2025 08:07:42 pm                                                #
+# Modified   : Sunday October 19th 2025 08:20:58 pm                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -27,7 +27,7 @@ import numpy as np
 import pandas as pd
 import typer
 
-from valuation.app.dataprep.task import DataPrepTaskResult, TaskResult
+from valuation.app.dataprep.task import DataPrepTaskResult
 from valuation.app.state import Status
 from valuation.asset.entity import Entity
 from valuation.asset.identity.dataset import DatasetID
@@ -78,14 +78,12 @@ class RawSalesDataGenerator:
             raise RuntimeError("Raw sales data generation is not allowed in 'prod' mode.")
 
         # Generate stratified sample
-        stratified_sample_result = self.generate_stratified_sample()
-        logger.info(stratified_sample_result)
+        stratified_sample = self.generate_stratified_sample()
 
         # Generate raw zipped files
-        zipped_files_result = self.generate_raw_zipped_files()
-        logger.info(zipped_files_result)
+        self.generate_raw_zipped_files(stratified_sample=stratified_sample)
 
-    def generate_stratified_sample(self) -> TaskResult:
+    def generate_stratified_sample(self) -> pd.DataFrame:
         """Generates the mode sales data."""
         result = DataPrepTaskResult(task_name="GenrateStratifiedSample", dataset_name="sales")
         if self._mode == "prod":
@@ -123,22 +121,6 @@ class RawSalesDataGenerator:
         weeks = sampled_df["WEEK"].nunique()
         logger.info(f"Sampled dataset contains {categories} categories over {weeks} weeks.")
 
-        # Create dataset passport
-        self._dataset_id = DatasetID(
-            name="sales",
-            stage=DatasetStage.INGEST,
-            asset_type=AssetType.DATASET,
-            entity=Entity.SALES,
-        )
-
-        # Save the sampled dataset
-        output_location = self._file_system.get_asset_filepath(
-            id_or_passport=self._dataset_id, format="parquet", mode=self._mode
-        )
-
-        self._io.write(data=sampled_df, filepath=output_location)
-        logger.info(f"Saved sampled dataset to {output_location}.")
-
         # Update task result
         result.records_out = len(sampled_df)
         result.ended = datetime.now()
@@ -146,10 +128,11 @@ class RawSalesDataGenerator:
         result.status = Status.SUCCESS.value
         # Finalize the task result
         result.end_task()
+        logger.info(result)
 
-        return result
+        return sampled_df
 
-    def generate_raw_zipped_files(self) -> TaskResult:
+    def generate_raw_zipped_files(self, stratified_sample: pd.DataFrame) -> pd.DataFrame:
         """Generates the mode sales data."""
 
         if self._mode == "prod":
@@ -158,18 +141,11 @@ class RawSalesDataGenerator:
         result = DataPrepTaskResult(task_name="Generate Zipped Files", dataset_name="sales")
         result.started = datetime.now()
 
-        # Get the filepath for the previously ingested dataset
-        ingested_data_filepath = self._file_system.get_asset_filepath(
-            id_or_passport=self._dataset_id, mode=self._mode, format="parquet"
-        )
-
-        # Load the previously ingested dataset
-        df = self._io.read(filepath=ingested_data_filepath)
-        result.records_in = len(df)
-        logger.info(f"Loaded ingested dataset with {len(df)} records.")
-
         # Read the config file
         category_config = self._io.read(filepath=self._config.category_config_filepath)
+
+        # Capture records per category
+        records_per_category = []
 
         # Iterate through  each category and save the filtered dataset
         for _, category_info in category_config["category_filenames"].items():
@@ -186,11 +162,16 @@ class RawSalesDataGenerator:
                 mode=self._mode,
             )
 
-            # Filter dataset by category
-            df_category = df[df["CATEGORY"] == category]
+            # Filter dataset by category and count records
+            df_category = stratified_sample[stratified_sample["CATEGORY"] == category]
             if df_category.empty or df_category is None:
                 logger.warning(f"No records found for category '{category}'. Skipping.")
+                counts = {"category": category, "records": 0}
+                records_per_category.append(counts)
                 continue
+
+            counts = {"category": category, "records": len(df_category)}
+            records_per_category.append(counts)
 
             # Cast records_out to int
             result.records_out = result.records_out if result.records_out else 0
@@ -202,7 +183,15 @@ class RawSalesDataGenerator:
         result.status = Status.SUCCESS.value
         result.end_task()
 
-        return result
+        counts = pd.DataFrame(records_per_category)
+        total_categories = counts["category"].nunique()
+        logger.info(
+            f"Saved a total of {result.records_out} raw data records for {total_categories} categories."
+        )
+
+        logger.info(result)
+        logger.info(f"\n{counts}")
+        return counts
 
     def _exists(self) -> bool:
         """Checks if the target dataset already exists.
