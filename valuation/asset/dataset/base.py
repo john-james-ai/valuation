@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 9th 2025 07:11:18 pm                                               #
-# Modified   : Sunday October 19th 2025 04:23:10 pm                                                #
+# Modified   : Sunday October 19th 2025 07:10:50 pm                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -292,9 +292,8 @@ class Dataset(Asset):
         """
         stale = self._fileinfo.is_stale if self._fileinfo else False
         if self._profile is None or stale or force:
-            # Guard against _df being None before checking .empty to satisfy static type checkers.
-            if self._df is not None and not self._df.empty:
-                self._profile = DatasetProfile.create(df=self._df)
+            self.refresh_data()  # Ensure data is current before profiling
+            self._profile = DatasetProfile.create(df=self._df)
 
     def refresh_fileinfo(self, force: bool = False) -> None:
         """Refreshes the file information if it is missing or stale.

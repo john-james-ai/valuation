@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday October 19th 2025 02:01:46 pm                                                #
-# Modified   : Sunday October 19th 2025 04:13:37 pm                                                #
+# Modified   : Sunday October 19th 2025 08:00:01 pm                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -58,9 +58,9 @@ class DatasetFileSystem(FileSystem):
         return Path(
             self._asset_location
             / mode
-            / str(id_or_passport.asset_type)
+            / str(id_or_passport.stage)
             / str(id_or_passport.entity)
-            / f"{str(id_or_passport.stage)}_{id_or_passport.name}.{format}"
+            / f"{id_or_passport.name}.{format}"
         )
 
     def get_passport_filepath(

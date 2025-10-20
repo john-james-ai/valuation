@@ -11,12 +11,12 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday October 19th 2025 12:18:21 am                                                #
-# Modified   : Sunday October 19th 2025 06:08:08 pm                                                #
+# Modified   : Sunday October 19th 2025 08:07:42 pm                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
 # ================================================================================================ #
-from typing import Set, cast
+from typing import Set
 
 from dataclasses import dataclass
 from datetime import datetime
@@ -37,6 +37,7 @@ from valuation.core.structure import DataClass
 from valuation.infra.file.dataset import DatasetFileSystem
 from valuation.infra.file.io import IOService
 from valuation.infra.loggers import configure_logging
+from valuation.utils.file import is_directory_empty
 
 
 @dataclass
@@ -54,12 +55,18 @@ class RawSalesDataGenerator:
     """Generates ModeSalesDataConfig based on the current operating mode."""
 
     def __init__(
-        self, config: RawSalesDataConfig, mode: str, io: IOService = IOService, force: bool = False
+        self,
+        config: RawSalesDataConfig,
+        mode: str,
+        io: IOService = IOService,
+        force: bool = False,
+        random_state: int = None,
     ) -> None:
         self._config = config
         self._mode = mode
         self._io = io
         self._force = force
+        self._random_state = random_state
         self._file_system = DatasetFileSystem()
 
         self._dataset_id = None  # Ingest dataset createadd during processing
@@ -69,11 +76,6 @@ class RawSalesDataGenerator:
 
         if self._mode == "prod":
             raise RuntimeError("Raw sales data generation is not allowed in 'prod' mode.")
-
-        # Check if dataset already exists
-        if self._exists() and not self._force:
-            logger.info("Raw sales data already exists. Use --force to regenerate.")
-            return
 
         # Generate stratified sample
         stratified_sample_result = self.generate_stratified_sample()
@@ -104,7 +106,7 @@ class RawSalesDataGenerator:
         selected_weeks = self._randomly_select_window(
             common_weeks=common_weeks, window_size=self._config.window_size
         )
-        logger.info(f"Selected weeks for sampling: {sorted(selected_weeks)}")
+        logger.info(f"Selected {len(selected_weeks)} weeks for sampling.")
 
         # Filter dataset to selected weeks
         filtered_df = self._filter_dataset(df, weeks=selected_weeks)
@@ -117,6 +119,9 @@ class RawSalesDataGenerator:
         # Perform stratified sampling
         sampled_df = self._stratified_sample(filtered_df, p=p)
         logger.info(f"Stratified sampled dataset to {len(sampled_df)} records.")
+        categories = sampled_df["CATEGORY"].nunique()
+        weeks = sampled_df["WEEK"].nunique()
+        logger.info(f"Sampled dataset contains {categories} categories over {weeks} weeks.")
 
         # Create dataset passport
         self._dataset_id = DatasetID(
@@ -181,10 +186,6 @@ class RawSalesDataGenerator:
                 mode=self._mode,
             )
 
-            # Remove stage and mode from filenames
-            substring = f"_{DatasetStage.RAW.value}_{self._mode}"
-            filepath = filepath.with_name(filepath.name.replace(substring, ""))
-
             # Filter dataset by category
             df_category = df[df["CATEGORY"] == category]
             if df_category.empty or df_category is None:
@@ -192,7 +193,7 @@ class RawSalesDataGenerator:
                 continue
 
             # Cast records_out to int
-            result.records_out = cast(int, result.records_out)
+            result.records_out = result.records_out if result.records_out else 0
             result.records_out += len(df_category)
             # Save the category dataset
             self._io.write(data=df_category, filepath=filepath)
@@ -209,7 +210,8 @@ class RawSalesDataGenerator:
         Returns:
             bool: True if the dataset exists, False otherwise.
         """
-        return self._file_system.asset_location.exists()
+        location = self._file_system.asset_location
+        return location.exists() and not is_directory_empty(location)
 
     def _randomly_select_window(self, common_weeks: Set[int], window_size: int) -> Set[int]:
         """Randomly selects a sequential set of week indices from the set of common weeks.
@@ -264,7 +266,9 @@ class RawSalesDataGenerator:
             pd.DataFrame: The stratified sampled dataframe with reset index.
         """
         return (
-            df.groupby(["CATEGORY", "WEEK"], group_keys=False).sample(frac=p).reset_index(drop=True)
+            df.groupby(["CATEGORY", "WEEK"], group_keys=False)
+            .sample(frac=p, random_state=self._random_state)
+            .reset_index(drop=True)
         )
 
 
@@ -289,13 +293,21 @@ def main(
         case_sensitive=False,
         help="Mode: valid values are 'test', 'prod', 'dev'. Defaults to 'test'.",
     ),
+    random_state: int = typer.Option(
+        None,
+        "--random-state",
+        "-r",
+        help="Mode: valid values are 'test', 'prod', 'dev'. Defaults to 'test'.",
+    ),
 ):
     """Main entry point for the Valuation package."""
     # Configure logging
     configure_logging()
     # Create the mode sales data generator
     config = RawSalesDataConfig()
-    generator = RawSalesDataGenerator(config=config, mode=mode, force=force)
+    generator = RawSalesDataGenerator(
+        config=config, mode=mode, force=force, random_state=random_state
+    )
     generator.run()
 
 
