@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday October 17th 2025 11:19:18 pm                                                #
-# Modified   : Sunday October 19th 2025 05:10:54 pm                                                #
+# Modified   : Sunday October 19th 2025 08:46:28 pm                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -24,8 +24,11 @@ from loguru import logger
 from valuation.asset.dataset.base import Dataset
 from valuation.asset.identity.dataset import DatasetID, DatasetPassport
 from valuation.asset.types import AssetType
+from valuation.infra.file.base import MODE
 from valuation.infra.file.dataset import DatasetFileSystem
 from valuation.infra.store.base import AssetStoreBase
+
+# ------------------------------------------------------------------------------------------------ #
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -65,6 +68,11 @@ class DatasetStore(AssetStoreBase):
             overwrite (bool, optional): If True, overwrite an existing dataset with the same name.
                 Defaults to False.
         """
+        if MODE == "prod" and str(dataset.passport.stage) == "raw":
+            raise RuntimeError(
+                "DatasetStore is in 'prod' mode. No changes to raw data are allowed."
+            )
+
         passport_filepath = self._file_system.get_passport_filepath(id_or_passport=dataset.passport)
 
         if passport_filepath.exists() and not overwrite:
@@ -108,6 +116,11 @@ class DatasetStore(AssetStoreBase):
         Returns:
             None
         """
+
+        if MODE == "prod" and str(dataset_id.stage) == "raw":
+            raise RuntimeError(
+                "DatasetStore is in 'prod' mode. No deletion of raw data is allowed."
+            )
         # Get the filepath for the passport
         passport_filepath = self._file_system.get_passport_filepath(id_or_passport=dataset_id)
 

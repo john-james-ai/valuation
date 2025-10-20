@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 9th 2025 11:01:16 pm                                               #
-# Modified   : Saturday October 18th 2025 11:15:32 pm                                              #
+# Modified   : Monday October 20th 2025 12:54:10 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -29,6 +29,7 @@ from valuation.config.filepaths import (
     RAW_DATA_DIR,
     WEEK_DECODE_TABLE_FILEPATH,
 )
+from valuation.infra.file.base import FileFormat
 from valuation.infra.loggers import configure_logging
 from valuation.utils.db.dataset import DatasetStore
 from valuation.utils.io.service import IOService
@@ -93,7 +94,7 @@ def get_aggregate_sales_data_task(source: Passport) -> Task:
         description="Dominick's Aggregated Sales Data Dataset",
         stage=DatasetStage.PROCESSED,
         type=AssetType.DATASET,
-        format="csv",
+        format=FileFormat.PARQUET,
     )
 
     # Create configuration for sales data processing
@@ -121,7 +122,7 @@ def get_clean_sales_data_task(source: Passport) -> Task:
         description="Dominick's Clean Sales Data Dataset",
         stage=DatasetStage.CLEAN,
         type=AssetType.DATASET,
-        format="parquet",
+        format=FileFormat.PARQUET,
     )
 
     # Create configuration for sales data processing
@@ -156,7 +157,7 @@ def get_ingest_sales_data_task() -> Task:
         description="Dominick's Sales Data Ingestion Dataset",
         stage=DatasetStage.INGEST,
         type=AssetType.DATASET,
-        format="parquet",
+        format=FileFormat.PARQUET,
     )
 
     config = IngestSalesDataTaskConfig(

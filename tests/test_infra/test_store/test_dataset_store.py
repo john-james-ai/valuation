@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday October 19th 2025 02:58:43 pm                                                #
-# Modified   : Sunday October 19th 2025 05:11:46 pm                                                #
+# Modified   : Monday October 20th 2025 12:47:17 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -52,7 +52,7 @@ class TestDatasetStore:  # pragma: no cover
 
         # ---------------------------------------------------------------------------------------- #
         end = datetime.now()
-        duration = round((end - start).total_seconds(), 1)
+        duration = round((end - start).total_seconds(), 1)  # type: ignore
 
         logger.info(
             f"\n\nCompleted {self.__class__.__name__} {inspect.stack()[0][3]} in {duration} seconds at {start.strftime('%I:%M:%S %p')} on {start.strftime('%m/%d/%Y')}"
@@ -104,7 +104,7 @@ class TestDatasetStore:  # pragma: no cover
         assert dataset.passport.stage == dataset_passport.stage
         # assert dataset.passport.entity == dataset_passport.entity
         assert dataset.passport.asset_type == dataset_passport.asset_type
-        assert dataset.passport.asset_format == dataset_passport.asset_format
+        assert dataset.passport.file_format == dataset_passport.file_format
         assert dataset.data is not None
         assert not dataset.data.empty
 

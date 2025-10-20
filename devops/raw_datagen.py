@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday October 19th 2025 12:18:21 am                                                #
-# Modified   : Sunday October 19th 2025 08:20:58 pm                                                #
+# Modified   : Monday October 20th 2025 12:52:23 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -158,7 +158,7 @@ class RawSalesDataGenerator:
                     asset_type=AssetType.DATASET,
                     entity=Entity.SALES,
                 ),
-                format=format,
+                format=str(format),
                 mode=self._mode,
             )
 

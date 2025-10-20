@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Wednesday October 8th 2025 02:52:13 pm                                              #
-# Modified   : Sunday October 19th 2025 05:10:31 pm                                                #
+# Modified   : Monday October 20th 2025 12:49:38 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -28,6 +28,7 @@ from valuation.asset.entity import Entity
 from valuation.asset.identity.base import ID, Passport
 from valuation.asset.stage import DatasetStage
 from valuation.asset.types import AssetType
+from valuation.infra.file.base import FileFormat
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -44,7 +45,7 @@ class DatasetPassport(Passport):
         description: str,
         entity: Entity,
         stage: DatasetStage,
-        asset_format: str = "parquet",
+        file_format: FileFormat = FileFormat.PARQUET,
     ) -> DatasetPassport:
         """Creates a DatasetPassport."""
         return cls(
@@ -53,7 +54,7 @@ class DatasetPassport(Passport):
             asset_type=AssetType.DATASET,
             entity=entity,
             stage=stage,
-            asset_format=asset_format,
+            file_format=file_format,
             created=datetime.now(),
         )
 
@@ -70,7 +71,7 @@ class DatasetPassport(Passport):
         data["asset_type"] = AssetType(data["asset_type"])
         data["entity"] = Entity(data["entity"])
         data["stage"] = DatasetStage(data["stage"])
-        data["asset_format"] = str(data["asset_format"])
+        data["file_format"] = FileFormat(data["file_format"])
         if data.get("created"):
             data["created"] = datetime.strptime(data["created"], "%Y%m%d-%H%M")
 
@@ -84,7 +85,7 @@ class DatasetPassport(Passport):
             "asset_type": str(self.asset_type),
             "entity": str(self.entity),
             "stage": str(self.stage),
-            "asset_format": self.asset_format,
+            "file_format": str(self.file_format),
             "created": self.created.strftime("%Y%m%d-%H%M") if self.created else "",
         }
 

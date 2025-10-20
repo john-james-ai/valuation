@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Wednesday October 8th 2025 02:52:13 pm                                              #
-# Modified   : Sunday October 19th 2025 05:10:48 pm                                                #
+# Modified   : Monday October 20th 2025 12:48:03 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -27,6 +27,7 @@ from datetime import datetime
 from valuation.asset.stage import Stage
 from valuation.asset.types import AssetType
 from valuation.core.structure import DataClass
+from valuation.infra.file.base import FileFormat
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -38,7 +39,7 @@ class Passport(DataClass):
     description: str
     asset_type: AssetType
     stage: Stage
-    asset_format: str
+    file_format: FileFormat = FileFormat.PARQUET
     created: Optional[datetime] = None
 
     @property
@@ -58,7 +59,7 @@ class Passport(DataClass):
         description: str,
         asset_type: AssetType,
         stage: Stage,
-        asset_format: str = "csv",
+        file_format: FileFormat = FileFormat.PARQUET,
     ) -> Passport:
         """Creates a Passport."""
         return cls(
@@ -66,7 +67,7 @@ class Passport(DataClass):
             description=description,
             asset_type=asset_type,
             stage=stage,
-            asset_format=asset_format,
+            file_format=file_format,
             created=datetime.now(),
         )
 
@@ -82,7 +83,7 @@ class Passport(DataClass):
         data["description"] = str(data["description"])
         data["asset_type"] = AssetType(data["asset_type"])
         data["stage"] = Stage(data["stage"])
-        data["asset_format"] = str(data["asset_format"])
+        data["file_format"] = FileFormat(data["file_format"])
         if data.get("created"):
             data["created"] = datetime.strptime(data["created"], "%Y%m%d-%H%M")
 
@@ -95,7 +96,7 @@ class Passport(DataClass):
             "description": self.description,
             "asset_type": str(self.asset_type),
             "stage": str(self.stage),
-            "asset_format": self.asset_format,
+            "file_format": str(self.file_format),
             "created": self.created.strftime("%Y%m%d-%H%M") if self.created else "",
         }
 

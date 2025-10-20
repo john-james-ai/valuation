@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Saturday October 18th 2025 06:47:58 pm                                              #
-# Modified   : Sunday October 19th 2025 04:25:29 pm                                                #
+# Modified   : Monday October 20th 2025 12:55:36 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -19,6 +19,7 @@
 """Filesystem path utilities for asset data and passports."""
 
 from abc import ABC, abstractmethod
+from enum import StrEnum
 import os
 from pathlib import Path
 
@@ -44,6 +45,15 @@ ASSET_STORE_DIR = PROJ_ROOT / "asset_store"
 ASSET_STORE_DATASET_PASSPORT_DIR = ASSET_STORE_DIR / "dataset"
 ASSET_STORE_MODEL_PASSPORT_DIR = ASSET_STORE_DIR / "model"
 ASSET_STORE_REPORT_PASSPORT_DIR = ASSET_STORE_DIR / "report"
+
+
+# ------------------------------------------------------------------------------------------------ #
+class FileFormat(StrEnum):
+    """Enumeration of supported file formats."""
+
+    PARQUET = "parquet"
+    CSV = "csv"
+    JSON = "json"
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -85,7 +95,7 @@ class FileSystem(ABC):
     def get_asset_filepath(
         self,
         id_or_passport: Passport | ID,
-        format: str = "parquet",
+        format=FileFormat.PARQUET,
         mode: str = MODE,
         **kwargs,
     ) -> Path:

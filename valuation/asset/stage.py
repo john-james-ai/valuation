@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Saturday October 18th 2025 08:07:16 pm                                              #
-# Modified   : Saturday October 18th 2025 08:07:46 pm                                              #
+# Modified   : Sunday October 19th 2025 09:08:03 pm                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -35,6 +35,7 @@ class DatasetStage(Stage):
     EXTERNAL = "external"
     REFERENCE = "reference"
     FINAL = "final"
+    TEST = "test"
 
     def __str__(self):
         return self.value

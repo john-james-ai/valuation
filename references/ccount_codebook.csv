@@ -1,0 +1,62 @@
+Variable,Description,Type,Length
+DATE,Date of the Observation,Character,6
+Week,Week Number,Numeric,8
+Store,Store Code,Numeric,8
+BAKCOUP,Bakery Coupons Redeemed,Numeric,8
+BAKERY,Bakery Sales in Dollars,Numeric,8
+BEER,Beer Sales in Dollars,Numeric,8
+BOTTLE,Bottle Sales in Dollars,Numeric,8
+BULK,Bulk Sales in Dollars,Numeric,8
+BULKCOUP,Bulk Coupons Redeemed,Numeric,8
+CAMERA,Camera Sales in Dollars,Numeric,8
+CHEESE,Cheese Sales in Dollars,Numeric,8
+CONVFOOD,Conventional Foods Sales in Dollars,Numeric,8
+COSMCOUP,Cosmetics Coupons Redeemed,Numeric,8
+COSMETIC,Cosmetics Sales in Dollars,Numeric,8
+CUSTCOUN,Customer Count,Numeric,8
+DAIRCOUP,Dairy Coupons Redeemed,Numeric,8
+DAIRY,Dairy Sales in Dollars,Numeric,8
+DELI,Deli Sales in Dollars,Numeric,8
+DELICOUP,Deli Coupons Redeemed,Numeric,8
+DELIEXPR,Deli Express Sales in Dollars,Numeric,8
+DELISELF,Deli Self Service Sales in Dollars,Numeric,8
+FISH,Fish Sales in Dollars,Numeric,8
+FISHCOUP,Fish Coupons Redeemed,Numeric,8
+FLORAL,Floral Sales in Dollars,Numeric,8
+FLORCOUP,Floral Coupons Redeemed,Numeric,8
+FROZCOUP,Frozen Items Coupons Redeemed,Numeric,8
+FROZEN,Frozen Items Sales,Numeric,8
+FTGCCOUP,Foodto-Go -Coupons Redeemed,Numeric,8
+FTGCHIN,Foodto--Go Chinese Sales in Dollars,Numeric,8
+FTGICOUP,Food-toGo -Coupons Redeemed,Numeric,8
+FTGITAL,Food-to-Go Italian Sales in Dollars,Numeric,8
+GM,General Merchandise Sales in Dollars,Numeric,8
+GMCOUP,General Coupons Redeemed,Numeric,8
+GROCCOUP,Grocery Coupons Redeemed,Numeric,8
+GROCERY,Grocery Sales in Dollars,Numeric,8
+HABA,Health and Beauty Aids Sales in Dollars,Numeric,8
+HABACOUP,Health and Beauty Aids Coupons Redeemed,Numeric,8
+JEWELRY,Jewelry Sales in Dollars,Numeric,8
+LIQCOUP,Liquor Coupons Redeemed,Numeric,8
+MANCOUP,Manufacturer Coupons Redeemed,Numeric,8
+MEAT,Meat Sales in Dollars,Numeric,8
+MEATCOUP,Meat Coupons Redeemed,Numeric,8
+MEATFROZ,Meat-Frozen Sales in Dollars,Numeric,8
+MISCSCP,Misc. Coupons Redeemed,Numeric,8
+MVPCLUB,MVP,Numeric,8
+PHARCOUP,Pharmacy Coupons Redeemed,Numeric,8
+PHARMACY,Pharmacy Sales in Dollars,Numeric,8
+PHOTCOUP,Photo Coupons Redeemed,Numeric,8
+PHOTOFIN,Photo,Numeric,8
+PRODCOUP,Produce Coupons Redeemed,Numeric,8
+PRODUCE,Produce Sales in Dollars,Numeric,8
+PROMCOUP,Promotion Coupons Redeemed,Numeric,8
+PROMO,Promotion Sales in Dollars,Numeric,8
+SALADBAR,Salad Bar Sales in Dollars,Numeric,8
+SALCOUP,Salad Coupons Redeemed,Numeric,8
+SPIRITS,Spirits Sales in Dollars,Numeric,8
+SSDELICP,Self Service Deli Sales in Dollars,Numeric,8
+VIDCOUP,Video Coupons Redeemed,Numeric,8
+VIDEO,Video Sales in Dollars,Numeric,8
+VIDEOREN,Video Rentals (Dollar Amounts),Numeric,8
+WINE,Wine Sales in Dollars,Numeric,8

@@ -11,23 +11,26 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Saturday October 11th 2025 08:23:13 pm                                              #
-# Modified   : Sunday October 19th 2025 05:01:26 pm                                                #
+# Modified   : Monday October 20th 2025 12:56:35 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
 # ================================================================================================ #
+import pandas as pd
 import pytest
 
-from valuation.asset.dataset.base import Dataset
+from valuation.asset.dataset.base import DTYPES, Dataset
 from valuation.asset.entity import Entity
 from valuation.asset.identity.dataset import DatasetPassport
 from valuation.asset.stage import DatasetStage
+from valuation.infra.file.base import FileFormat
 from valuation.infra.file.io import IOService
 
 # ------------------------------------------------------------------------------------------------ #
-DATASET_FILEPATH = "data/test/ingest/sales_ingest_test.parquet"
+DATASET_FILEPATH = "tests/data/wbat.csv"
 
 
+# ------------------------------------------------------------------------------------------------ #
 @pytest.fixture(scope="function", autouse=True)
 def auto_set_test_mode_env(monkeypatch):
     """
@@ -53,18 +56,20 @@ def auto_set_test_mode_env(monkeypatch):
     # No teardown code needed! monkeypatch handles it.
 
 
+# ------------------------------------------------------------------------------------------------ #
 @pytest.fixture(scope="session", autouse=False)
 def dataset_passport() -> DatasetPassport:
     passport = DatasetPassport.create(
         name="test_dataset",
         description="Test dataset for unit tests.",
         entity=Entity.SALES,
-        stage=DatasetStage.INGEST,
-        asset_format="parquet",
+        stage=DatasetStage.TEST,
+        file_format=FileFormat.PARQUET,
     )
     return passport
 
 
+# ------------------------------------------------------------------------------------------------ #
 @pytest.fixture(scope="session", autouse=False)
 def dataset(dataset_passport: DatasetPassport) -> Dataset:
     """Fixture for dataset tests."""
@@ -77,3 +82,13 @@ def dataset(dataset_passport: DatasetPassport) -> Dataset:
         pytest.skip("Dataset not found in store.")
 
     return dataset
+
+
+# ------------------------------------------------------------------------------------------------ #
+@pytest.fixture(scope="session", autouse=False)
+def sales_df() -> pd.DataFrame:
+    """Fixture for sales dataframe."""
+
+    data = IOService.read(filepath=DATASET_FILEPATH)
+    data = data.astype({k: v for k, v in DTYPES.items() if k in data.columns})
+    return data

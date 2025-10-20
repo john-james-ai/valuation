@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 9th 2025 07:11:18 pm                                               #
-# Modified   : Sunday October 19th 2025 07:10:50 pm                                                #
+# Modified   : Monday October 20th 2025 01:13:28 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -216,18 +216,30 @@ class Dataset(Asset):
         self._df = df
         self._io = io()
 
+        self._fileinfo = None
+        self._profile = None
+        self._asset_filepath = None
         self._file_system = DatasetFileSystem()
-        self._asset_filepath = self._file_system.get_asset_filepath(id_or_passport=self._passport)
 
-        self._fileinfo: Optional[FileInfo] = None
-        self._profile: Optional[DatasetProfile] = None
+        self._validate()
+        self._initialize()
 
     @property
     def data(self) -> pd.DataFrame:
         """The dataset as a Pandas DataFrame, loaded lazily."""
-        self.refresh_data()
-        self._df = self._df if self._df is not None else pd.DataFrame()
+        self._lazy_load_data()
         return self._df
+
+    @property
+    def profile(self) -> Optional[DatasetProfile]:
+        """A profile of the dataset's content, generated lazily."""
+        self._lazy_load_profile()
+        return self._profile
+
+    @property
+    def fileinfo(self) -> Optional[FileInfo]:
+        """Metadata for the associated file, generated lazily."""
+        return self._fileinfo
 
     @property
     def passport(self) -> Passport:
@@ -240,16 +252,19 @@ class Dataset(Asset):
         return AssetType.DATASET
 
     @property
-    def profile(self) -> Optional[DatasetProfile]:
-        """A profile of the dataset's content, generated lazily."""
-        self.refresh_profile()
-        return self._profile
+    def data_in_memory(self) -> bool:
+        """Indicates if the DataFrame is loaded in memory."""
+        return self._df is not None and not self._df.empty
 
     @property
-    def fileinfo(self) -> Optional[FileInfo]:
-        """Metadata for the associated file, generated lazily."""
-        self.refresh_fileinfo()
-        return self._fileinfo
+    def file_exists(self) -> bool:
+        """Indicates if the dataset file exists on disk."""
+        return self._asset_filepath.exists() if self._asset_filepath else False
+
+    @property
+    def file_fresh(self) -> bool:
+        """Indicates if the file on disk is fresh compared to in-memory data."""
+        return self._fileinfo and not self._fileinfo.is_stale if self._fileinfo else False
 
     @property
     def nrows(self) -> Optional[int]:
@@ -269,42 +284,6 @@ class Dataset(Asset):
         """
         self._passport = passport
 
-    def refresh_data(self, force: bool = False) -> None:
-        """Refreshes the in-memory DataFrame from the file if it is stale or missing.
-
-        This method implements the lazy-loading logic. It will trigger a `load`
-        operation if the DataFrame is empty, has never been loaded, is detected
-        as stale, or if the refresh is forced.
-
-        Args:
-            force: If True, forces the data to be reloaded from the file
-                regardless of its current state.
-        """
-        stale = self._fileinfo.is_stale if self._fileinfo else False
-        if self._df is None or self._df.empty or stale or force:
-            self.load()
-
-    def refresh_profile(self, force: bool = False) -> None:
-        """Refreshes the dataset profile if it is missing or stale.
-
-        Args:
-            force: If True, forces the profile to be re-calculated.
-        """
-        stale = self._fileinfo.is_stale if self._fileinfo else False
-        if self._profile is None or stale or force:
-            self.refresh_data()  # Ensure data is current before profiling
-            self._profile = DatasetProfile.create(df=self._df)
-
-    def refresh_fileinfo(self, force: bool = False) -> None:
-        """Refreshes the file information if it is missing or stale.
-
-        Args:
-            force: If True, forces the file metadata to be re-read.
-        """
-        stale = self._fileinfo.is_stale if self._fileinfo else False
-        if self._fileinfo is None or stale or force:
-            self._fileinfo = FileInfo.from_filepath(filepath=self._asset_filepath)
-
     def load(self, **kwargs) -> None:
         """Loads data from the source filepath into the internal DataFrame.
 
@@ -317,12 +296,14 @@ class Dataset(Asset):
             **kwargs: Additional keyword arguments to pass to the IO service's
                 read method.
         """
-
-        self._df = self._io.read(filepath=self._asset_filepath, **kwargs)
-
-        if DTYPES is not None and self._df is not None and not self._df.empty:
-            valid_dtypes = {k: v for k, v in DTYPES.items() if k in self._df.columns}
-            self._df = self._df.astype(valid_dtypes)
+        try:
+            self._df = self._io.read(filepath=self._asset_filepath, **kwargs)
+            self._df = self._normalize_dtypes(self._df)
+            self._fileinfo = FileInfo.from_filepath(filepath=self._asset_filepath)
+            logger.debug(f"Dataset {self.passport.label} loaded.")
+        except FileNotFoundError:
+            logger.warning(f"File {self._asset_filepath} not found. DataFrame is empty.")
+            self._df = pd.DataFrame()
 
     def save(self, overwrite: bool = False, **kwargs) -> None:
         """Saves the in-memory DataFrame to its canonical filepath.
@@ -359,8 +340,9 @@ class Dataset(Asset):
             raise DatasetExistsError(
                 f"File {filepath} already exists. Set overwrite=True to replace it."
             )
-        logger.debug(f"Saving data to {filepath}")
+
         self._io.write(data=self._df, filepath=filepath, **kwargs)
+        logger.debug(f"Dataset {self.passport.name} saved to {filepath}")
 
     def delete(self) -> None:
         """Deletes the file associated with this Dataset from the filesystem."""
@@ -379,3 +361,84 @@ class Dataset(Asset):
         if not self._asset_filepath:
             return False
         return self._asset_filepath.exists()
+
+    def _validate(self) -> None:
+        """Validates the dataset's passport and filepath."""
+        # Validate the passport.
+        if not isinstance(self._passport, DatasetPassport):
+            raise TypeError("passport must be an instance of DatasetPassport.")
+        # Confirm that the passport is for a dataset asset.
+        if self._passport.asset_type != AssetType.DATASET:
+            raise ValueError("passport must be for a dataset asset.")
+        # Ensure name is lower case and contains only letters and numbers, if not, log and correct it.
+
+        # Get the canonical filepath from the file system.
+        self._asset_filepath = self._file_system.get_asset_filepath(id_or_passport=self._passport)
+        # If self._df is provided, yet the file exists, raise a FileExistsError to avoid overwriting.
+        if not self._df.empty and self._asset_filepath.exists():
+            raise DatasetExistsError(
+                f"Dataset file {self._asset_filepath} already exists. Cannot initialize with data to avoid overwriting."
+            )
+        # If self._df is empty and no file exists, raise an exception.
+        if self._df.empty and not self._asset_filepath.exists():
+            raise FileNotFoundError(
+                f"No data provided and dataset file {self._asset_filepath} does not exist."
+            )
+
+    def _initialize(self) -> None:
+        """Initializes the dataset."""
+
+        # If the filepath exists, set the fileinfo object
+        if self._asset_filepath and self._asset_filepath.exists():
+            self._fileinfo = FileInfo.from_filepath(filepath=self._asset_filepath)
+
+        # If self._df exists and is not empty, normalize dtypes
+        if self._df is not None and not self._df.empty:
+            self._df = self._normalize_dtypes(self._df)
+
+    def _normalize_dtypes(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Applies predefined data types to the DataFrame's columns.
+
+        Args:
+            df: The DataFrame to normalize.
+
+        Returns:
+            The DataFrame with enforced data types.
+        """
+        if DTYPES is not None and df is not None and not df.empty:
+            valid_dtypes = {k: v for k, v in DTYPES.items() if k in df.columns}
+            df = df.astype(valid_dtypes)
+        return df
+
+    def _lazy_load_data(self) -> None:
+        """Ensures data is fresh with minimal reads."""
+
+        if not self.data_in_memory and self.file_exists:
+            # No DataFrame in memory; however, file exists - load it
+            self.load()
+        elif not self.data_in_memory and not self.file_exists:
+            # No DataFrame and no file - return an empty DataFrame
+            self._df = pd.DataFrame()
+        elif self.data_in_memory and self.file_fresh:
+            # DataFrame is present and fresh - do nothing
+            pass
+        elif self.data_in_memory and not self.file_fresh:
+            # DataFrame is stale - reload it
+            self.load()
+
+    def _lazy_load_profile(self) -> None:
+        """Refreshes the dataset profile if it is missing or stale.
+
+        Args:
+            force: If True, forces the profile to be re-calculated.
+        """
+        current_data = self._df
+        self._lazy_load_data()
+        if not current_data.equals(self._df):
+            # Data has changed, - refresh it
+            self._profile = DatasetProfile.create(df=self._df)
+            logger.debug("Dataset profile refreshed due to data change.")
+            return
+        elif not self._profile:
+            self._profile = DatasetProfile.create(df=self._df)
+            logger.debug("Dataset profile created.")
