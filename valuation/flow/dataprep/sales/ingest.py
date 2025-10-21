@@ -4,14 +4,14 @@
 # Project    : Valuation - Discounted Cash Flow Method                                             #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
-# Filename   : /valuation/app/dataprep/sales/ingest.py                                             #
+# Filename   : /valuation/flow/dataprep/sales/ingest.py                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday October 12th 2025 11:51:12 pm                                                #
-# Modified   : Monday October 20th 2025 05:34:00 am                                                #
+# Modified   : Tuesday October 21st 2025 07:04:43 am                                               #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -25,20 +25,20 @@ from loguru import logger
 import pandas as pd
 from tqdm import tqdm
 
-from valuation.app.dataprep.task import DataPrepTask, DataPrepTaskConfig, DataPrepTaskResult
 from valuation.asset.dataset.base import DTYPES, Dataset
 from valuation.asset.identity.dataset import DatasetPassport
 from valuation.core.entity import Entity
 from valuation.core.stage import DatasetStage
 from valuation.core.state import Status
+from valuation.flow.dataprep.task import DataPrepTask, DataPrepTaskConfig, DataPrepTaskResult
 from valuation.infra.file.dataset import DatasetFileSystem
 from valuation.infra.file.io import IOService
 from valuation.infra.store.dataset import DatasetStore
 
 # ------------------------------------------------------------------------------------------------ #
-CONFIG_FILEPATH = "config.yaml"
+CONFIG_FILEPATH = Path("config.yaml")
 CONFIG_CATEGORY_INFO_KEY = "category_filenames"
-WEEK_DECODE_TABLE_FILEPATH = "reference/week_decode_table.csv"
+WEEK_DECODE_TABLE_FILEPATH = Path("reference/week_decode_table.csv")
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -46,7 +46,7 @@ WEEK_DECODE_TABLE_FILEPATH = "reference/week_decode_table.csv"
 class IngestSalesDataTaskConfig(DataPrepTaskConfig):
     """Holds all parameters for the sales data ingestion process."""
 
-    source: str  # Path to categories and filenames mapping
+    source: Path  # Path to categories and filenames mapping
     target: DatasetPassport  # Target ingested dataset passport
     week_decode_table_filepath: Path
 
@@ -96,7 +96,9 @@ class IngestSalesDataTask(DataPrepTask):
             self._add_dates, week_dates=week_dates
         )
 
-    def run(self, dataset: Optional[Dataset] = None, force: bool = False) -> DataPrepTaskResult:
+    def run(
+        self, dataset: Optional[Dataset] = None, force: bool = False
+    ) -> Optional[DataPrepTaskResult]:
         """Executes the sales data ingestion task.
 
         Args:
@@ -111,7 +113,7 @@ class IngestSalesDataTask(DataPrepTask):
         result = DataPrepTaskResult(task_name=self.task_name, config=self._config)
         result.start_task()
 
-        # # Check if output dataset alread exists
+        # # Check if output dataset already exists
         # dataset_id_out = DatasetID.from_passport(self._config.target)
         # if self._dataset_store.exists(dataset_id=dataset_id_out) and not force:
         #     dataset_out = self._dataset_store.get(dataset_id=dataset_id_out)
@@ -125,12 +127,12 @@ class IngestSalesDataTask(DataPrepTask):
         try:
 
             # Read week decoding table
-            week_dates = self._load(filepath=WEEK_DECODE_TABLE_FILEPATH)
+            week_dates = self._load(filepath=Path(WEEK_DECODE_TABLE_FILEPATH))
             logger.info(f"Week decode table loaded with {len(week_dates)} records.")
             logger.info(f"Week decode table columns: {week_dates.head()}")  # type: ignore
 
             # Read category filenames mapping
-            category_filenames = self._io.read(filepath=CONFIG_FILEPATH)["category_filenames"]
+            category_filenames = self._io.read(filepath=Path(CONFIG_FILEPATH))["category_filenames"]
             logger.info(f"Category filenames mapping loaded: {len(category_filenames)}")
 
             # Create tqdm progress bar for categories
@@ -152,13 +154,16 @@ class IngestSalesDataTask(DataPrepTask):
             for _, category_info in pbar:
                 filename = category_info["filename"]
                 filepath = directory / filename
+                filepath = Path(filepath)
                 category = category_info["category"]
                 pbar.set_description(f"Processing category: {category} from file: {filename}")
-                logger.info(f"Processing category: {category} from file: {filename} at {filepath}")
 
                 # Create a temporary dataset for loading the data
-
                 df_in = self._load(filepath=filepath)
+                logger.info(
+                    f"\tLoaded {len(df_in)} records for category {category} from {filename}"
+                )
+                logger.info(f"\tData head: \n{df_in.head()}")  # type: ignore
                 if isinstance(df_in, pd.DataFrame):
                     result.records_in += len(df_in)  # type: ignore
 
@@ -282,15 +287,19 @@ class IngestSalesDataTask(DataPrepTask):
             Returns:
             Union[pd.DataFrame, Any]: The loaded DataFrame or data object."""
 
-        logger.info(f"Loading data from {filepath}")
+        logger.info(f"Loading data from {filepath.name}")
+        try:
 
-        data = self._io.read(filepath=filepath, **kwargs)
-        # Ensure correct data types
-        if isinstance(data, pd.DataFrame):
-            logger.info(f"Applying data types to loaded DataFrame")
-            data = data.astype({k: v for k, v in DTYPES.items() if k in data.columns})
-        else:
-            logger.info(
-                f"Loaded data is type {type(data)} and not a DataFrame. Skipping dtype application."
-            )
-        return data
+            data = self._io.read(filepath=filepath, **kwargs)
+            # Ensure correct data types
+            if isinstance(data, pd.DataFrame):
+                logger.info(f"Applying data types to loaded DataFrame")
+                data = data.astype({k: v for k, v in DTYPES.items() if k in data.columns})
+            else:
+                logger.info(
+                    f"Loaded data is type {type(data)} and not a DataFrame. Skipping dtype application."
+                )
+            return data
+        except Exception as e:
+            logger.critical(f"Failed to load data from {filepath.name} with exception: {e}")
+            raise e

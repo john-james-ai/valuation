@@ -4,14 +4,14 @@
 # Project    : Valuation - Discounted Cash Flow Method                                             #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
-# Filename   : /valuation/app/dataprep/task.py                                                     #
+# Filename   : /valuation/flow/dataprep/task.py                                                    #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday October 10th 2025 02:27:30 am                                                #
-# Modified   : Monday October 20th 2025 04:54:58 am                                                #
+# Modified   : Tuesday October 21st 2025 06:48:34 am                                               #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -27,11 +27,11 @@ from dataclasses import dataclass, field
 from loguru import logger
 import pandas as pd
 
-from valuation.app.base.task import Task, TaskConfig, TaskResult
-from valuation.app.validation import Validation
 from valuation.asset.dataset.base import DTYPES, Dataset
 from valuation.asset.identity.dataset import DatasetID, DatasetPassport
 from valuation.core.state import Status
+from valuation.flow.base.task import Task, TaskConfig, TaskResult
+from valuation.flow.validation import Validation
 from valuation.infra.store.dataset import DatasetStore
 
 

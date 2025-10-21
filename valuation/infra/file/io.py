@@ -4,14 +4,14 @@
 # Project    : Valuation - Discounted Cash Flow Method                                             #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
-# Filename   : /valuation/utils/io/service.py                                                      #
+# Filename   : /valuation/infra/file/io.py                                                         #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 16th 2025 05:59:08 pm                                              #
-# Modified   : Saturday October 18th 2025 07:43:37 am                                              #
+# Modified   : Tuesday October 21st 2025 08:46:37 am                                               #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -177,6 +177,7 @@ class ZipFileIO(IO):  # pragma: no cover
         cls,
         filepath: str,
         data: pd.DataFrame,
+        mode: str = "w",
         internal_filepath: Optional[Union[Path, str]] = None,
         **kwargs,
     ) -> None:
@@ -216,9 +217,7 @@ class ZipFileIO(IO):  # pragma: no cover
                 if not is_binary and isinstance(buffer_content, str):
                     buffer_content = buffer_content.encode("utf-8")
 
-                # Write the buffer content to the ZIP archive in **APPEND** mode
-                # mode='a' enables appending to existing zipfiles
-                with zipfile.ZipFile(filepath, "a", compression=zipfile.ZIP_DEFLATED) as zip_ref:
+                with zipfile.ZipFile(str(filepath), mode=mode, compression=zipfile.ZIP_DEFLATED) as zip_ref:  # type: ignore
                     zip_ref.writestr(internal_filepath, buffer_content)
         except Exception as e:
             logger.error(f"An error occurred while writing to zip file {filepath}: {e}")
@@ -229,29 +228,57 @@ class ZipFileIO(IO):  # pragma: no cover
         cls, all_kwargs: Dict[str, Any], file_extension: str, operation: str = "read"
     ) -> Dict[str, Any]:
         """
-        Filters a dictionary of all passed keyword arguments down to only
-        those supported by the target pandas reader/writer function for a given
-        extension and operation ('read' or 'write').
+        Filter to only supported kwargs for the target pandas reader/writer and
+        inject safe, performant defaults per (ext, op).
         """
-        # 1. Get the dictionary for the specific file_extension (e.g., {'read': {...}, 'write': {...}})
-        op_kwargs = cls.VALID_KWARGS.get(file_extension, {})
+        ext = file_extension.lower()
 
-        # 2. Get the set of valid keys for the specific operation (e.g., 'read')
-        valid_keys = op_kwargs.get(operation, set())
+        # 1) Allow only supported keys
+        op_map = cls.VALID_KWARGS.get(ext, {})
+        valid_keys = op_map.get(operation, set())
+        filtered = {k: v for k, v in all_kwargs.items() if k in valid_keys}
 
-        # Use dictionary comprehension to select only the valid keys
-        filtered_kwargs = {k: v for k, v in all_kwargs.items() if k in valid_keys}
+        # 2) Inject format-specific defaults
+        if ext == ".csv":
+            if operation == "read":
+                # fast & robust CSV reads
+                filtered.setdefault("on_bad_lines", "skip")
+                filtered.setdefault("engine", "c")
+                filtered.setdefault("low_memory", False)
+                # Optional modern dtypes (pandas >=2.0)
+                filtered.setdefault("dtype_backend", "pyarrow")  # or "numpy_nullable"
+            else:  # write
+                filtered.setdefault("index", False)  # never persist index to CSV
+                # Optional: deterministic quoting
+                # filtered.setdefault("quoting", csv.QUOTE_MINIMAL)
+        elif ext == ".json":
+            if operation == "read":
+                # Optional modern dtypes
+                filtered.setdefault("dtype_backend", "pyarrow")
+                # If you expect records-orient a lot:
+                # filtered.setdefault("orient", "records")
+                pass
+            else:  # write
+                filtered.setdefault("index", False)
+                # filtered.setdefault("orient", "records")  # if that’s your house style
+        elif ext == ".parquet":
+            # Prefer pyarrow across read/write; most stable with BytesIO
+            filtered.setdefault("engine", "pyarrow")
+            if operation == "write":
+                filtered.setdefault("index", False)
+                # Optional: compression defaults (pyarrow handles inside the payload, not zip)
+                # filtered.setdefault("compression", "zstd")  # good balance; needs pyarrow built with it
+        elif ext in (".feather", ".ipc"):  # Arrow IPC/Feather
+            filtered.setdefault("compression", "zstd")  # if supported in your build
+            # Feather doesn’t store index; nothing to add for write
+        elif ext == ".txt":
+            if operation == "write":
+                filtered.setdefault("index", False)
+        else:
+            # Unknown ext: leave filtered as-is; caller has already validated support upstream
+            pass
 
-        if file_extension == ".csv" and operation == "read":
-            # Special handling for 'on_bad_lines' to ensure performance
-            if "on_bad_lines" not in filtered_kwargs:
-                filtered_kwargs["on_bad_lines"] = "skip"  # Default to 'skip' for performance
-            if "engine" not in filtered_kwargs:
-                filtered_kwargs["engine"] = "c"  # Default to 'c' engine for performance
-            if "low_memory" not in filtered_kwargs:
-                filtered_kwargs["low_memory"] = False  # Default to False for mixed types
-
-        return filtered_kwargs
+        return filtered
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -518,13 +545,25 @@ class PickleIO(IO):  # pragma: no cover
 class ParquetIO(IO):  # pragma: no cover
     @classmethod
     def _read(cls, filepath: str, **kwargs) -> Any:
-        """Reads using pandas API."""
-        return pd.read_parquet(path=filepath)
+        df = pd.read_parquet(filepath, **kwargs)
+
+        # Drop old index artifacts (__index_level_0__, Unnamed, etc.)
+        df = df.loc[:, ~df.columns.str.match(r"^(Unnamed:|__index_level__)")]
+
+        # Ensure no accidental MultiIndex columns
+        if isinstance(df.columns, pd.MultiIndex):
+            df.columns = ["_".join(map(str, col)).strip() for col in df.columns.values]
+
+        # Trim whitespace from column names (sometimes sneaks in)
+        df.columns = df.columns.str.strip()
+        return df
 
     @classmethod
     def _write(cls, filepath: str, data: pd.DataFrame, **kwargs) -> None:
         """Writes a parquet file using pandas API."""
-        data.to_parquet(path=filepath)
+        if data.index.name or not data.index.equals(pd.RangeIndex(len(data))):
+            data = data.reset_index(drop=True)
+        data.to_parquet(path=filepath, **kwargs)
 
 
 # ------------------------------------------------------------------------------------------------ #

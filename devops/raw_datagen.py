@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday October 19th 2025 12:18:21 am                                                #
-# Modified   : Monday October 20th 2025 03:05:24 am                                                #
+# Modified   : Tuesday October 21st 2025 08:25:24 am                                               #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -27,13 +27,13 @@ import numpy as np
 import pandas as pd
 import typer
 
-from valuation.app.dataprep.task import DataPrepTaskResult
 from valuation.asset.identity.dataset import DatasetID
 from valuation.core.entity import Entity
 from valuation.core.stage import DatasetStage
 from valuation.core.state import Status
 from valuation.core.structure import DataClass
 from valuation.core.types import AssetType
+from valuation.flow.dataprep.task import DataPrepTaskResult
 from valuation.infra.file.dataset import DatasetFileSystem
 from valuation.infra.file.io import IOService
 from valuation.infra.loggers import configure_logging
@@ -85,6 +85,7 @@ class RawSalesDataGenerator:
 
     def generate_stratified_sample(self) -> pd.DataFrame:
         """Generates the mode sales data."""
+        logger.info("Generating stratified sample of raw sales data...")
         result = DataPrepTaskResult(task_name="GenrateStratifiedSample", dataset_name="sales")
         if self._mode == "prod":
             raise RuntimeError("Mode sales data generation is not allowed in 'prod' mode.")
@@ -92,23 +93,27 @@ class RawSalesDataGenerator:
         result.started = datetime.now()
 
         # Load raw sales data
+        logger.info(
+            f"\tLoading raw sales data from {self._config.source_dataset}. \n\tThis will take a minute..."
+        )
         df = self._io.read(filepath=self._config.source_dataset)
         result.records_in = len(df)
-        logger.info(f"Loaded raw sales data with {len(df)} records.")
+        logger.info(f"\tLoaded raw sales data with {len(df)} records.")
+        logger.info(f"\tColumns: {list(df.columns)}")
 
         # Identify common weeks across all categories
         common_weeks = self._get_common_weeks(df)
-        logger.info(f"Identified {len(common_weeks)} common weeks across all categories.")
+        logger.info(f"\tIdentified {len(common_weeks)} common weeks across all categories.")
 
         # Randomly select a sequential window of weeks
         selected_weeks = self._randomly_select_window(
             common_weeks=common_weeks, window_size=self._config.window_size
         )
-        logger.info(f"Selected {len(selected_weeks)} weeks for sampling.")
+        logger.info(f"\tSelected {len(selected_weeks)} weeks for sampling.")
 
         # Filter dataset to selected weeks
         filtered_df = self._filter_dataset(df, weeks=selected_weeks)
-        logger.info(f"Filtered dataset to {len(filtered_df)} records for selected weeks.")
+        logger.info(f"\tFiltered dataset to {len(filtered_df)} records for selected weeks.")
 
         # Determine sample proportion
         n = len(filtered_df)
@@ -116,10 +121,10 @@ class RawSalesDataGenerator:
 
         # Perform stratified sampling
         sampled_df = self._stratified_sample(filtered_df, p=p)
-        logger.info(f"Stratified sampled dataset to {len(sampled_df)} records.")
+        logger.info(f"\tStratified sampled dataset to {len(sampled_df)} records.")
         categories = sampled_df["CATEGORY"].nunique()
         weeks = sampled_df["WEEK"].nunique()
-        logger.info(f"Sampled dataset contains {categories} categories over {weeks} weeks.")
+        logger.info(f"\tSampled dataset contains {categories} categories over {weeks} weeks.")
 
         # Update task result
         result.records_out = len(sampled_df)
@@ -138,6 +143,8 @@ class RawSalesDataGenerator:
         if self._mode == "prod":
             raise RuntimeError("Mode sales data generation is not allowed in 'prod' mode.")
 
+        logger.info("Generating raw zipped files for each category...")
+
         result = DataPrepTaskResult(task_name="Generate Zipped Files", dataset_name="sales")
         result.started = datetime.now()
 
@@ -150,7 +157,8 @@ class RawSalesDataGenerator:
         # Iterate through  each category and save the filtered dataset
         for _, category_info in category_config["category_filenames"].items():
             category = category_info["category"]
-            name, format = category_info["filename"].split(".")
+            filename = category_info["filename"]
+            name, format = filename.split(".")
             filepath = self._file_system.get_asset_filepath(
                 id_or_passport=DatasetID(
                     name=name,
@@ -161,11 +169,12 @@ class RawSalesDataGenerator:
                 format=str(format),
                 mode=self._mode,
             )
+            logger.info(f"\tProcessing category '{category}' to be saved at {filename}.")
 
             # Filter dataset by category and count records
             df_category = stratified_sample[stratified_sample["CATEGORY"] == category]
             if df_category.empty or df_category is None:
-                logger.warning(f"No records found for category '{category}'. Skipping.")
+                logger.warning(f"\t\tNo records found for category '{category}'. Skipping.")
                 counts = {"category": category, "records": 0}
                 records_per_category.append(counts)
                 continue
@@ -176,11 +185,39 @@ class RawSalesDataGenerator:
             # Cast records_out to int
             result.records_out = result.records_out if result.records_out else 0
             result.records_out += len(df_category)
-            # Save the category dataset
-            self._io.write(data=df_category, filepath=filepath)
-            logger.info(f"Saved raw data for category '{category}' to {filepath}.")
+            # Select original raw data columns
+            RAW_COLUMNS = [
+                "STORE",
+                "UPC",
+                "WEEK",
+                "MOVE",
+                "QTY",
+                "PRICE",
+                "SALE",
+                "PROFIT",
+                "OK",
+                "PRICE_HEX",
+                "PROFIT_HEX",
+            ]
+            df_out = df_category[RAW_COLUMNS].copy()
+            logger.info(f"\t\t{len(df_out)} records to be saved for category '{category}'.")
+            logger.info(f"\t\tColumns to be saved: {list(df_out.columns)}.")
+            # Kill the fucking index
+            df_out.reset_index(drop=True, inplace=True)
+            logger.info(f"\t\tReset the fu*king index for category '{category}' dataset.")
 
-        result.status = Status.SUCCESS.value[0]
+            # Delete existing file if force is set
+            if self._force and filepath.exists():
+                filepath.unlink()
+                logger.info(f"\t\tDeleted existing file at {filename} due to force=True setting.")
+            # Sort columns
+            df_out = df_out.sort_values(by=["STORE", "WEEK"]).reset_index(drop=True)
+
+            # Save the category dataset
+            self._io.write(data=df_out, filepath=filepath)
+            logger.info(f"\t\tSaved raw data for category '{category}' to {filename}.")
+
+        result.status_obj = Status.SUCCESS
         result.end_task()
 
         counts = pd.DataFrame(records_per_category)

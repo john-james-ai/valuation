@@ -4,14 +4,14 @@
 # Project    : Valuation - Discounted Cash Flow Method                                             #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
-# Filename   : /valuation/app/dataprep/sales/filter.py                                             #
+# Filename   : /valuation/flow/dataprep/sales/filter.py                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Saturday October 18th 2025 10:52:13 pm                                              #
-# Modified   : Monday October 20th 2025 03:46:08 am                                                #
+# Modified   : Tuesday October 21st 2025 06:48:34 am                                               #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -23,8 +23,8 @@ from dataclasses import dataclass
 
 import pandas as pd
 
-from valuation.app.dataprep.task import SISODataPrepTask
 from valuation.core.structure import DataClass
+from valuation.flow.dataprep.task import SISODataPrepTask
 from valuation.infra.file.io import IOService
 from valuation.infra.store.dataset import DatasetStore
 

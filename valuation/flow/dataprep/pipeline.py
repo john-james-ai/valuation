@@ -4,14 +4,14 @@
 # Project    : Valuation - Discounted Cash Flow Method                                             #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
-# Filename   : /valuation/app/dataprep/pipeline.py                                                 #
+# Filename   : /valuation/flow/dataprep/pipeline.py                                                #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Tuesday October 14th 2025 10:53:05 pm                                               #
-# Modified   : Monday October 20th 2025 04:57:11 am                                                #
+# Modified   : Tuesday October 21st 2025 06:48:35 am                                               #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -24,8 +24,8 @@ from datetime import datetime
 
 from loguru import logger
 
-from valuation.app.base.pipeline import Pipeline, PipelineConfig, PipelineResult
 from valuation.core.state import Status
+from valuation.flow.base.pipeline import Pipeline, PipelineConfig, PipelineResult
 
 
 # ------------------------------------------------------------------------------------------------ #

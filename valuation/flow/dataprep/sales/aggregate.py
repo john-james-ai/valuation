@@ -4,14 +4,14 @@
 # Project    : Valuation - Discounted Cash Flow Method                                             #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
-# Filename   : /valuation/app/dataprep/sales/aggregate.py                                          #
+# Filename   : /valuation/flow/dataprep/sales/aggregate.py                                         #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 16th 2025 06:18:02 pm                                              #
-# Modified   : Monday October 20th 2025 03:48:13 am                                                #
+# Modified   : Tuesday October 21st 2025 06:48:35 am                                               #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -21,7 +21,7 @@
 from loguru import logger
 import pandas as pd
 
-from valuation.app.dataprep.task import DataPrepTaskConfig, DataPrepTaskResult, SISODataPrepTask
+from valuation.flow.dataprep.task import DataPrepTaskConfig, DataPrepTaskResult, SISODataPrepTask
 from valuation.infra.store.dataset import DatasetStore
 
 

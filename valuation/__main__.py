@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 9th 2025 11:01:16 pm                                               #
-# Modified   : Monday October 20th 2025 04:53:42 am                                                #
+# Modified   : Tuesday October 21st 2025 06:48:35 am                                               #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -20,21 +20,21 @@
 
 import typer
 
-from valuation.app.base.pipeline import PipelineConfig, PipelineResult
-from valuation.app.dataprep.pipeline import DataPrepPipeline
-from valuation.app.dataprep.sales.aggregate import AggregateSalesDataTask
-from valuation.app.dataprep.sales.clean import CleanSalesDataTask
-from valuation.app.dataprep.sales.ingest import (
+from valuation.asset.identity.dataset import DatasetPassport
+from valuation.core.entity import Entity
+from valuation.core.file import FileFormat
+from valuation.core.stage import DatasetStage
+from valuation.flow.base.pipeline import PipelineConfig, PipelineResult
+from valuation.flow.dataprep.pipeline import DataPrepPipeline
+from valuation.flow.dataprep.sales.aggregate import AggregateSalesDataTask
+from valuation.flow.dataprep.sales.clean import CleanSalesDataTask
+from valuation.flow.dataprep.sales.ingest import (
     CONFIG_FILEPATH,
     WEEK_DECODE_TABLE_FILEPATH,
     IngestSalesDataTask,
     IngestSalesDataTaskConfig,
 )
-from valuation.app.dataprep.task import DataPrepTask, SISODataPrepTaskConfig
-from valuation.asset.identity.dataset import DatasetPassport
-from valuation.core.entity import Entity
-from valuation.core.file import FileFormat
-from valuation.core.stage import DatasetStage
+from valuation.flow.dataprep.task import DataPrepTask, SISODataPrepTaskConfig
 from valuation.infra.loggers import configure_logging
 from valuation.infra.store.dataset import DatasetStore
 
