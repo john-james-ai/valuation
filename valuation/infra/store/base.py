@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday October 17th 2025 11:19:18 pm                                                #
-# Modified   : Monday October 20th 2025 03:03:38 am                                                #
+# Modified   : Tuesday October 21st 2025 02:10:29 pm                                               #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -26,7 +26,7 @@ from loguru import logger
 import pandas as pd
 
 from valuation.asset.base import Asset
-from valuation.asset.identity.base import ID
+from valuation.asset.identity.base import ID, Passport
 from valuation.asset.store import AssetStore
 from valuation.core.types import AssetType
 from valuation.infra.exception import AssetStoreNotFoundError
@@ -121,7 +121,7 @@ class AssetStoreBase(AssetStore):
         """
 
     @abstractmethod
-    def get(self, asset_id: ID, **kwargs) -> Optional[Asset]:
+    def get(self, passport: Passport) -> Optional[Asset]:
         """Retrieve an asset by its ID (passport identifier).
 
         Args:
@@ -148,7 +148,7 @@ class AssetStoreBase(AssetStore):
         """
 
     def exists(self, asset_id: ID, **kwargs) -> bool:
-        passport_filepath = self._file_system.get_passport_filepath(id_or_passport=asset_id)
+        passport_filepath = self._file_system.get_passport_filepath(asset_id=asset_id)
 
         return passport_filepath.exists()
 

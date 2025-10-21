@@ -1,0 +1,9 @@
+{
+  "name": "sales_ingest",
+  "description": "Dominick's Ingested Sales Data Dataset",
+  "asset_type": "dataset",
+  "entity": "sales",
+  "stage": "ingest",
+  "file_format": "parquet",
+  "created": "20251021-0954"
+}

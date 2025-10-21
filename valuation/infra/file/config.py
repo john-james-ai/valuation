@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday October 17th 2025 02:03:56 am                                                #
-# Modified   : Saturday October 18th 2025 11:16:36 pm                                              #
+# Modified   : Tuesday October 21st 2025 11:05:21 am                                               #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -23,7 +23,7 @@ from typing import Any, Dict, List, Optional, Union
 
 from dataclasses import asdict, dataclass, field
 
-from valuation.core.structure import DataClass
+from valuation.core.dataclass import DataClass
 
 # ------------------------------------------------------------------------------------------------ #
 # pylint: disable=missing-class-docstring, unused-argument

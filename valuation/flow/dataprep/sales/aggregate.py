@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 16th 2025 06:18:02 pm                                              #
-# Modified   : Tuesday October 21st 2025 06:48:35 am                                               #
+# Modified   : Tuesday October 21st 2025 12:24:52 pm                                               #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -44,7 +44,7 @@ class AggregateSalesDataTask(SISODataPrepTask):
     ) -> None:
         super().__init__(config=config, dataset_store=dataset_store)
 
-    def _execute(self, data: pd.DataFrame) -> pd.DataFrame:
+    def _execute(self, df: pd.DataFrame) -> pd.DataFrame:
         """Runs the ingestion process on the provided DataFrame.
         Args:
             data (pd.DataFrame): The raw sales data DataFrame.
@@ -57,7 +57,7 @@ class AggregateSalesDataTask(SISODataPrepTask):
         logger.debug("Aggregating sales data.")
         # 1: Group by store, category, and week, summing revenue and gross profit
         aggregated = (
-            data.groupby(["store", "category", "week"])
+            df.groupby(["store", "category", "week"])
             .agg(
                 revenue=("revenue", "sum"),
                 gross_profit=("gross_profit", "sum"),
@@ -111,6 +111,7 @@ class AggregateSalesDataTask(SISODataPrepTask):
         # Extract result components for brevity and clarity
         validation = result.validation
         data = result.dataset.data
+        classname = self.__class__.__name__
 
         # 1. Check for mandatory columns
         logger.debug("Validating output DataFrame structure and integrity.")
@@ -128,7 +129,7 @@ class AggregateSalesDataTask(SISODataPrepTask):
         duplicates = data[data.duplicated(subset=group_cols, keep=False)]
         if not duplicates.empty:
             reason = "Output data contains duplicate rows on the aggregation key, indicating incomplete aggregation."
-            validation.add_failed_records(reason=reason, records=duplicates)
+            validation.add_failed_records(classname=classname, reason=reason, records=duplicates)
 
         # 3. Check integrity of aggregated financial metrics
         logger.debug("Performing sanity checks on aggregated financial metrics.")
@@ -137,20 +138,24 @@ class AggregateSalesDataTask(SISODataPrepTask):
         negative_revenue = data[data["revenue"] < 0]
         if not negative_revenue.empty:
             reason = f"Aggregated 'revenue' contains {len(negative_revenue)} negative values."
-            validation.add_failed_records(reason=reason, records=negative_revenue)
+            validation.add_failed_records(
+                classname=classname, reason=reason, records=negative_revenue
+            )
 
         # Check for negative gross profit
         logger.debug("..checking negative gross profit.")
         negative_profit = data[data["gross_profit"] < 0]
         if not negative_profit.empty:
             reason = f"Aggregated 'gross_profit' contains {len(negative_profit)} negative values."
-            validation.add_failed_records(reason=reason, records=negative_profit)
+            validation.add_failed_records(
+                classname=classname, reason=reason, records=negative_profit
+            )
 
         # Check for division by zero / resulting NaNs/Infs in the margin
         logger.debug("..checking for NaN or infinite gross margin percentages.")
         null_margins = data[data["gross_margin_pct"].isnull()]
         if not null_margins.empty:
             reason = f"'gross_margin_pct' contains {len(null_margins)} NULLs, often indicating a divide by zero error."
-            validation.add_failed_records(reason=reason, records=null_margins)
+            validation.add_failed_records(classname=classname, reason=reason, records=null_margins)
 
         return result

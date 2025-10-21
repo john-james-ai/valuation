@@ -4,14 +4,14 @@
 # Project    : Valuation - Discounted Cash Flow Method                                             #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
-# Filename   : /valuation/app/analysis/profile.py                                                  #
+# Filename   : /valuation/flow/analysis/profile.py                                                 #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Monday October 13th 2025 08:32:34 am                                                #
-# Modified   : Saturday October 18th 2025 11:16:36 pm                                              #
+# Modified   : Tuesday October 21st 2025 11:05:20 am                                               #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -21,7 +21,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from valuation.core.structure import DataClass
+from valuation.core.dataclass import DataClass
 from valuation.dataprep.base import Task, TaskConfig
 
 

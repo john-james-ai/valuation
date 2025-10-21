@@ -22,6 +22,8 @@ __pycache__/
 # Logs
 logs
 
+# Notes
+/note/
 
 # Distribution / packaging
 .Python

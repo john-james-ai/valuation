@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday October 19th 2025 02:01:46 pm                                                #
-# Modified   : Monday October 20th 2025 05:27:51 am                                                #
+# Modified   : Tuesday October 21st 2025 01:45:02 pm                                               #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -22,7 +22,7 @@ from valuation.asset.identity.dataset import DatasetID, DatasetPassport
 from valuation.core.entity import Entity
 from valuation.core.stage import DatasetStage
 from valuation.core.types import AssetType
-from valuation.infra.file.base import MODE, FileFormat, FileSystem
+from valuation.infra.file.base import MODE, FileSystem
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -51,36 +51,30 @@ class DatasetFileSystem(FileSystem):
 
     def get_asset_filepath(
         self,
-        id_or_passport: DatasetPassport | DatasetID,
-        format=FileFormat.PARQUET,
-        mode: str = MODE,
+        passport: DatasetPassport,
         **kwargs,
     ) -> Path:
 
         return Path(
             self._asset_location
-            / mode
-            / str(id_or_passport.stage)
-            / str(id_or_passport.entity)
-            / f"{id_or_passport.name}.{str(format)}"
+            / MODE
+            / str(passport.stage)
+            / str(passport.entity)
+            / f"{passport.name}.{str(passport.file_format)}"
         )
 
-    def get_passport_filepath(
-        self, id_or_passport: DatasetPassport | DatasetID, mode: str = MODE, **kwargs
-    ) -> Path:
+    def get_passport_filepath(self, dataset_id: DatasetID, **kwargs) -> Path:
 
         return Path(
             self._store_location
-            / mode
-            / f"{str(id_or_passport.asset_type)}_{str(id_or_passport.entity)}_{str(id_or_passport.stage)}_{id_or_passport.name}_passport.json"
+            / MODE
+            / f"{str(dataset_id.asset_type)}_{str(dataset_id.entity)}_{str(dataset_id.stage)}_{dataset_id.name}_passport.json"
         )
 
-    def get_stage_location(self, stage: DatasetStage, mode: str = MODE) -> Path:
+    def get_stage_location(self, stage: DatasetStage) -> Path:
         """Builds the full filepath for an asset stage directory."""
-        return Path(self._asset_location) / mode / str(stage)
+        return Path(self._asset_location) / MODE / str(stage)
 
-    def get_stage_entity_location(
-        self, stage: DatasetStage, entity: Entity, mode: str = MODE
-    ) -> Path:
+    def get_stage_entity_location(self, stage: DatasetStage, entity: Entity) -> Path:
         """Builds the full filepath for an asset stage/entity directory."""
-        return Path(self._asset_location) / mode / str(stage) / str(entity)
+        return Path(self._asset_location) / MODE / str(stage) / str(entity)

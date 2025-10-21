@@ -4,14 +4,14 @@
 # Project    : Valuation - Discounted Cash Flow Method                                             #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
-# Filename   : /valuation/core/structure.py                                                        #
+# Filename   : /valuation/core/dataclass.py                                                        #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 9th 2025 07:11:18 pm                                               #
-# Modified   : Monday October 20th 2025 01:59:35 am                                                #
+# Modified   : Tuesday October 21st 2025 11:12:04 am                                               #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -72,9 +72,42 @@ NUMERICS = [
 
 
 # ------------------------------------------------------------------------------------------------ #
-@dataclass
 class DataClass(ABC):  # noqa
     """Base Class for Data Transfer Objects"""
+
+    def __repr__(self) -> str:
+        return "{}({})".format(
+            self.__class__.__name__,
+            ", ".join(
+                "{}={!r}".format(k, v)
+                for k, v in self.__dict__.items()
+                if type(v) in IMMUTABLE_TYPES
+            ),
+        )
+
+    def __str__(self) -> str:
+        width = 32
+        breadth = width * 2
+        s = f"\n\n{self.__class__.__name__.center(breadth, ' ')}"
+        d = self.as_dict()
+        for k, v in d.items():
+            if type(v) in IMMUTABLE_TYPES:
+                s += f"\n{k.rjust(width,' ')} | {v}"
+        s += "\n\n"
+        return s
+
+    def as_dict(self) -> Dict[str, Any]:
+        """Returns a dictionary representation of the DataClassRecursive object."""
+        return asdict(self)
+
+
+# ------------------------------------------------------------------------------------------------ #
+@dataclass
+class DataClassRecursive(ABC):  # noqa
+    """Base Class for Data Transfer Objects
+
+    Recursively prints all nested dataclasses.
+    """
 
     def __repr__(self) -> str:
         return "{}({})".format(
@@ -92,7 +125,9 @@ class DataClass(ABC):  # noqa
         return "\n".join(self._format_block(name, data) for name, data in blocks)
 
     @staticmethod
-    def _collect_blocks(obj: "DataClass", prefix: str = "") -> List[Tuple[str, Dict[str, Any]]]:
+    def _collect_blocks(
+        obj: "DataClassRecursive", prefix: str = ""
+    ) -> List[Tuple[str, Dict[str, Any]]]:
         """
         Recursively collects all dataclass blocks for printing.
         Returns a list of tuples: (display_name, data_dict)
@@ -109,23 +144,27 @@ class DataClass(ABC):  # noqa
             # If the value is a dataclass instance, recursively collect its blocks
             if is_dataclass(value) and not isinstance(value, type):
                 nested_prefix = f"{current_name}.{key}"
-                blocks.extend(DataClass._collect_blocks(value, prefix=nested_prefix))
+                blocks.extend(DataClassRecursive._collect_blocks(value, prefix=nested_prefix))
             # If it's a list of dataclasses, handle each one
             elif isinstance(value, list) and value and is_dataclass(value[0]):
                 for idx, item in enumerate(value):
                     if is_dataclass(item) and not isinstance(item, type):
                         nested_prefix = f"{current_name}.{key}[{idx}]"
-                        blocks.extend(DataClass._collect_blocks(item, prefix=nested_prefix))
+                        blocks.extend(
+                            DataClassRecursive._collect_blocks(item, prefix=nested_prefix)
+                        )
             # If it's a dict of dataclasses, handle each one
             elif isinstance(value, dict) and value:
                 first_val = next(iter(value.values()), None)
                 if is_dataclass(first_val) and not isinstance(first_val, type):
                     for dict_key, item in value.items():
                         nested_prefix = f"{current_name}.{key}[{dict_key}]"
-                        blocks.extend(DataClass._collect_blocks(item, prefix=nested_prefix))
+                        blocks.extend(
+                            DataClassRecursive._collect_blocks(item, prefix=nested_prefix)
+                        )
                 else:
                     # Regular dict with immutable values
-                    if type(value) in IMMUTABLE_TYPES or DataClass._is_simple_dict(value):
+                    if type(value) in IMMUTABLE_TYPES or DataClassRecursive._is_simple_dict(value):
                         current_block[key] = value
             else:
                 # Only add immutable types to current block
@@ -157,7 +196,7 @@ class DataClass(ABC):  # noqa
         return s
 
     def as_dict(self) -> Dict[str, Any]:
-        """Returns a dictionary representation of the DataClass object."""
+        """Returns a dictionary representation of the DataClassRecursive object."""
         return asdict(self)
 
 

@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Saturday October 18th 2025 06:47:58 pm                                              #
-# Modified   : Tuesday October 21st 2025 07:14:23 am                                               #
+# Modified   : Tuesday October 21st 2025 01:40:32 pm                                               #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -26,7 +26,6 @@ from dotenv import load_dotenv
 
 from valuation.asset.identity.base import ID, Passport
 from valuation.core.entity import Entity
-from valuation.core.file import FileFormat
 from valuation.core.stage import Stage
 from valuation.core.types import AssetType
 
@@ -87,16 +86,14 @@ class FileSystem(ABC):
     @abstractmethod
     def get_asset_filepath(
         self,
-        id_or_passport: Passport | ID,
-        format=FileFormat.PARQUET,
-        mode: str = MODE,
+        passport: Passport,
         **kwargs,
     ) -> Path:
         """Builds the full filepath for an asset data file and ensures the stage directory exists."""
         pass
 
     @abstractmethod
-    def get_passport_filepath(self, id_or_passport: ID | Passport, mode: str = MODE) -> Path:
+    def get_passport_filepath(self, asset_id: ID) -> Path:
         """Builds the full filepath for an asset passport JSON file."""
         pass
 

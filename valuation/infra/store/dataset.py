@@ -11,13 +11,12 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday October 17th 2025 11:19:18 pm                                                #
-# Modified   : Monday October 20th 2025 03:03:38 am                                                #
+# Modified   : Tuesday October 21st 2025 02:16:42 pm                                               #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
 # ================================================================================================ #
 """Manages the Dataset Store."""
-from typing import Optional
 
 from loguru import logger
 
@@ -73,7 +72,7 @@ class DatasetStore(AssetStoreBase):
                 "DatasetStore is in 'prod' mode. No changes to raw data are allowed."
             )
 
-        passport_filepath = self._file_system.get_passport_filepath(id_or_passport=dataset.passport)
+        passport_filepath = self._file_system.get_passport_filepath(dataset_id=dataset.passport.id)  # type: ignore
 
         if passport_filepath.exists() and not overwrite:
             msg = f"{dataset.passport.label} already exists in the store. To overwrite, set the overwrite flag to True."
@@ -92,24 +91,18 @@ class DatasetStore(AssetStoreBase):
         dataset.save()
         logger.debug(f"Saved dataset data for {dataset.passport.label} to the store.")
 
-    def get(self, dataset_id: DatasetID, **kwargs) -> Optional[Dataset]:
-        """Retrieve a dataset from the store by its ID.
-
+    def get(self, passport: DatasetPassport) -> Dataset:
+        """Retrieve a dataset from the store by its ID or Passport.
         Args:
-            asset_id (ID): The unique identifier of the dataset.
+            id_or_passport (Union[DatasetID, DatasetPassport]): The unique identifier or passport of the dataset.
         Returns:
-            Optional[Asset]: The retrieved Dataset asset, or None if not found.
+            Optional[Dataset]: The retrieved Dataset instance, or None if not found.
         """
-        passport_filepath = self._file_system.get_passport_filepath(id_or_passport=dataset_id)
-        # Obtain the passport dictionary
-        passport_dict = self._io.read(filepath=passport_filepath)
-        # Create the passport
-        passport = DatasetPassport.from_dict(passport_dict)
         # Instantiate the appropriate asset type
         dataset = Dataset(passport=passport)
         return dataset
 
-    def remove(self, dataset_id: DatasetID, **kwargs) -> None:
+    def remove(self, passport: DatasetPassport, **kwargs) -> None:
         """Remove a dataset from the store by its ID.
         Args:
             dataset_id (DatasetID): The unique identifier of the dataset.
@@ -117,42 +110,26 @@ class DatasetStore(AssetStoreBase):
             None
         """
 
-        if MODE == "prod" and str(dataset_id.stage) == "raw":
+        if str(MODE).lower() == "prod" and str(passport.stage) == "raw":
             raise RuntimeError(
                 "DatasetStore is in 'prod' mode. No deletion of raw data is allowed."
             )
-        # Get the filepath for the passport
-        passport_filepath = self._file_system.get_passport_filepath(id_or_passport=dataset_id)
 
-        # If passport exists remove it and associated asset
-        if passport_filepath.exists():
-
-            # Get the passport dictionary
-            passport_dict = self._io.read(filepath=passport_filepath)
-
-            # Convert to passport
-            passport = DatasetPassport.from_dict(passport_dict)
-
-            # Get the asset filepath
-            asset_filepath = self._file_system.get_asset_filepath(id_or_passport=passport)
-
-            # Remove passport if exists else log attempt
-            if asset_filepath.exists():
-                self._remove_file(filepath=asset_filepath)
-                logger.debug(f"Removed asset at {asset_filepath} from the store.")
-            else:
-                msg = f"Attempted to remove non-existing dataset data with ID {dataset_id.label}"
-                logger.debug(msg)
-
-            # Remove passport
-            self._remove_file(filepath=passport_filepath)
-            logger.debug(f"Removed passport at {passport_filepath} from the store.")
-
-        else:
-            msg = f"Attempt to remove non-existing dataset passport with ID {str(dataset_id)}"
-            logger.debug(msg)
+        # Get asset filepath and remove it
+        asset_filepath = self._file_system.get_asset_filepath(passport=passport)
+        self._remove_file(filepath=asset_filepath)
+        # Get passport filepath and remove it
+        passport_filepath = self._file_system.get_passport_filepath(dataset_id=passport.id)  # type: ignore
+        self._remove_file(filepath=passport_filepath)
 
     def exists(self, dataset_id: DatasetID, **kwargs) -> bool:
-        passport_filepath = self._file_system.get_passport_filepath(id_or_passport=dataset_id)
+        """Check if a dataset exists in the store by its ID or Passport.
+        Args:
+            id_or_passport (Union[DatasetID, DatasetPassport]): The unique identifier or passport of
+                the dataset.
+        Returns:
+            bool: True if the dataset exists, False otherwise.
+        """
+        passport_filepath = self._file_system.get_passport_filepath(dataset_id=dataset_id)  # type: ignore
 
         return passport_filepath.exists()

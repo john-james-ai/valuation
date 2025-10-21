@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 9th 2025 07:11:18 pm                                               #
-# Modified   : Monday October 20th 2025 01:56:03 am                                                #
+# Modified   : Tuesday October 21st 2025 02:23:26 pm                                               #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -29,7 +29,7 @@ import pandas as pd
 
 from valuation.asset.base import Asset, Passport
 from valuation.asset.identity.dataset import DatasetPassport
-from valuation.core.structure import DataClass
+from valuation.core.dataclass import DataClass
 from valuation.core.types import AssetType
 from valuation.infra.exception import DatasetExistsError
 from valuation.infra.file.dataset import DatasetFileSystem
@@ -284,7 +284,7 @@ class Dataset(Asset):
         """
         self._passport = passport
 
-    def load(self, **kwargs) -> None:
+    def load(self) -> None:
         """Loads data from the source filepath into the internal DataFrame.
 
         This method uses the injected IO service to read the file. It can also
@@ -297,7 +297,7 @@ class Dataset(Asset):
                 read method.
         """
         try:
-            self._df = self._io.read(filepath=self._asset_filepath, **kwargs)
+            self._df = self._io.read(filepath=self._asset_filepath, **self._passport.read_kwargs)
             self._df = self._normalize_dtypes(self._df)
             self._fileinfo = FileInfo.from_filepath(filepath=self._asset_filepath)
             logger.debug(f"Dataset {self.passport.label} loaded.")
@@ -305,7 +305,7 @@ class Dataset(Asset):
             logger.warning(f"File {self._asset_filepath} not found. DataFrame is empty.")
             self._df = pd.DataFrame()
 
-    def save(self, overwrite: bool = False, **kwargs) -> None:
+    def save(self, overwrite: bool = False) -> None:
         """Saves the in-memory DataFrame to its canonical filepath.
 
         Fails safely by default if a file already exists at the location.
@@ -319,9 +319,9 @@ class Dataset(Asset):
             ValueError: If the Dataset has no canonical filepath set.
             FileConflictError: If the file exists and `overwrite` is False.
         """
-        self.save_as(self._asset_filepath, overwrite=overwrite, **kwargs)
+        self.save_as(self._asset_filepath, overwrite=overwrite)
 
-    def save_as(self, filepath: Path | str, overwrite: bool = False, **kwargs) -> None:
+    def save_as(self, filepath: Path | str, overwrite: bool = False) -> None:
         """Saves the in-memory DataFrame to a specified location.
 
         Fails safely by default if a file already exists at the location.
@@ -341,7 +341,7 @@ class Dataset(Asset):
                 f"File {filepath} already exists. Set overwrite=True to replace it."
             )
 
-        self._io.write(data=self._df, filepath=filepath, **kwargs)
+        self._io.write(data=self._df, filepath=filepath, **self._passport.write_kwargs)
         logger.debug(f"Dataset {self.passport.name} saved to {filepath}")
 
     def delete(self) -> None:
@@ -374,7 +374,7 @@ class Dataset(Asset):
         # Ensure name is lower case and contains only letters and numbers, if not, log and correct it.
 
         # Get the canonical filepath from the file system.
-        self._asset_filepath = self._file_system.get_asset_filepath(id_or_passport=self._passport)
+        self._asset_filepath = self._file_system.get_asset_filepath(passport=self._passport)
         # If self._df is provided, yet the file exists, raise a FileExistsError to avoid overwriting.
         if not self._df.empty and self._asset_filepath.exists():
             raise DatasetExistsError(
@@ -396,6 +396,7 @@ class Dataset(Asset):
         # If self._df exists and is not empty, normalize dtypes
         if self._df is not None and not self._df.empty:
             self._df = self._normalize_dtypes(self._df)
+            self.save(overwrite=True)
 
     def _normalize_dtypes(self, df: pd.DataFrame) -> pd.DataFrame:
         """Applies predefined data types to the DataFrame's columns.
@@ -413,19 +414,16 @@ class Dataset(Asset):
 
     def _lazy_load_data(self) -> None:
         """Ensures data is fresh with minimal reads."""
-
-        if not self.data_in_memory and self.file_exists:
-            # No DataFrame in memory; however, file exists - load it
-            self.load()
-        elif not self.data_in_memory and not self.file_exists:
-            # No DataFrame and no file - return an empty DataFrame
-            self._df = pd.DataFrame()
-        elif self.data_in_memory and self.file_fresh:
-            # DataFrame is present and fresh - do nothing
-            pass
-        elif self.data_in_memory and not self.file_fresh:
-            # DataFrame is stale - reload it
-            self.load()
+        if self.file_exists:
+            if not self.data_in_memory:
+                # No DataFrame in memory; however, file exists - load it
+                self.load()
+            elif not self.file_fresh:
+                # File exists but is stale - reload it
+                self.load()
+            else:
+                # DataFrame is present and fresh - do nothing
+                pass
 
     def _lazy_load_profile(self) -> None:
         """Refreshes the dataset profile if it is missing or stale.

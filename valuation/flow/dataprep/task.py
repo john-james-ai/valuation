@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday October 10th 2025 02:27:30 am                                                #
-# Modified   : Tuesday October 21st 2025 06:48:34 am                                               #
+# Modified   : Tuesday October 21st 2025 11:58:46 am                                               #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -28,7 +28,7 @@ from loguru import logger
 import pandas as pd
 
 from valuation.asset.dataset.base import DTYPES, Dataset
-from valuation.asset.identity.dataset import DatasetID, DatasetPassport
+from valuation.asset.identity.dataset import DatasetPassport
 from valuation.core.state import Status
 from valuation.flow.base.task import Task, TaskConfig, TaskResult
 from valuation.flow.validation import Validation
@@ -160,6 +160,7 @@ class DataPrepTask(Task):
         msg = f"{self.__class__.__name__} - Validation Failed"
         logger.error(msg)
         logger.error(f"Validation Messages:\n{validation.messages}")
+        validation.log_failed_records()
         raise RuntimeError(msg)
 
 
@@ -192,7 +193,7 @@ class SISODataPrepTask(DataPrepTask):
         return self._config
 
     @abstractmethod
-    def _execute(self, df: pd.DataFrame, **kwargs) -> Dataset:
+    def _execute(self, df: pd.DataFrame, **kwargs) -> pd.DataFrame:
         """Executes the core logic of the task.
 
         Subclasses must implement this method to perform the specific
@@ -202,7 +203,7 @@ class SISODataPrepTask(DataPrepTask):
             dataset (Dataset): The input dataset to be processed.
 
         Returns:
-            Dataset: The processed output dataset.
+            pd.DataFrame: The processed output DataFrame.
         """
 
     @abstractmethod
@@ -230,9 +231,8 @@ class SISODataPrepTask(DataPrepTask):
         result.start_task()
 
         # Check if output already exists to potentially skip processing.
-        dataset_id_out = DatasetID.from_passport(self._config.target)
-        if self._dataset_store.exists(dataset_id=dataset_id_out) and not force:
-            dataset_out = self._dataset_store.get(dataset_id=dataset_id_out)
+        if self._dataset_store.exists(id_or_passport=self._config.target) and not force:
+            dataset_out = self._dataset_store.get(id_or_passport=self._config.target)
             result.status_obj = Status.SKIPPED
             result.end_task()
             logger.info(result)
@@ -255,15 +255,15 @@ class SISODataPrepTask(DataPrepTask):
             result = self._validate_result(result=result)
 
             # Store data if valid otherwise handle failure
-            if isinstance(result, DataPrepTaskResult):
-                if result.validation.is_valid:
-                    result.status_obj = Status.SUCCESS
-                    self._dataset_store.add(dataset=result.dataset)
-                else:
-                    result.status_obj = Status.FAIL
-                    self._handle_validation_failure(validation=result.validation)
+            if result.validation.is_valid:
+                result.status_obj = Status.SUCCESS
+                self._dataset_store.add(dataset=result.dataset)
             else:
-                raise TypeError("Result is not of type DataPrepTaskResult.")
+                result.status_obj = Status.FAIL
+                self._handle_validation_failure(validation=result.validation)
+        except Exception as e:
+            result.status_obj = Status.FAIL
+            logger.exception(f"An error occurred during task execution: \n{e}")
 
         finally:
             result.end_task()

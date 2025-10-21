@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday October 12th 2025 11:51:12 pm                                                #
-# Modified   : Tuesday October 21st 2025 07:04:43 am                                               #
+# Modified   : Tuesday October 21st 2025 02:17:55 pm                                               #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -109,31 +109,37 @@ class IngestSalesDataTask(DataPrepTask):
             Optional[Dataset]: The ingested sales dataset, or None if ingestion was skipped.
         """
 
+        logger.debug(f"Starting task: {self.task_name}")
+
         # Initialize the result object and start the task
         result = DataPrepTaskResult(task_name=self.task_name, config=self._config)
         result.start_task()
 
         # # Check if output dataset already exists
-        # dataset_id_out = DatasetID.from_passport(self._config.target)
-        # if self._dataset_store.exists(dataset_id=dataset_id_out) and not force:
-        #     dataset_out = self._dataset_store.get(dataset_id=dataset_id_out)
-        #     result.status_obj = Status.SKIPPED
-        #     result.end_task()
-        #     logger.info(result)
-        #     result.dataset = dataset_out  # type: ignore
-        #     return result
+        if self._dataset_store.exists(dataset_id=self._config.target.id) and not force:
+            logger.debug(
+                f"Dataset {self._config.target.label} already exists in the store. Skipping ingestion."
+            )
+            dataset_out = self._dataset_store.get(passport=self._config.target)
+            result.status_obj = Status.SKIPPED
+            result.end_task()
+            logger.info(result)
+            result.dataset = dataset_out  # type: ignore
+            return result
+
+        # Remove dataset if it exists
+        self._dataset_store.remove(passport=self._config.target)
 
         sales_datasets = []
         try:
 
             # Read week decoding table
             week_dates = self._load(filepath=Path(WEEK_DECODE_TABLE_FILEPATH))
-            logger.info(f"Week decode table loaded with {len(week_dates)} records.")
-            logger.info(f"Week decode table columns: {week_dates.head()}")  # type: ignore
+            logger.debug(f"Week decode table loaded with {len(week_dates)} records.")
 
             # Read category filenames mapping
             category_filenames = self._io.read(filepath=Path(CONFIG_FILEPATH))["category_filenames"]
-            logger.info(f"Category filenames mapping loaded: {len(category_filenames)}")
+            logger.debug(f"Category filenames mapping loaded: {len(category_filenames)}")
 
             # Create tqdm progress bar for categories
             pbar = tqdm(
@@ -147,7 +153,7 @@ class IngestSalesDataTask(DataPrepTask):
             directory = self._file_system.get_stage_entity_location(
                 stage=DatasetStage.RAW, entity=Entity.SALES
             )
-            logger.info(f"Raw sales data directory: {directory}")
+            logger.debug(f"Raw sales data directory: {directory}\n")
 
             result.records_in = result.records_in if result.records_in else 0
             # Iterate through category sales files
@@ -158,22 +164,22 @@ class IngestSalesDataTask(DataPrepTask):
                 category = category_info["category"]
                 pbar.set_description(f"Processing category: {category} from file: {filename}")
 
-                # Create a temporary dataset for loading the data
+                # Load the raw sales data file and update input record count
                 df_in = self._load(filepath=filepath)
-                logger.info(
-                    f"\tLoaded {len(df_in)} records for category {category} from {filename}"
-                )
-                logger.info(f"\tData head: \n{df_in.head()}")  # type: ignore
                 if isinstance(df_in, pd.DataFrame):
                     result.records_in += len(df_in)  # type: ignore
 
                 # Execute ingestion steps
                 category_df = self._execute(df=df_in, category=category, week_dates=week_dates)
+                logger.debug(
+                    f"Ingested category '{category}' from file '{filename}' with {len(category_df)} records."
+                )
 
                 sales_datasets.append(category_df)
 
             # Concatenate all datasets
             concat_df = pd.concat(sales_datasets, ignore_index=True)
+            logger.debug(f"Concatenated ingested dataset has {len(concat_df)} records.")
 
             # Update result with output record counts
             result.records_out = len(concat_df)
@@ -196,10 +202,10 @@ class IngestSalesDataTask(DataPrepTask):
             result.status_obj = Status.FAIL
             raise e
 
-        # finally:
-        #     result.end_task()
-        #     logger.info(result)
-        #     return result
+        finally:
+            result.end_task()
+            logger.info(result)
+            return result
 
     def _validate_result(self, result: DataPrepTaskResult) -> DataPrepTaskResult:
         """Validates the result of the ingestion process.
@@ -227,19 +233,31 @@ class IngestSalesDataTask(DataPrepTask):
             "OK",
         ]
 
+        df = result.dataset.data
+        classname = self.__class__.__name__
+
         # Check for zero input records
         if result.records_in == 0:
             result.validation.add_message("No records were processed.")  # type: ignore
         else:
             # Check presence and types of mandatory columns
             result.validation = self._validate_columns(
-                validation=result.validation, data=result.dataset.data, required_columns=COLUMNS
+                validation=result.validation, data=df, required_columns=COLUMNS
             )
             # Check for consistent record count
             if result.records_in != result.records_out:
                 result.validation.add_message(
                     f"Number of input records {result.records_in} does not match number of output records {result.records_out}."
                 )
+            # Check for negative values in PRICE, QTY, MOVE, PROFIT
+            NUMERIC_COLUMNS = ["PRICE", "QTY", "MOVE", "PROFIT"]
+            for col in NUMERIC_COLUMNS:
+                negative_values = df[df[col] < 0]
+                if not negative_values.empty:
+                    reason = f"Column '{col}' contains {len(negative_values)} negative values."
+                    result.validation.add_failed_records(
+                        classname=classname, reason=reason, records=negative_values
+                    )  # type: ignore
 
         return result
 
@@ -287,16 +305,15 @@ class IngestSalesDataTask(DataPrepTask):
             Returns:
             Union[pd.DataFrame, Any]: The loaded DataFrame or data object."""
 
-        logger.info(f"Loading data from {filepath.name}")
         try:
 
             data = self._io.read(filepath=filepath, **kwargs)
             # Ensure correct data types
             if isinstance(data, pd.DataFrame):
-                logger.info(f"Applying data types to loaded DataFrame")
+                logger.debug(f"Applying data types to loaded DataFrame")
                 data = data.astype({k: v for k, v in DTYPES.items() if k in data.columns})
             else:
-                logger.info(
+                logger.debug(
                     f"Loaded data is type {type(data)} and not a DataFrame. Skipping dtype application."
                 )
             return data

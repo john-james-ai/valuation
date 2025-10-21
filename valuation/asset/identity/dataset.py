@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Wednesday October 8th 2025 02:52:13 pm                                              #
-# Modified   : Monday October 20th 2025 02:05:40 am                                                #
+# Modified   : Tuesday October 21st 2025 02:20:20 pm                                               #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -19,7 +19,7 @@
 """Valuation package."""
 from __future__ import annotations
 
-from typing import Dict, Optional, cast
+from typing import Any, Dict, Optional, cast
 
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -45,7 +45,9 @@ class DatasetPassport(Passport):
         description: str,
         entity: Entity,
         stage: DatasetStage,
-        file_format: FileFormat = FileFormat.PARQUET,
+        file_format: FileFormat,
+        read_kwargs: Optional[Dict[str, str]] = None,
+        write_kwargs: Optional[Dict[str, str]] = None,
     ) -> DatasetPassport:
         """Creates a DatasetPassport."""
         return cls(
@@ -55,6 +57,8 @@ class DatasetPassport(Passport):
             entity=entity,
             stage=stage,
             file_format=file_format,
+            read_kwargs=read_kwargs if read_kwargs is not None else {},
+            write_kwargs=write_kwargs if write_kwargs is not None else {},
             created=datetime.now(),
         )
 
@@ -72,12 +76,14 @@ class DatasetPassport(Passport):
         data["entity"] = Entity(data["entity"])
         data["stage"] = DatasetStage(data["stage"])
         data["file_format"] = FileFormat(data["file_format"])
+        data["read_kwargs"] = dict(data.get("read_kwargs", {}))
+        data["write_kwargs"] = dict(data.get("write_kwargs", {}))
         if data.get("created"):
             data["created"] = datetime.strptime(data["created"], "%Y%m%d-%H%M")
 
         return cls(**data)
 
-    def to_dict(self) -> Dict[str, str]:
+    def to_dict(self) -> Dict[str, Any]:
         """Converts the Passport to a dictionary."""
         return {
             "name": self.name,
@@ -86,6 +92,8 @@ class DatasetPassport(Passport):
             "entity": str(self.entity),
             "stage": str(self.stage),
             "file_format": str(self.file_format),
+            "read_kwargs": self.read_kwargs,
+            "write_kwargs": self.write_kwargs,
             "created": self.created.strftime("%Y%m%d-%H%M") if self.created else "",
         }
 

@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday October 19th 2025 12:18:21 am                                                #
-# Modified   : Tuesday October 21st 2025 08:25:24 am                                               #
+# Modified   : Tuesday October 21st 2025 11:05:20 am                                               #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -21,17 +21,19 @@ from typing import Set
 from dataclasses import dataclass
 from datetime import datetime
 from functools import reduce
+import os
 
+from dotenv import load_dotenv
 from loguru import logger
 import numpy as np
 import pandas as pd
 import typer
 
 from valuation.asset.identity.dataset import DatasetID
+from valuation.core.dataclass import DataClass
 from valuation.core.entity import Entity
 from valuation.core.stage import DatasetStage
 from valuation.core.state import Status
-from valuation.core.structure import DataClass
 from valuation.core.types import AssetType
 from valuation.flow.dataprep.task import DataPrepTaskResult
 from valuation.infra.file.dataset import DatasetFileSystem
@@ -39,7 +41,13 @@ from valuation.infra.file.io import IOService
 from valuation.infra.loggers import configure_logging
 from valuation.utils.file import is_directory_empty
 
+# ------------------------------------------------------------------------------------------------ #
+load_dotenv()
+# Obtain the operating mode from environment variables
+MODE = str(os.getenv("MODE", "dev")).lower()
 
+
+# ------------------------------------------------------------------------------------------------ #
 @dataclass
 class RawSalesDataConfig(DataClass):
     """Holds data related to the current operating mode."""
@@ -74,7 +82,7 @@ class RawSalesDataGenerator:
     def run(self) -> None:
         """Generates the mode sales data."""
 
-        if self._mode == "prod":
+        if str(self._mode).lower() == "prod":
             raise RuntimeError("Raw sales data generation is not allowed in 'prod' mode.")
 
         # Generate stratified sample
@@ -96,7 +104,10 @@ class RawSalesDataGenerator:
         logger.info(
             f"\tLoading raw sales data from {self._config.source_dataset}. \n\tThis will take a minute..."
         )
+        start = datetime.now()
         df = self._io.read(filepath=self._config.source_dataset)
+        duration = round((datetime.now() - start).total_seconds() / 60, 2)
+        logger.info(f"\t...exactly {duration} minutes to be precise. Damn!")
         result.records_in = len(df)
         logger.info(f"\tLoaded raw sales data with {len(df)} records.")
         logger.info(f"\tColumns: {list(df.columns)}")
@@ -313,14 +324,14 @@ def main(
         help="Whether to force reprocessing if the file already exists.",
     ),
     mode: str = typer.Option(
-        "test",
+        MODE,
         "--mode",
         "-m",
         case_sensitive=False,
         help="Mode: valid values are 'test', 'prod', 'dev'. Defaults to 'test'.",
     ),
     random_state: int = typer.Option(
-        None,
+        55,
         "--random-state",
         "-r",
         help="Mode: valid values are 'test', 'prod', 'dev'. Defaults to 'test'.",

@@ -4,14 +4,14 @@
 # Project    : Valuation - Discounted Cash Flow Method                                             #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
-# Filename   : /valuation/app/base/task.py                                                         #
+# Filename   : /valuation/flow/base/task.py                                                        #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday October 10th 2025 02:27:30 am                                                #
-# Modified   : Monday October 20th 2025 04:04:29 am                                                #
+# Modified   : Tuesday October 21st 2025 11:05:20 am                                               #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -26,8 +26,8 @@ from dataclasses import dataclass, field
 from datetime import datetime
 
 from valuation.asset.base import Asset
+from valuation.core.dataclass import DataClass
 from valuation.core.state import Status
-from valuation.core.structure import DataClass
 
 
 # ------------------------------------------------------------------------------------------------ #

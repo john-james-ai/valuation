@@ -11,12 +11,11 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday October 12th 2025 11:51:12 pm                                                #
-# Modified   : Tuesday October 21st 2025 06:48:34 am                                               #
+# Modified   : Tuesday October 21st 2025 12:25:13 pm                                               #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
 # ================================================================================================ #
-from typing import Any, Union
 
 from loguru import logger
 import pandas as pd
@@ -48,12 +47,12 @@ class CleanSalesDataTask(SISODataPrepTask):
     ) -> None:
         super().__init__(config=config, dataset_store=dataset_store)
 
-    def _execute(self, data: Union[pd.DataFrame, Any], **kwargs) -> Union[pd.DataFrame, Any]:
+    def _execute(self, df: pd.DataFrame, **kwargs) -> pd.DataFrame:
 
         logger.debug("Cleaning sales data.")
 
         return (
-            data.pipe(self._remove_invalid_records)
+            df.pipe(self._remove_invalid_records)
             .pipe(self._normalize_columns)
             .pipe(self._calculate_revenue)
             .pipe(self._calculate_gross_profit)
@@ -159,6 +158,7 @@ class CleanSalesDataTask(SISODataPrepTask):
 
         data = result.dataset.data
         validation = result.validation
+        classname = self.__class__.__name__
 
         # 1. Check for mandatory columns
         logger.debug("Validating output DataFrame structure and integrity.")
@@ -172,13 +172,15 @@ class CleanSalesDataTask(SISODataPrepTask):
         negative_profit = data[data["gross_profit"] < 0]
         if not negative_profit.empty:
             reason = f"Aggregated 'gross_profit' contains {len(negative_profit)} negative values."
-            validation.add_failed_records(reason=reason, records=negative_profit)
+            validation.add_failed_records(
+                classname=classname, reason=reason, records=negative_profit
+            )
 
         # Check for division by zero / resulting NaNs/Infs in the margin
         logger.debug("..checking for NaN or infinite gross margin percentages.")
         null_margins = data[data["gross_margin_pct"].isnull()]
         if not null_margins.empty:
             reason = f"'gross_margin_pct' contains {len(null_margins)} NULLs, often indicating a divide by zero error."
-            validation.add_failed_records(reason=reason, records=null_margins)
+            validation.add_failed_records(classname=classname, reason=reason, records=null_margins)
 
         return result
