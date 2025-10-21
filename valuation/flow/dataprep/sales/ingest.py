@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday October 12th 2025 11:51:12 pm                                                #
-# Modified   : Tuesday October 21st 2025 02:17:55 pm                                               #
+# Modified   : Tuesday October 21st 2025 05:41:37 pm                                               #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -39,6 +39,25 @@ from valuation.infra.store.dataset import DatasetStore
 CONFIG_FILEPATH = Path("config.yaml")
 CONFIG_CATEGORY_INFO_KEY = "category_filenames"
 WEEK_DECODE_TABLE_FILEPATH = Path("reference/week_decode_table.csv")
+
+# ------------------------------------------------------------------------------------------------ #
+REQUIRED_COLUMNS_INGEST = {
+    "CATEGORY": "string",
+    "STORE": "Int64",
+    "UPC": "Int64",
+    "WEEK": "Int64",
+    "QTY": "Int64",
+    "MOVE": "Int64",
+    "OK": "Int64",
+    "SALE": "string",
+    "PRICE": "float64",
+    "PROFIT": "float64",
+    "YEAR": "Int64",
+    "START": "datetime64[ns]",
+    "END": "datetime64[ns]",
+}
+
+NON_NEGATIVE_COLUMNS_INGEST = ["QTY", "MOVE", "PRICE", "PROFIT"]
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -71,6 +90,8 @@ class IngestSalesDataTask(DataPrepTask):
         io: IOService = IOService,
     ) -> None:
         """Initializes the ingestion task with the provided configuration."""
+        super().__init__()
+
         self._config = config
         self._dataset_store = dataset_store
         self._io = io
@@ -189,14 +210,17 @@ class IngestSalesDataTask(DataPrepTask):
 
             # Add the dataset to the result object and validate
             result.dataset = dataset_out
-            result = self._validate_result(result=result)
 
-            # Save the dataset if validation passed
-            if result.validation.is_valid:  # type: ignore
+            # Validate the result
+            if not self._validation.validate(
+                data=result.dataset.data, classname=self.__class__.__name__
+            ):
+                result.status_obj = Status.FAIL
+                raise ValueError("Data validation failed.")
+            else:
                 self._dataset_store.add(dataset=dataset_out, overwrite=True)
                 logger.info(f"Saved ingested dataset {dataset_out.passport.label} to the store.")
-            else:
-                self._handle_validation_failure(validation=result.validation)  # type: ignore
+
         except Exception as e:
             logger.critical(f"Task {self.task_name} failed with exception: {e}")
             result.status_obj = Status.FAIL
@@ -206,60 +230,6 @@ class IngestSalesDataTask(DataPrepTask):
             result.end_task()
             logger.info(result)
             return result
-
-    def _validate_result(self, result: DataPrepTaskResult) -> DataPrepTaskResult:
-        """Validates the result of the ingestion process.
-
-        Args:
-            result (TaskResult): The result object containing data to validate.
-
-        Returns:
-            TaskResult: The updated result object with validation info.
-        """
-
-        COLUMNS = [
-            "CATEGORY",
-            "WEEK",
-            "YEAR",
-            "START",
-            "END",
-            "STORE",
-            "UPC",
-            "PRICE",
-            "QTY",
-            "MOVE",
-            "PROFIT",
-            "SALE",
-            "OK",
-        ]
-
-        df = result.dataset.data
-        classname = self.__class__.__name__
-
-        # Check for zero input records
-        if result.records_in == 0:
-            result.validation.add_message("No records were processed.")  # type: ignore
-        else:
-            # Check presence and types of mandatory columns
-            result.validation = self._validate_columns(
-                validation=result.validation, data=df, required_columns=COLUMNS
-            )
-            # Check for consistent record count
-            if result.records_in != result.records_out:
-                result.validation.add_message(
-                    f"Number of input records {result.records_in} does not match number of output records {result.records_out}."
-                )
-            # Check for negative values in PRICE, QTY, MOVE, PROFIT
-            NUMERIC_COLUMNS = ["PRICE", "QTY", "MOVE", "PROFIT"]
-            for col in NUMERIC_COLUMNS:
-                negative_values = df[df[col] < 0]
-                if not negative_values.empty:
-                    reason = f"Column '{col}' contains {len(negative_values)} negative values."
-                    result.validation.add_failed_records(
-                        classname=classname, reason=reason, records=negative_values
-                    )  # type: ignore
-
-        return result
 
     def _add_category(self, df: pd.DataFrame, category: str) -> pd.DataFrame:
         """Adds a category column to the DataFrame.

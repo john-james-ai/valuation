@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday October 10th 2025 02:27:30 am                                                #
-# Modified   : Tuesday October 21st 2025 11:58:46 am                                               #
+# Modified   : Tuesday October 21st 2025 05:36:09 pm                                               #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -19,7 +19,7 @@
 """Base classes for data preparation tasks."""
 from __future__ import annotations
 
-from typing import List, Optional, cast
+from typing import Optional, cast
 
 from abc import abstractmethod
 from dataclasses import dataclass, field
@@ -27,7 +27,7 @@ from dataclasses import dataclass, field
 from loguru import logger
 import pandas as pd
 
-from valuation.asset.dataset.base import DTYPES, Dataset
+from valuation.asset.dataset.base import Dataset
 from valuation.asset.identity.dataset import DatasetPassport
 from valuation.core.state import Status
 from valuation.flow.base.task import Task, TaskConfig, TaskResult
@@ -71,6 +71,8 @@ class DataPrepTaskResult(TaskResult):
 
 # ------------------------------------------------------------------------------------------------ #
 class DataPrepTask(Task):
+    def __init__(self, validation: Optional[Validation] = None) -> None:
+        self._validation = validation if validation else Validation()
 
     @abstractmethod
     def _execute(self, df: pd.DataFrame, **kwargs) -> Dataset:
@@ -87,24 +89,6 @@ class DataPrepTask(Task):
         """
 
     @abstractmethod
-    def _validate_result(self, result: TaskResult) -> DataPrepTaskResult:
-        """Validates the output data and updates the TaskResult.
-
-        Subclasses must implement specific validation logic to ensure
-        the output data meets expected standards. This method should
-        update the `validation` attribute of the provided `TaskResult`
-        object.
-
-        Args:
-            result: The TaskResult object containing the output data
-                to be validated.
-
-        Returns:
-            The updated TaskResult object with validation results.
-        """
-        pass
-
-    @abstractmethod
     def run(self, dataset: Dataset, force: bool = False) -> DataPrepTaskResult:
         """Executes the full task lifecycle: execution, validation, and reporting.
 
@@ -118,50 +102,6 @@ class DataPrepTask(Task):
         Returns:
             Dataset: The processed output dataset, or None if skipped.
         """
-
-    def _validate_columns(
-        self, validation: Validation, data: pd.DataFrame, required_columns: List[str]
-    ) -> Validation:
-        """Validates that required columns are present and of correct types.
-
-        Args:
-            validation (Validation): The current validation object to update.
-            data (pd.DataFrame): The DataFrame to validate.
-            required_columns (List[str]): List of required column names.
-
-        Returns:
-            Validation: The updated validation object."""
-        for col in required_columns:
-            if col not in data.columns:
-                validation.add_message(f"Missing required column: '{col}'.")
-
-            else:
-                dtype = str(data[col].dtype)
-                if not dtype == DTYPES[col]:
-                    validation.add_message(
-                        f"Column '{col}' of type {dtype} should be type {DTYPES[col]}."
-                    )
-        return validation
-
-    def _handle_validation_failure(self, validation: Validation) -> None:
-        """Handles logging and raises an exception on validation failure.
-
-        This method centralizes the failure logic. It logs all specific
-        validation messages and then raises a `RuntimeError` to halt execution.
-
-        Args:
-            validation: The Validation object containing failure messages.
-
-        Raises:
-            RuntimeError: Always raised to ensure execution is halted and
-                the failure is propagated.
-        """
-
-        msg = f"{self.__class__.__name__} - Validation Failed"
-        logger.error(msg)
-        logger.error(f"Validation Messages:\n{validation.messages}")
-        validation.log_failed_records()
-        raise RuntimeError(msg)
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -180,6 +120,7 @@ class SISODataPrepTask(DataPrepTask):
         config: SISODataPrepTaskConfig,
         dataset_store: DatasetStore = DatasetStore,
     ) -> None:
+        super().__init__()
         self._config = config
         self._dataset_store = dataset_store
 
@@ -206,24 +147,6 @@ class SISODataPrepTask(DataPrepTask):
             pd.DataFrame: The processed output DataFrame.
         """
 
-    @abstractmethod
-    def _validate_result(self, result: TaskResult) -> DataPrepTaskResult:
-        """Validates the output data and updates the TaskResult.
-
-        Subclasses must implement specific validation logic to ensure
-        the output data meets expected standards. This method should
-        update the `validation` attribute of the provided `TaskResult`
-        object.
-
-        Args:
-            result: The TaskResult object containing the output data
-                to be validated.
-
-        Returns:
-            The updated TaskResult object with validation results.
-        """
-        pass
-
     def run(self, dataset: Dataset, force: bool = False) -> DataPrepTaskResult:
 
         # Initialize the result object and start the task
@@ -231,15 +154,15 @@ class SISODataPrepTask(DataPrepTask):
         result.start_task()
 
         # Check if output already exists to potentially skip processing.
-        if self._dataset_store.exists(id_or_passport=self._config.target) and not force:
-            dataset_out = self._dataset_store.get(id_or_passport=self._config.target)
+        if self._dataset_store.exists(dataset_id=self._config.target.id) and not force:
+            dataset_out = self._dataset_store.get(passport=self._config.target)
             result.status_obj = Status.SKIPPED
             result.end_task()
             logger.info(result)
-            if isinstance(dataset_out, Dataset):
-                result.dataset = dataset_out
+            result.dataset = dataset_out
             return result
         try:
+            self._dataset_store.remove(passport=self._config.target)
 
             # 1. Capture the size of the input dataset.
             result.records_in = cast(int, dataset.nrows)
@@ -252,15 +175,13 @@ class SISODataPrepTask(DataPrepTask):
             result.records_out = cast(int, result.dataset.nrows)
 
             # 4. Validate the result
-            result = self._validate_result(result=result)
-
-            # Store data if valid otherwise handle failure
-            if result.validation.is_valid:
-                result.status_obj = Status.SUCCESS
-                self._dataset_store.add(dataset=result.dataset)
-            else:
+            if not self._validation.validate(
+                data=result.dataset.data,
+                classname=self.__class__.__name__,
+            ):
                 result.status_obj = Status.FAIL
-                self._handle_validation_failure(validation=result.validation)
+                raise ValueError("Data validation failed.")
+
         except Exception as e:
             result.status_obj = Status.FAIL
             logger.exception(f"An error occurred during task execution: \n{e}")

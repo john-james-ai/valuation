@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Saturday October 18th 2025 10:52:13 pm                                              #
-# Modified   : Tuesday October 21st 2025 11:05:20 am                                               #
+# Modified   : Tuesday October 21st 2025 05:42:30 pm                                               #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -28,6 +28,19 @@ from valuation.flow.dataprep.task import SISODataPrepTask
 from valuation.infra.file.io import IOService
 from valuation.infra.store.dataset import DatasetStore
 
+# ------------------------------------------------------------------------------------------------ #
+REQUIRED_COLUMNS_FILTER = {
+    "category": "string",
+    "store": "Int64",
+    "week": "Int64",
+    "year": "Int64",
+    "start": "datetime64[ns]",
+    "end": "datetime64[ns]",
+    "revenue": "float64",
+    "gross_profit": "float64",
+    "gross_margin_pct": "float64",
+}
+NON_NEGATIVE_COLUMNS_FILTER = ["revenue", "gross_profit", "gross_margin_pct"]
 # ------------------------------------------------------------------------------------------------ #
 
 

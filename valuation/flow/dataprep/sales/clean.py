@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday October 12th 2025 11:51:12 pm                                                #
-# Modified   : Tuesday October 21st 2025 12:25:13 pm                                               #
+# Modified   : Tuesday October 21st 2025 05:42:45 pm                                               #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -20,12 +20,23 @@
 from loguru import logger
 import pandas as pd
 
-from valuation.flow.dataprep.task import (
-    DataPrepTaskResult,
-    SISODataPrepTask,
-    SISODataPrepTaskConfig,
-)
+from valuation.flow.dataprep.task import SISODataPrepTask, SISODataPrepTaskConfig
 from valuation.infra.store.dataset import DatasetStore
+
+# ------------------------------------------------------------------------------------------------ #
+REQUIRED_COLUMNS_CLEAN = {
+    "category": "string",
+    "store": "Int64",
+    "week": "Int64",
+    "year": "Int64",
+    "start": "datetime64[ns]",
+    "end": "datetime64[ns]",
+    "revenue": "float64",
+    "gross_profit": "float64",
+    "gross_margin_pct": "float64",
+}
+
+NON_NEGATIVE_COLUMNS_CLEAN = ["revenue", "gross_profit", "gross_margin_pct"]
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -135,52 +146,3 @@ class CleanSalesDataTask(SISODataPrepTask):
         logger.debug("Calculating transaction-level gross profit.")
         df["gross_profit"] = df["revenue"] * (df["gross_margin_pct"] / 100.0)
         return df
-
-    def _validate_result(self, result: DataPrepTaskResult) -> DataPrepTaskResult:
-        """Validates the output DataFrame structure and integrity.
-
-        Args:
-            result (TaskResult): The result object containing the output DataFrame.
-        Returns:
-            TaskResult: The validated result object.
-        """
-        COLUMNS = [
-            "store",
-            "category",
-            "week",
-            "year",
-            "start",
-            "end",
-            "revenue",
-            "gross_profit",
-            "gross_margin_pct",
-        ]
-
-        data = result.dataset.data
-        validation = result.validation
-        classname = self.__class__.__name__
-
-        # 1. Check for mandatory columns
-        logger.debug("Validating output DataFrame structure and integrity.")
-        # Critical: Must check this first and return if failed, as subsequent steps require these columns.
-        for col in COLUMNS:
-            if col not in data.columns:
-                validation.add_message(f"Missing mandatory column: {col}")
-
-        # Check for negative gross profit
-        logger.debug("..checking negative gross profit.")
-        negative_profit = data[data["gross_profit"] < 0]
-        if not negative_profit.empty:
-            reason = f"Aggregated 'gross_profit' contains {len(negative_profit)} negative values."
-            validation.add_failed_records(
-                classname=classname, reason=reason, records=negative_profit
-            )
-
-        # Check for division by zero / resulting NaNs/Infs in the margin
-        logger.debug("..checking for NaN or infinite gross margin percentages.")
-        null_margins = data[data["gross_margin_pct"].isnull()]
-        if not null_margins.empty:
-            reason = f"'gross_margin_pct' contains {len(null_margins)} NULLs, often indicating a divide by zero error."
-            validation.add_failed_records(classname=classname, reason=reason, records=null_margins)
-
-        return result

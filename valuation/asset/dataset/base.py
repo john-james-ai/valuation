@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 9th 2025 07:11:18 pm                                               #
-# Modified   : Tuesday October 21st 2025 02:23:26 pm                                               #
+# Modified   : Tuesday October 21st 2025 06:26:10 pm                                               #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -57,6 +57,8 @@ DTYPES = {
     "GROSS_MARGIN": "float64",
     "GROSS_PROFIT": "float64",
     "OK": "Int64",
+    "PRICE_HEX": "string",
+    "PROFIT_HEX": "string",
 }
 DTYPES_CAPITAL = {k.capitalize(): v for k, v in DTYPES.items()}
 DTYPES_LOWER = {k.lower(): v for k, v in DTYPES.items()}

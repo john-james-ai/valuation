@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 9th 2025 11:01:16 pm                                               #
-# Modified   : Tuesday October 21st 2025 03:06:17 pm                                               #
+# Modified   : Tuesday October 21st 2025 03:41:31 pm                                               #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -119,7 +119,9 @@ def get_clean_sales_data_task(source: DatasetPassport) -> CleanSalesDataTask:
         description="Dominick's Clean Sales Data Dataset",
         stage=DatasetStage.CLEAN,
         entity=Entity.SALES,
-        file_format=FileFormat.CSV,
+        file_format=FileFormat.PARQUET,
+        read_kwargs=source.read_kwargs,
+        write_kwargs=source.write_kwargs,
     )
     # Create configuration for sales data processing
     config = SISODataPrepTaskConfig(
@@ -147,7 +149,21 @@ def get_ingest_sales_data_task() -> IngestSalesDataTask:
         description="Dominick's Ingested Sales Data Dataset",
         stage=DatasetStage.INGEST,
         entity=Entity.SALES,
-        file_format=FileFormat.CSV,
+        file_format=FileFormat.PARQUET,
+        read_kwargs={
+            "engine": "pyarrow",
+            "columns": None,
+            "filters": None,
+            "use_threads": True,
+            "dtype_backend": "pyarrow",
+        },
+        write_kwargs={
+            "engine": "pyarrow",
+            "compression": "snappy",
+            "index": False,
+            "row_group_size": 256_000,
+            "partition_cols": ["CATEGORY", "YEAR"],
+        },
     )
 
     config = IngestSalesDataTaskConfig(
