@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 9th 2025 11:01:16 pm                                               #
-# Modified   : Tuesday October 21st 2025 06:48:35 am                                               #
+# Modified   : Tuesday October 21st 2025 03:06:17 pm                                               #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -20,6 +20,7 @@
 
 import typer
 
+from devops.raw_datagen import MODE
 from valuation.asset.identity.dataset import DatasetPassport
 from valuation.core.entity import Entity
 from valuation.core.file import FileFormat
@@ -93,7 +94,7 @@ def get_aggregate_sales_data_task(source: DatasetPassport) -> DataPrepTask:
         description="Dominick's Aggregated Sales Data Dataset",
         stage=DatasetStage.PROCESSED,
         entity=Entity.SALES,
-        file_format=FileFormat.PARQUET,
+        file_format=FileFormat.CSV,
     )
 
     # Create configuration for sales data processing
@@ -118,7 +119,7 @@ def get_clean_sales_data_task(source: DatasetPassport) -> CleanSalesDataTask:
         description="Dominick's Clean Sales Data Dataset",
         stage=DatasetStage.CLEAN,
         entity=Entity.SALES,
-        file_format=FileFormat.PARQUET,
+        file_format=FileFormat.CSV,
     )
     # Create configuration for sales data processing
     config = SISODataPrepTaskConfig(
@@ -146,7 +147,7 @@ def get_ingest_sales_data_task() -> IngestSalesDataTask:
         description="Dominick's Ingested Sales Data Dataset",
         stage=DatasetStage.INGEST,
         entity=Entity.SALES,
-        file_format=FileFormat.PARQUET,
+        file_format=FileFormat.CSV,
     )
 
     config = IngestSalesDataTaskConfig(
@@ -196,6 +197,11 @@ def main(
     )
 ):
     """Main entry point for the Valuation package."""
+    if str(MODE).lower() == "prod":
+        go = input("This will run in 'prod' mode. Are you sure you want to continue? (y/n):")
+        if go.lower() != "y":
+            print("Exiting...")
+            raise SystemExit(0)
     # Configure logging
     configure_logging()
     # Construct the data preparation pipeline tasks
