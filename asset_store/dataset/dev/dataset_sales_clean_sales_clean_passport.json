@@ -1,9 +1,9 @@
 {
-  "name": "sales_ingest",
-  "description": "Dominick's Ingested Sales Data Dataset",
+  "name": "sales_clean",
+  "description": "Dominick's Clean Sales Data Dataset",
   "asset_type": "dataset",
   "entity": "sales",
-  "stage": "ingest",
+  "stage": "clean",
   "file_format": "parquet",
   "read_kwargs": {
     "engine": "pyarrow",

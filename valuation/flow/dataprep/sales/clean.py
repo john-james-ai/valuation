@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday October 12th 2025 11:51:12 pm                                                #
-# Modified   : Tuesday October 21st 2025 06:47:43 pm                                               #
+# Modified   : Wednesday October 22nd 2025 02:30:19 am                                             #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -19,12 +19,17 @@
 
 from typing import Optional
 
+from dataclasses import dataclass
+
 from loguru import logger
 import pandas as pd
 
-from valuation.flow.dataprep.task import SISODataPrepTask, SISODataPrepTaskConfig
+from valuation.flow.dataprep.task import (
+    DataPrepTaskResult,
+    SISODataPrepTask,
+    SISODataPrepTaskConfig,
+)
 from valuation.flow.validation import Validation
-from valuation.infra.store.dataset import DatasetStore
 
 # ------------------------------------------------------------------------------------------------ #
 REQUIRED_COLUMNS_CLEAN = {
@@ -39,7 +44,13 @@ REQUIRED_COLUMNS_CLEAN = {
     "gross_margin_pct": "float64",
 }
 
-NON_NEGATIVE_COLUMNS_CLEAN = ["revenue", "gross_profit", "gross_margin_pct"]
+NON_NEGATIVE_COLUMNS_CLEAN = ["revenue"]
+
+
+# ------------------------------------------------------------------------------------------------ #
+@dataclass
+class CleanSalesDataTaskResult(DataPrepTaskResult):
+    """Holds the results of the CleanSalesDataTask execution."""
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -50,17 +61,18 @@ class CleanSalesDataTask(SISODataPrepTask):
 
     Args:
         config (SISODataPrepTaskConfig): Task configuration.
-        dataset_store (DatasetStore): DatasetStore used to persist/read datasets.
         validation (Optional[Validation]): Optional Validation instance for data checks.
     """
+
+    _result: type[CleanSalesDataTaskResult]
 
     def __init__(
         self,
         config: SISODataPrepTaskConfig,
-        dataset_store: DatasetStore,
+        result: type[CleanSalesDataTaskResult] = CleanSalesDataTaskResult,
         validation: Optional[Validation] = None,
     ) -> None:
-        super().__init__(config=config, dataset_store=dataset_store, validation=validation)
+        super().__init__(config=config, validation=validation, result=result)
 
     def _execute(self, df: pd.DataFrame, **kwargs) -> pd.DataFrame:
         """Execute the cleaning pipeline on the provided DataFrame.
@@ -81,11 +93,13 @@ class CleanSalesDataTask(SISODataPrepTask):
         )
 
     def _remove_invalid_records(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Removes records that do not meet business criteria:
-        1. 'OK' flag is '1'
-        2. 'PRICE' is greater than 0
-        3. 'MOVE' is greater than 0
-        4. 'QTY' is greater than or equal to 1
+        """Removes records that do not meet business criteria.
+
+        The rules applied are:
+            1. 'ok' flag is '1'
+            2. 'price' > 0
+            3. 'move' > 0
+            4. 'qty' >= 1
 
         Args:
             df (pd.DataFrame): The ingested sales data.
@@ -96,10 +110,10 @@ class CleanSalesDataTask(SISODataPrepTask):
         logger.debug("Removing invalid records based on business rules.")
         # Define the query string for filtering
         query_string = """
-            OK == 1 and \
-            PRICE > 0 and \
-            MOVE > 0 and \
-            QTY >= 1
+            ok == 1 and \
+            price > 0 and \
+            move > 0 and \
+            qty >= 1
         """
 
         df_clean = df.query(
@@ -120,7 +134,7 @@ class CleanSalesDataTask(SISODataPrepTask):
         df_clean = df.copy()
         # Rename columns for clarity and drop unneeded ones.
         df_clean = (
-            df_clean.rename(columns={"PROFIT": "GROSS_MARGIN_PCT"}).drop(columns=["SALE"])
+            df_clean.rename(columns={"profit": "gross_margin_pct"}).drop(columns=["sale"])
         ).copy()
         # Standardize column names to lowercase
         df_clean.columns = df_clean.columns.str.lower()
@@ -130,14 +144,13 @@ class CleanSalesDataTask(SISODataPrepTask):
         """Calculate transaction-level revenue, accounting for product bundles.
 
         Revenue is derived from bundle price, individual units sold, and bundle size.
-        The formula used is: revenue = (price * move) / qty.
+        Formula: revenue = (price * move) / qty.
 
         Args:
-            df (pd.DataFrame): The cleaned sales data. Must contain lowercase columns
-                'price', 'move', and 'qty'.
+            df (pd.DataFrame): The cleaned sales data. Must contain columns 'price', 'move', and 'qty'.
 
         Returns:
-            pd.DataFrame: The input DataFrame with an added 'revenue' column.
+            pd.DataFrame: DataFrame with an added 'revenue' column.
         """
         logger.debug("Calculating transaction-level revenue.")
         df["revenue"] = (df["price"] * df["move"]) / df["qty"]
@@ -147,14 +160,13 @@ class CleanSalesDataTask(SISODataPrepTask):
         """Calculate transaction-level gross profit.
 
         Gross profit is derived from revenue and gross margin percentage.
-        The formula used is: gross_profit = revenue * (gross_margin_pct / 100).
+        Formula: gross_profit = revenue * (gross_margin_pct / 100).
 
         Args:
-            df (pd.DataFrame): The cleaned sales data. Must contain lowercase columns
-                'revenue' and 'gross_margin_pct'.
+            df (pd.DataFrame): The cleaned sales data. Must contain columns 'revenue' and 'gross_margin_pct'.
 
         Returns:
-            pd.DataFrame: The input DataFrame with an added 'gross_profit' column.
+            pd.DataFrame: DataFrame with an added 'gross_profit' column.
         """
         logger.debug("Calculating transaction-level gross profit.")
         df["gross_profit"] = df["revenue"] * (df["gross_margin_pct"] / 100.0)

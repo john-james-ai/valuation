@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Tuesday October 21st 2025 04:51:55 pm                                               #
-# Modified   : Tuesday October 21st 2025 06:20:03 pm                                               #
+# Modified   : Tuesday October 21st 2025 11:26:59 pm                                               #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -30,7 +30,7 @@ from valuation.flow.dataprep.sales.ingest import (
 from valuation.flow.validation import (
     ColumnTypeValidator,
     MissingColumnValidator,
-    NonNegativeColumnValidator,
+    NonNegativeValidator,
 )
 
 # ------------------------------------------------------------------------------------------------ #
@@ -107,7 +107,7 @@ class TestValidation:  # pragma: no cover
         logger.info(double_line)
         # ---------------------------------------------------------------------------------------- #
         sales_df["PRICE"] = sales_df["PRICE"] * -1  # Introduce negative value
-        validator = NonNegativeColumnValidator(columns=NON_NEGATIVE_COLUMNS_INGEST)
+        validator = NonNegativeValidator(columns=NON_NEGATIVE_COLUMNS_INGEST)
         assert validator.validate(data=sales_df, classname=self.__class__.__name__) is False
         logger.info(validator.messages)
 

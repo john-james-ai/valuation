@@ -1,0 +1,11 @@
+{
+  "name": "sales_aggregated",
+  "description": "Dominick's Aggregated Sales Data Dataset",
+  "asset_type": "dataset",
+  "entity": "sales",
+  "stage": "processed",
+  "file_format": "csv",
+  "read_kwargs": {},
+  "write_kwargs": {},
+  "created": "20251022-0329"
+}

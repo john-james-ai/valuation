@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Wednesday October 8th 2025 02:52:13 pm                                              #
-# Modified   : Tuesday October 21st 2025 02:22:14 pm                                               #
+# Modified   : Tuesday October 21st 2025 08:37:04 pm                                               #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -19,7 +19,7 @@
 """Valuation package."""
 from __future__ import annotations
 
-from typing import Any, Dict, cast
+from typing import Any, Dict, Optional, cast
 
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -40,7 +40,7 @@ class Passport(DataClass):
     asset_type: AssetType
     stage: Stage
     created: datetime
-    file_format: FileFormat
+    file_format: Optional[FileFormat] = None
     read_kwargs: Dict[str, str] = field(default_factory=dict)
     write_kwargs: Dict[str, str] = field(default_factory=dict)
 
@@ -61,7 +61,7 @@ class Passport(DataClass):
         description: str,
         asset_type: AssetType,
         stage: Stage,
-        file_format: FileFormat,
+        file_format: Optional[FileFormat] = None,
         read_kwargs: Dict[str, str] = {},
         write_kwargs: Dict[str, str] = {},
     ) -> Passport:

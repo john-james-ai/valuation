@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday October 10th 2025 02:27:30 am                                                #
-# Modified   : Tuesday October 21st 2025 11:05:20 am                                               #
+# Modified   : Wednesday October 22nd 2025 02:34:53 am                                             #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -73,7 +73,7 @@ class TaskResult(DataClass, ABC):
             None
         """
         self.started = datetime.now()
-        self.status = Status.RUNNING.value[0]
+        self.status_obj = Status.RUNNING
 
     def end_task(self) -> None:
         """Mark the task as ended and compute elapsed time.

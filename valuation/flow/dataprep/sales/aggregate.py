@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 16th 2025 06:18:02 pm                                              #
-# Modified   : Tuesday October 21st 2025 06:48:08 pm                                               #
+# Modified   : Wednesday October 22nd 2025 03:29:20 am                                             #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -20,12 +20,13 @@
 
 from typing import Optional
 
+from dataclasses import dataclass
+
 from loguru import logger
 import pandas as pd
 
-from valuation.flow.dataprep.task import DataPrepTaskConfig, SISODataPrepTask
+from valuation.flow.dataprep.task import DataPrepTaskConfig, DataPrepTaskResult, SISODataPrepTask
 from valuation.flow.validation import Validation
-from valuation.infra.store.dataset import DatasetStore
 
 # ------------------------------------------------------------------------------------------------ #
 REQUIRED_COLUMNS_AGGREGATE = {
@@ -40,7 +41,13 @@ REQUIRED_COLUMNS_AGGREGATE = {
     "gross_margin_pct": "float64",
 }
 
-NON_NEGATIVE_COLUMNS_AGGREGATE = ["revenue", "gross_profit", "gross_margin_pct"]
+NON_NEGATIVE_COLUMNS_AGGREGATE = ["revenue"]
+
+
+# ------------------------------------------------------------------------------------------------ #
+@dataclass
+class AggregateSalesDataTaskResult(DataPrepTaskResult):
+    """Holds the results of the AggregateSalesDataTask execution."""
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -55,13 +62,16 @@ class AggregateSalesDataTask(SISODataPrepTask):
 
     """
 
+    _config: DataPrepTaskConfig
+    _result: type[AggregateSalesDataTaskResult]
+
     def __init__(
         self,
         config: DataPrepTaskConfig,
-        dataset_store: DatasetStore,
+        result: type[AggregateSalesDataTaskResult] = AggregateSalesDataTaskResult,
         validation: Optional[Validation] = None,
     ) -> None:
-        super().__init__(config=config, dataset_store=dataset_store, validation=validation)
+        super().__init__(config=config, validation=validation, result=result)
 
     def _execute(self, df: pd.DataFrame) -> pd.DataFrame:
         """Runs the ingestion process on the provided DataFrame.

@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday October 12th 2025 11:51:12 pm                                                #
-# Modified   : Tuesday October 21st 2025 07:55:45 pm                                               #
+# Modified   : Wednesday October 22nd 2025 03:23:39 am                                             #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -34,7 +34,6 @@ from valuation.flow.dataprep.task import DataPrepTask, DataPrepTaskConfig, DataP
 from valuation.flow.validation import Validation
 from valuation.infra.file.dataset import DatasetFileSystem
 from valuation.infra.file.io import IOService
-from valuation.infra.store.dataset import DatasetStore
 
 # ------------------------------------------------------------------------------------------------ #
 CONFIG_FILEPATH = Path("config.yaml")
@@ -43,22 +42,28 @@ WEEK_DECODE_TABLE_FILEPATH = Path("reference/week_decode_table.csv")
 
 # ------------------------------------------------------------------------------------------------ #
 REQUIRED_COLUMNS_INGEST = {
-    "CATEGORY": "string",
-    "STORE": "Int64",
-    "UPC": "Int64",
-    "WEEK": "Int64",
-    "QTY": "Int64",
-    "MOVE": "Int64",
-    "OK": "Int64",
-    "SALE": "string",
-    "PRICE": "float64",
-    "PROFIT": "float64",
-    "YEAR": "Int64",
-    "START": "datetime64[ns]",
-    "END": "datetime64[ns]",
+    "category": "string",
+    "store": "Int64",
+    "upc": "Int64",
+    "week": "Int64",
+    "qty": "Int64",
+    "move": "Int64",
+    "ok": "Int64",
+    "sale": "string",
+    "price": "float64",
+    "profit": "float64",
+    "year": "Int64",
+    "start": "datetime64[ns]",
+    "end": "datetime64[ns]",
 }
 
-NON_NEGATIVE_COLUMNS_INGEST = ["QTY", "MOVE", "PRICE", "PROFIT"]
+NON_NEGATIVE_COLUMNS_INGEST = ["qty", "move", "price"]
+
+
+# ------------------------------------------------------------------------------------------------ #
+@dataclass
+class IngestSalesDataTaskResult(DataPrepTaskResult):
+    """Holds the results of the IngestSalesDataTask execution."""
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -83,25 +88,23 @@ class IngestSalesDataTask(DataPrepTask):
 
     """
 
+    _config: IngestSalesDataTaskConfig
+    _result: type[IngestSalesDataTaskResult]
+
     def __init__(
         self,
         config: IngestSalesDataTaskConfig,
-        file_system: type[DatasetFileSystem] = DatasetFileSystem,
-        dataset_store: DatasetStore = DatasetStore,
-        io: IOService = IOService,
+        result: type[IngestSalesDataTaskResult] = IngestSalesDataTaskResult,
         validation: Optional[Validation] = None,
+        file_system: type[DatasetFileSystem] = DatasetFileSystem,
+        io: IOService = IOService,
     ) -> None:
         """Initializes the ingestion task with the provided configuration."""
-        super().__init__(validation=validation)
+        super().__init__(config=config, validation=validation, result=result)
 
-        self._config = config
-        self._dataset_store = dataset_store
         self._io = io
         self._file_system = file_system()
-
-    @property
-    def config(self) -> IngestSalesDataTaskConfig:
-        return self._config
+        self._result = result
 
     def _execute(self, df: pd.DataFrame, category: str, week_dates: pd.DataFrame) -> pd.DataFrame:
         """Runs the ingestion process on the provided DataFrame.
@@ -116,13 +119,15 @@ class IngestSalesDataTask(DataPrepTask):
             pd.DataFrame: The processed sales data with added category and date information.
         """
         # Add category and dates to the data
-        return self._add_category(df=df, category=category).pipe(
+        df_out = self._add_category(df=df, category=category).pipe(
             self._add_dates, week_dates=week_dates
         )
+        # Convert column names to lowercase
+        df_out.columns = [col.lower() for col in df_out.columns]
 
-    def run(
-        self, dataset: Optional[Dataset] = None, force: bool = False
-    ) -> Optional[DataPrepTaskResult]:
+        return df_out
+
+    def run(self, dataset: Optional[Dataset] = None) -> Optional[DataPrepTaskResult]:
         """Executes the sales data ingestion task.
 
         Args:
@@ -136,23 +141,11 @@ class IngestSalesDataTask(DataPrepTask):
         logger.debug(f"Starting task: {self.task_name}")
 
         # Initialize the result object and start the task
-        result = DataPrepTaskResult(task_name=self.task_name, config=self._config)
+        result = self._result(
+            task_name=self.__class__.__name__, dataset_name=self._config.target.name
+        )
+
         result.start_task()
-
-        # # Check if output dataset already exists
-        if self._dataset_store.exists(dataset_id=self._config.target.id) and not force:
-            logger.debug(
-                f"Dataset {self._config.target.label} already exists in the store. Skipping ingestion."
-            )
-            dataset_out = self._dataset_store.get(passport=self._config.target)
-            result.status_obj = Status.SKIPPED
-            result.end_task()
-            logger.info(result)
-            result.dataset = dataset_out  # type: ignore
-            return result
-
-        # Remove dataset if it exists
-        self._dataset_store.remove(passport=self._config.target)
 
         sales_datasets = []
         try:
@@ -198,8 +191,18 @@ class IngestSalesDataTask(DataPrepTask):
                 logger.debug(
                     f"Ingested category '{category}' from file '{filename}' with {len(category_df)} records."
                 )
+                # Validate the result
+                if not self._validation.validate(
+                    data=category_df, classname=self.__class__.__name__
+                ):
+                    result.status_obj = Status.FAIL
+                else:
+                    result.status_obj = Status.SUCCESS
 
                 sales_datasets.append(category_df)
+
+            # Add the validation result to the result object
+            result.validation = self._validation
 
             # Concatenate all datasets
             concat_df = pd.concat(sales_datasets, ignore_index=True)
@@ -214,22 +217,14 @@ class IngestSalesDataTask(DataPrepTask):
             # Add the dataset to the result object and validate
             result.dataset = dataset_out
 
-            # Validate the result
-            if not self._validation.validate(
-                data=result.dataset.data, classname=self.__class__.__name__
-            ):
-                result.status_obj = Status.FAIL
-                raise ValueError("Data validation failed.")
-            else:
-                result.end_task()
-                logger.info(result)
-                logger.info(f"Saved ingested dataset {dataset_out.passport.label} to the store.")
-                return result
+            result.end_task()
+            logger.info(result)
+            return result
 
         except Exception as e:
             logger.critical(f"Task {self.task_name} failed with exception: {e}")
             result.status_obj = Status.FAIL
-            raise e
+            result.end_task()
 
     def _add_category(self, df: pd.DataFrame, category: str) -> pd.DataFrame:
         """Adds a category column to the DataFrame.

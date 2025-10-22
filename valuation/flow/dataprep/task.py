@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday October 10th 2025 02:27:30 am                                                #
-# Modified   : Tuesday October 21st 2025 06:43:22 pm                                               #
+# Modified   : Wednesday October 22nd 2025 03:23:00 am                                             #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -19,7 +19,7 @@
 """Base classes for data preparation tasks."""
 from __future__ import annotations
 
-from typing import Optional, cast
+from typing import Optional
 
 from abc import abstractmethod
 from dataclasses import dataclass, field
@@ -32,13 +32,14 @@ from valuation.asset.identity.dataset import DatasetPassport
 from valuation.core.state import Status
 from valuation.flow.base.task import Task, TaskConfig, TaskResult
 from valuation.flow.validation import Validation
-from valuation.infra.store.dataset import DatasetStore
 
 
 # ------------------------------------------------------------------------------------------------ #
 @dataclass
 class DataPrepTaskConfig(TaskConfig):
     """Base configuration class for tasks."""
+
+    target: DatasetPassport
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -71,8 +72,28 @@ class DataPrepTaskResult(TaskResult):
 
 # ------------------------------------------------------------------------------------------------ #
 class DataPrepTask(Task):
-    def __init__(self, validation: Optional[Validation] = None) -> None:
+    def __init__(
+        self,
+        config: DataPrepTaskConfig,
+        result: type[DataPrepTaskResult] = DataPrepTaskResult,
+        validation: Optional[Validation] = None,
+    ) -> None:
+        super().__init__()
         self._validation = validation if validation else Validation()
+        self._config = config
+        self._result = result
+
+    @property
+    def config(self) -> DataPrepTaskConfig:
+        return self._config
+
+    @property
+    def validation(self) -> Validation:
+        return self._validation
+
+    @property
+    def result(self) -> DataPrepTaskResult:
+        return self._result  # type: ignore
 
     @abstractmethod
     def _execute(self, df: pd.DataFrame, **kwargs) -> Dataset:
@@ -115,24 +136,17 @@ class SISODataPrepTaskConfig(DataPrepTaskConfig):
 
 # ------------------------------------------------------------------------------------------------ #
 class SISODataPrepTask(DataPrepTask):
+
+    _config: SISODataPrepTaskConfig
+    _result: type[DataPrepTaskResult]
+
     def __init__(
         self,
         config: SISODataPrepTaskConfig,
-        dataset_store: DatasetStore = DatasetStore,
+        result: type[DataPrepTaskResult] = DataPrepTaskResult,
         validation: Optional[Validation] = None,
     ) -> None:
-        super().__init__(validation=validation)
-        self._config = config
-        self._dataset_store = dataset_store
-
-    @property
-    def config(self) -> SISODataPrepTaskConfig:
-        """Return the task configuration.
-
-        Returns:
-            SISODataPrepTaskConfig: The task configuration.
-        """
-        return self._config
+        super().__init__(config=config, validation=validation, result=result)
 
     @abstractmethod
     def _execute(self, df: pd.DataFrame, **kwargs) -> pd.DataFrame:
@@ -148,32 +162,27 @@ class SISODataPrepTask(DataPrepTask):
             pd.DataFrame: The processed output DataFrame.
         """
 
-    def run(self, dataset: Dataset, force: bool = False) -> DataPrepTaskResult:
+    def run(self, dataset: Dataset) -> DataPrepTaskResult:
 
-        # Initialize the result object and start the task
-        result = DataPrepTaskResult(task_name=self.task_name, config=self._config)
+        # Initialize the self._result object and start the task
+        result = self._result(
+            task_name=self.__class__.__name__, dataset_name=self._config.target.name
+        )
         result.start_task()
 
-        # Check if output already exists to potentially skip processing.
-        if self._dataset_store.exists(dataset_id=self._config.target.id) and not force:
-            dataset_out = self._dataset_store.get(passport=self._config.target)
-            result.status_obj = Status.SKIPPED
-            result.end_task()
-            logger.info(result)
-            result.dataset = dataset_out
-            return result
+        result.status_obj = Status.RUNNING
+
         try:
-            self._dataset_store.remove(passport=self._config.target)
 
             # 1. Capture the size of the input dataset.
-            result.records_in = cast(int, dataset.nrows)
+            result.records_in = dataset.nrows
 
             # 2. Execute the task
             df_out = self._execute(df=dataset.data)
 
             # 3. Create the output dataset object and count output records.
             result.dataset = Dataset(passport=self._config.target, df=df_out)
-            result.records_out = cast(int, result.dataset.nrows)
+            result.records_out = result.dataset.nrows
 
             # 4. Validate the result
             if not self._validation.validate(
@@ -181,13 +190,17 @@ class SISODataPrepTask(DataPrepTask):
                 classname=self.__class__.__name__,
             ):
                 result.status_obj = Status.FAIL
-                raise ValueError("Data validation failed.")
+            else:
+                result.status_obj = Status.SUCCESS
+            result.validation = self._validation
+
+            result.end_task()
+            logger.info(result)
+            return result
 
         except Exception as e:
             result.status_obj = Status.FAIL
             logger.exception(f"An error occurred during task execution: \n{e}")
-
-        finally:
             result.end_task()
             logger.info(result)
             return result

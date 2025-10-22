@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Wednesday October 8th 2025 02:52:13 pm                                              #
-# Modified   : Tuesday October 21st 2025 02:20:20 pm                                               #
+# Modified   : Tuesday October 21st 2025 08:37:22 pm                                               #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -45,7 +45,7 @@ class DatasetPassport(Passport):
         description: str,
         entity: Entity,
         stage: DatasetStage,
-        file_format: FileFormat,
+        file_format: Optional[FileFormat] = None,
         read_kwargs: Optional[Dict[str, str]] = None,
         write_kwargs: Optional[Dict[str, str]] = None,
     ) -> DatasetPassport:

@@ -11,23 +11,21 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Saturday October 18th 2025 10:52:13 pm                                              #
-# Modified   : Tuesday October 21st 2025 06:48:41 pm                                               #
+# Modified   : Wednesday October 22nd 2025 02:14:58 am                                             #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
 # ================================================================================================ #
 """Module for filtering sales data to remove partial years."""
-from typing import Optional, cast
+from typing import Optional
 
 from dataclasses import dataclass
 
 import pandas as pd
 
 from valuation.core.dataclass import DataClass
-from valuation.flow.dataprep.task import SISODataPrepTask
+from valuation.flow.dataprep.task import DataPrepTaskResult, SISODataPrepTask
 from valuation.flow.validation import Validation
-from valuation.infra.file.io import IOService
-from valuation.infra.store.dataset import DatasetStore
 
 # ------------------------------------------------------------------------------------------------ #
 REQUIRED_COLUMNS_FILTER = {
@@ -42,6 +40,14 @@ REQUIRED_COLUMNS_FILTER = {
     "gross_margin_pct": "float64",
 }
 NON_NEGATIVE_COLUMNS_FILTER = ["revenue", "gross_profit", "gross_margin_pct"]
+
+
+# ------------------------------------------------------------------------------------------------ #
+@dataclass
+class FilterPartialYearsTaskResult(DataPrepTaskResult):
+    """Holds the results of the FilterPartialYearsTask execution."""
+
+
 # ------------------------------------------------------------------------------------------------ #
 
 
@@ -59,16 +65,14 @@ class FilterPartialYearsTaskConfig(DataClass):
 # ------------------------------------------------------------------------------------------------ #
 class FilterPartialYearsTask(SISODataPrepTask):
 
+    _config: FilterPartialYearsTaskConfig
+
     def __init__(
         self,
         config: FilterPartialYearsTaskConfig,
-        dataset_store: DatasetStore,
-        io: type[IOService] = IOService,
         validation: Optional[Validation] = None,
     ) -> None:
-        super().__init__(config=config, dataset_store=dataset_store, validation=validation)
-
-        self._io = io
+        super().__init__(config=config, validation=validation)
 
     def _execute(self, df: pd.DataFrame) -> pd.DataFrame:
         """Executes the filtering of partial years.
@@ -84,10 +88,7 @@ class FilterPartialYearsTask(SISODataPrepTask):
         # 1. Group by year and count the number of unique weeks in each group
         weeks_per_year = df.groupby("year")["week"].nunique()
 
-        # 2. Cast the config object back to its proper type
-        self._config = cast(FilterPartialYearsTaskConfig, self._config)
-
-        # 3. Filter to get a sorted list of years that have more than min_weeks of data
+        # 2. Filter to get a sorted list of years that have more than min_weeks of data
         years = weeks_per_year[weeks_per_year >= self._config.min_weeks].index.tolist()
 
         # 3. Filter the original DataFrame to include only rows from the full years

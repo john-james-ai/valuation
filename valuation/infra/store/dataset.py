@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday October 17th 2025 11:19:18 pm                                                #
-# Modified   : Tuesday October 21st 2025 07:08:26 pm                                               #
+# Modified   : Tuesday October 21st 2025 08:44:27 pm                                               #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -36,7 +36,7 @@ class DatasetStore(AssetStoreBase):
 
     Initializes the AssetStoreBase with a DatasetFileSystem.
 
-    Attributes:
+    Args:
         filesystem (DatasetFileSystem): The filesystem helper used by the base store.
     """
 
@@ -62,10 +62,19 @@ class DatasetStore(AssetStoreBase):
 
     def add(self, dataset: Dataset, overwrite: bool = False) -> None:
         """Add a dataset to the store.
+
+        Saves the dataset passport and dataset data to the configured filesystem.
+
         Args:
             dataset (Dataset): The dataset instance to add.
-            overwrite (bool, optional): If True, overwrite an existing dataset with the same name.
-                Defaults to False.
+            overwrite (bool): If True, overwrite an existing dataset with the same name. Defaults to False.
+
+        Returns:
+            None
+
+        Raises:
+            FileExistsError: If the dataset already exists and overwrite is False.
+            RuntimeError: If operation disallowed in current MODE (e.g., modifying raw data in prod).
         """
         if MODE == "prod" and str(dataset.passport.stage) == "raw":
             raise RuntimeError(
@@ -92,22 +101,32 @@ class DatasetStore(AssetStoreBase):
         logger.debug(f"Saved dataset data for {dataset.passport.label} to the store.")
 
     def get(self, passport: DatasetPassport) -> Dataset:
-        """Retrieve a dataset from the store by its ID or Passport.
+        """Retrieve a dataset from the store by its passport.
+
         Args:
-            id_or_passport (Union[DatasetID, DatasetPassport]): The unique identifier or passport of the dataset.
+            passport (DatasetPassport): The passport of the dataset to retrieve.
+
         Returns:
-            Optional[Dataset]: The retrieved Dataset instance, or None if not found.
+            Dataset: The retrieved Dataset instance.
         """
         # Instantiate the appropriate asset type
         dataset = Dataset(passport=passport)
         return dataset
 
     def remove(self, passport: DatasetPassport, **kwargs) -> None:
-        """Remove a dataset from the store by its ID.
+        """Remove a dataset from the store by its passport.
+
+        Deletes both the dataset data file (if present) and its passport.
+
         Args:
-            dataset_id (DatasetID): The unique identifier of the dataset.
+            passport (DatasetPassport): The passport of the dataset to remove.
+            **kwargs: Additional backend-specific keyword arguments (ignored by base).
+
         Returns:
             None
+
+        Raises:
+            RuntimeError: If deletion of raw data is disallowed in current MODE.
         """
 
         if str(MODE).lower() == "prod" and str(passport.stage) == "raw":
@@ -123,10 +142,12 @@ class DatasetStore(AssetStoreBase):
         self._remove_file(filepath=passport_filepath)
 
     def exists(self, dataset_id: DatasetID, **kwargs) -> bool:
-        """Check if a dataset exists in the store by its ID or Passport.
+        """Check if a dataset exists in the store by its ID.
+
         Args:
-            id_or_passport (Union[DatasetID, DatasetPassport]): The unique identifier or passport of
-                the dataset.
+            dataset_id (DatasetID): The unique identifier of the dataset (id component of passport).
+            **kwargs: Additional backend-specific keyword arguments (ignored by base).
+
         Returns:
             bool: True if the dataset exists, False otherwise.
         """

@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Tuesday October 14th 2025 10:53:05 pm                                               #
-# Modified   : Tuesday October 21st 2025 11:05:20 am                                               #
+# Modified   : Wednesday October 22nd 2025 12:02:25 am                                             #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -26,7 +26,6 @@ from dataclasses import dataclass, field
 from datetime import datetime
 
 from loguru import logger
-import pandas as pd
 
 from valuation.core.dataclass import DataClass
 from valuation.core.state import Status
@@ -68,8 +67,12 @@ class PipelineResult(DataClass):
         return self
 
     def end_pipeline(self) -> None:
-        results = [result.to_dict() for result in self.task_results]
-        print(pd.DataFrame(results))
+        self.status = self.status_obj.value[0]
+        self.ended = datetime.now()
+        if self.started:
+            self.elapsed = (self.ended - self.started).total_seconds()
+        else:
+            self.elapsed = None
 
 
 # ------------------------------------------------------------------------------------------------ #
