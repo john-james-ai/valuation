@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday October 12th 2025 11:51:12 pm                                                #
-# Modified   : Wednesday October 22nd 2025 03:23:39 am                                             #
+# Modified   : Wednesday October 22nd 2025 04:26:59 am                                             #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -198,6 +198,8 @@ class IngestSalesDataTask(DataPrepTask):
                     result.status_obj = Status.FAIL
                 else:
                     result.status_obj = Status.SUCCESS
+                result.num_errors += self._validation.num_errors
+                result.num_warnings += self._validation.num_warnings
 
                 sales_datasets.append(category_df)
 

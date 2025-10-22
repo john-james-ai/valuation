@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Tuesday October 14th 2025 10:53:05 pm                                               #
-# Modified   : Wednesday October 22nd 2025 03:22:09 am                                             #
+# Modified   : Wednesday October 22nd 2025 04:53:22 am                                             #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -47,6 +47,8 @@ class DataPrepPipelineResult(PipelineResult):
     """Holds the results of a pipeline execution."""
 
     validation: Dict[str, Validation] = field(default_factory=dict)
+    num_errors: int = 0
+    num_warnings: int = 0
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -122,6 +124,9 @@ class DataPrepPipeline(Pipeline):
                         pipeline_result.status_obj = Status.FAIL
                         task_result.validation.report()
                         break
+
+                    pipeline_result.num_errors += task_result.num_errors
+                    pipeline_result.num_warnings += task_result.num_warnings
 
                     # If persist is True, save the intermediate dataset
                     if persist and task_result.validation.is_valid:

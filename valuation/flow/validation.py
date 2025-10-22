@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 16th 2025 08:29:37 pm                                              #
-# Modified   : Wednesday October 22nd 2025 03:44:16 am                                             #
+# Modified   : Wednesday October 22nd 2025 04:58:04 am                                             #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -19,9 +19,10 @@
 """Module for data validation results."""
 from __future__ import annotations
 
-from typing import Dict, List
+from typing import DefaultDict, Dict, List
 
 from abc import ABC, abstractmethod
+from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
 
@@ -29,6 +30,7 @@ from loguru import logger
 import pandas as pd
 
 from valuation.asset.dataset.base import DTYPES
+from valuation.core.validation import Severity
 from valuation.infra.file.io import IOService
 
 
@@ -38,6 +40,8 @@ class Validation:
     def __init__(self) -> None:
         self._validators = {}
         self._is_valid = True
+        self._num_errors = 0
+        self._num_warnings = 0
 
     @property
     def is_valid(self) -> bool:
@@ -47,6 +51,24 @@ class Validation:
             bool: True if all validations passed, False otherwise.
         """
         return self._is_valid
+
+    @property
+    def num_errors(self) -> int:
+        """Returns the total number of validation errors.
+
+        Returns:
+            int: Number of validation errors.
+        """
+        return self._num_errors
+
+    @property
+    def num_warnings(self) -> int:
+        """Returns the total number of validation warnings.
+
+        Returns:
+            int: Number of validation warnings.
+        """
+        return self._num_warnings
 
     @property
     def validators(self) -> Dict[str, Validator]:
@@ -84,6 +106,8 @@ class Validation:
             validator.validate(data=data, classname=classname)
             if not validator.is_valid:
                 self._is_valid = False
+            self._num_errors += validator.num_errors
+            self._num_warnings += validator.num_warnings
         return self._is_valid
 
     def report(self) -> None:
@@ -104,7 +128,7 @@ class Validator(ABC):
         _classname (Optional[str]): Last validated class name.
         _is_valid (bool): Whether last validation passed.
         _num_errors (int): Count of failures recorded.
-        _error_records (Dict[str, Dict[str, pd.DataFrame]]): Per-class failure anomaly_types and DataFrames.
+        _anomaly_records (Dict[str, Dict[str, pd.DataFrame]]): Per-class failure anomaly_types and DataFrames.
         _messages (List[str]): General validation messages.
     """
 
@@ -113,8 +137,16 @@ class Validator(ABC):
         self._is_valid = True
         self._num_errors = 0
         self._num_warnings = 0
-        self._anomalies: Dict[str, Dict[str, Dict[str, Dict[str, Dict[str, int]]]]] = {}
-        self._anomaly_records: Dict[str, Dict[str, Dict[str, Dict[str, pd.DataFrame]]]] = {}
+        self._anomalies = []
+        self._anomaly_records: DefaultDict[
+            str, DefaultDict[str, DefaultDict[str, DefaultDict[str, pd.DataFrame]]]
+        ] = defaultdict(  # Level 1: classname
+            lambda: defaultdict(  # Level 2: severity
+                lambda: defaultdict(  # Level 3: validator_name
+                    lambda: defaultdict(pd.DataFrame)  # Level 4: anomaly_type
+                )
+            )
+        )
 
     @property
     def is_valid(self) -> bool:
@@ -182,59 +214,78 @@ class Validator(ABC):
         if self._is_valid:
             logger.debug(f"{self.__class__.__name__} validation passed. No issues found.")
         else:
-            errors = []
-            for classname, validator in self._anomalies.items():
-                for validator_name, error_dict in validator.items():
-                    for anomaly_type, column in error_dict.items():
-                        for column, count in column.items():
-                            errors.append(
-                                {
-                                    "classname": classname,
-                                    "validator": validator_name,
-                                    "anomaly_type": anomaly_type,
-                                    "column": column,
-                                    "count": count,
-                                }
-                            )
-            if errors:
-                error_df = pd.DataFrame(errors)
+            anomalies = pd.DataFrame(self._anomalies)
+            warnings = anomalies[anomalies["severity"] == str(Severity.WARNING)]
+            if not warnings.empty:
+                warning_df = pd.DataFrame(warnings)
                 logger.info(
-                    f"\tValidation Report for   {self.__class__.__name__}:\n{error_df.to_string(index=False)}"
+                    f"\tValidation Warning Report for   {self.__class__.__name__}:\n{warning_df.to_string(index=False)}"
                 )
 
-    def _log_error_records(self) -> None:
+            errors = anomalies[anomalies["severity"] == str(Severity.ERROR)]
+            if not errors.empty:
+                error_df = pd.DataFrame(errors)
+                logger.error(
+                    f"\tValidation Error Report for {self.__class__.__name__}:\n{error_df.to_string(index=False)}"
+                )
+
+    def _log_anomaly_records(self) -> None:
         """Log failed record DataFrames to CSV files for each anomaly_type.
 
         Returns:
             None
         """
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        for _, anomaly_types in self._anomaly_records.items():
-            for anomaly_type, df in anomaly_types.items():
-                log_filepath = self._get_log_filepath(
-                    anomaly_type=anomaly_type, timestamp=timestamp
-                )
-                logger.debug(
-                    f"Logging failed {len(df)} records for anomaly_type: {anomaly_type} to {log_filepath.name}"
-                )
-                IOService.write(data=df, filepath=log_filepath)
+
+        """Log failed record DataFrames to CSV files for each anomaly_type.
+
+        Returns:
+            None
+        """
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+
+        # 1. Loop through classname
+        for classname, severity_dict in self._anomaly_records.items():
+            # 2. Loop through severity
+            for severity, validator_dict in severity_dict.items():
+                # 3. Loop through validator_name
+                for validator_name, anomaly_type_dict in validator_dict.items():
+                    # 4. Loop through anomaly_type and the DataFrame
+                    for anomaly_type, df in anomaly_type_dict.items():
+
+                        # Only log if there are actual error records
+                        if not df.empty:
+                            # Create a more descriptive/unique filename
+                            log_name = f"{classname}_{severity}_{validator_name}_{anomaly_type}"
+
+                            log_filepath = self._get_log_filepath(
+                                anomaly_type=log_name, timestamp=timestamp
+                            )
+                            logger.debug(
+                                f"Logging {len(df)} records for {log_name} to {log_filepath.name}"
+                            )
+                            IOService.write(data=df, filepath=log_filepath)
 
     def _add_anomalies(
         self, severity: str, classname: str, anomaly_type: str, column: str, count: int
     ) -> None:
 
-        self._is_valid = False
-        self._num_errors += count
-        self._anomalies.setdefault(classname, {})
-        self._anomalies[classname].setdefault(severity, {})
-        self._anomalies[classname][severity].setdefault(self.__class__.__name__, {})
-        self._anomalies[classname][severity][self.__class__.__name__].setdefault(anomaly_type, {})
-        self._anomalies[classname][severity][self.__class__.__name__][anomaly_type].setdefault(
-            column, {}
-        )
-        self._anomalies[classname][severity][self.__class__.__name__][anomaly_type][column] += count
+        self._is_valid = self._is_valid and severity != str(Severity.ERROR)
+        self._num_errors += count if severity == str(Severity.ERROR) else 0
+        self._num_warnings += count if severity == str(Severity.WARNING) else 0
+        anomaly = {
+            "severity": severity,
+            "classname": classname,
+            "validator": self.__class__.__name__,
+            "anomaly_type": anomaly_type,
+            "column": column,
+            "count": count,
+        }
+        self._anomalies.append(anomaly)
 
-    def _add_error_records(self, classname: str, anomaly_type: str, records: pd.DataFrame) -> None:
+    def _add_anomaly_records(
+        self, classname: str, severity: str, anomaly_type: str, records: pd.DataFrame
+    ) -> None:
         """Add failed records for a specific anomaly_type and update failure counts.
 
         Args:
@@ -249,21 +300,13 @@ class Validator(ABC):
         if records.empty:
             return
 
-        self._is_valid = False
-        self._num_errors += len(records)
-
         validator_name = self.__class__.__name__
 
-        # 2. This gets the dict for {'anomaly_type': pd.DataFrame, ...}
-        #    It creates the classname and validator_name keys if they don't exist.
-        error_dict = self._anomaly_records.setdefault(classname, {}).setdefault(validator_name, {})
+        existing_records = self._anomaly_records[classname][severity][validator_name][anomaly_type]
 
-        # 3. Get the existing DataFrame, or an empty one if this is the first time.
-        existing_records = error_dict.setdefault(anomaly_type, pd.DataFrame())
-
-        # 4. Concat and re-assign.
-        #    Use .copy() on records to match the 'store a copy' intent from your original code.
-        error_dict[anomaly_type] = pd.concat([existing_records, records.copy()], ignore_index=True)
+        self._anomaly_records[classname][severity][validator_name][anomaly_type] = pd.concat(
+            [existing_records, records.copy()], ignore_index=True
+        )
 
     def _get_log_filepath(self, anomaly_type: str, timestamp: str | None = None) -> Path:
         """Generate a log file path for failed records and ensure parent directories exist.
@@ -282,7 +325,7 @@ class Validator(ABC):
         file_path = (
             Path("logs")
             / f"dataset.{timestamp}"
-            / "validation_error_records"
+            / "validation_anomaly_records"
             / f"{safe_anomaly_type}.csv"
         )
 
@@ -319,8 +362,13 @@ class MissingColumnValidator(Validator):
         """
         for col in self._required_columns:
             if col not in data.columns:
-                self._add_errors(
-                    classname=classname, anomaly_type="MissingColumn", column=col, count=1
+
+                self._add_anomalies(
+                    classname=classname,
+                    severity=str(Severity.ERROR),
+                    anomaly_type="MissingColumn",
+                    column=col,
+                    count=1,
                 )
                 msg = f"{classname} {self.__class__.__name__} validation found column'{col}' missing in the dataset."
                 logger.debug(msg)
@@ -352,8 +400,13 @@ class ColumnTypeValidator(Validator):
         for col in data.columns:
             dtype = str(data[col].dtype)
             if not dtype == DTYPES[col]:
-                self._add_errors(
-                    classname=classname, anomaly_type="InvalidColumnType", column=col, count=1
+
+                self._add_anomalies(
+                    classname=classname,
+                    severity=str(Severity.ERROR),
+                    anomaly_type="InvalidColumnType",
+                    column=col,
+                    count=1,
                 )
                 msg = f"{classname} {self.__class__.__name__} validation found column '{col}' to have an invalid type '{dtype}'; expected '{DTYPES[col]}'."
                 logger.debug(msg)
@@ -386,15 +439,20 @@ class NonNegativeValidator(Validator):
             if col in data.columns:
                 negative_values = data[data[col] < 0]
                 if not negative_values.empty:
+
                     anomaly_type = "NegativeValue"
-                    self._add_errors(
+                    self._add_anomalies(
                         classname=classname,
+                        severity=str(Severity.WARNING),
                         anomaly_type=anomaly_type,
                         column=col,
                         count=len(negative_values),
                     )
-                    self._add_error_records(
-                        classname=classname, anomaly_type=anomaly_type, records=negative_values
+                    self._add_anomaly_records(
+                        classname=classname,
+                        severity=str(Severity.WARNING),
+                        anomaly_type=anomaly_type,
+                        records=negative_values,
                     )
                     msg = f"{classname} {self.__class__.__name__} validation found {len(negative_values)} rows with negative values in the '{col}' column."
                     logger.debug(msg)
@@ -416,14 +474,18 @@ class RangeValidator(Validator):
         out_of_range = pd.concat([below_min, above_max])
         if not out_of_range.empty:
             anomaly_type = "OutOfRangeValue"
-            self._add_errors(
+            self._add_anomalies(
                 classname=classname,
+                severity=str(Severity.ERROR),
                 anomaly_type=anomaly_type,
                 column=self._column,
                 count=len(out_of_range),
             )
-            self._add_error_records(
-                classname=classname, anomaly_type=anomaly_type, records=out_of_range
+            self._add_anomaly_records(
+                classname=classname,
+                severity=str(Severity.ERROR),
+                anomaly_type=anomaly_type,
+                records=out_of_range,
             )
             msg = f"{classname} {self.__class__.__name__} validation found {len(out_of_range)} rows with out of range values in the '{self._column}' column."
             logger.debug(msg)

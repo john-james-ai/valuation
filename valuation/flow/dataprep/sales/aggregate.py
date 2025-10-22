@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 16th 2025 06:18:02 pm                                              #
-# Modified   : Wednesday October 22nd 2025 03:29:20 am                                             #
+# Modified   : Wednesday October 22nd 2025 04:54:47 am                                             #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -41,7 +41,7 @@ REQUIRED_COLUMNS_AGGREGATE = {
     "gross_margin_pct": "float64",
 }
 
-NON_NEGATIVE_COLUMNS_AGGREGATE = ["revenue"]
+NON_NEGATIVE_COLUMNS_AGGREGATE = ["revenue", "gross_profit", "gross_margin_pct"]
 
 
 # ------------------------------------------------------------------------------------------------ #

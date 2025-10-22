@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday October 10th 2025 02:27:30 am                                                #
-# Modified   : Wednesday October 22nd 2025 03:23:00 am                                             #
+# Modified   : Wednesday October 22nd 2025 04:46:04 am                                             #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -53,6 +53,10 @@ class DataPrepTaskResult(TaskResult):
     records_out: Optional[int] = None
     pct_change: Optional[float] = None
 
+    # Error and Warning counts
+    num_errors: int = 0
+    num_warnings: int = 0
+
     # Validation results
     validation: Validation = field(default_factory=Validation)
 
@@ -72,6 +76,11 @@ class DataPrepTaskResult(TaskResult):
 
 # ------------------------------------------------------------------------------------------------ #
 class DataPrepTask(Task):
+
+    _result: type[DataPrepTaskResult]
+    _config: DataPrepTaskConfig
+    _validation: Validation
+
     def __init__(
         self,
         config: DataPrepTaskConfig,
@@ -190,9 +199,13 @@ class SISODataPrepTask(DataPrepTask):
                 classname=self.__class__.__name__,
             ):
                 result.status_obj = Status.FAIL
+                self._validation.report()
             else:
                 result.status_obj = Status.SUCCESS
+
             result.validation = self._validation
+            result.num_errors = self._validation.num_errors
+            result.num_warnings = self._validation.num_warnings
 
             result.end_task()
             logger.info(result)
