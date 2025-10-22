@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 16th 2025 08:29:37 pm                                              #
-# Modified   : Tuesday October 21st 2025 06:31:24 pm                                               #
+# Modified   : Tuesday October 21st 2025 08:18:42 pm                                               #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -34,14 +34,39 @@ from valuation.infra.file.io import IOService
 
 # ------------------------------------------------------------------------------------------------ #
 class Validation:
+    """Container for a collection of validators and overall validation state.
+
+    Attributes:
+        _validators (Dict[str, Validator]): Mapping of validator names to validator instances.
+        _is_valid (bool): Overall validation flag, True if all validators passed.
+    """
+
     def __init__(self) -> None:
         self._validators = {}
         self._is_valid = True
 
     def add_validator(self, name: str, validator: Validator) -> None:
+        """Register a validator under a name.
+
+        Args:
+            name (str): The name to register the validator under.
+            validator (Validator): The validator instance to register.
+
+        Returns:
+            None
+        """
         self._validators[name] = validator
 
     def validate(self, data: pd.DataFrame, classname: str) -> bool:
+        """Run all registered validators against provided data.
+
+        Args:
+            data (pd.DataFrame): The DataFrame to validate.
+            classname (str): The name of the class being validated (for logging purposes).
+
+        Returns:
+            bool: True if all validators pass, False otherwise.
+        """
         for validator in self._validators.values():
             validator.validate(data=data, classname=classname)
             if not validator.is_valid:
@@ -51,7 +76,15 @@ class Validation:
 
 # ------------------------------------------------------------------------------------------------ #
 class Validator(ABC):
-    """Base class for data validators."""
+    """Base class for data validators.
+
+    Attributes:
+        _classname (Optional[str]): Last validated class name.
+        _is_valid (bool): Whether last validation passed.
+        _num_failures (int): Count of failures recorded.
+        _failed_records (Dict[str, Dict[str, pd.DataFrame]]): Per-class failure reasons and DataFrames.
+        _messages (List[str]): General validation messages.
+    """
 
     def __init__(self) -> None:
         self._classname = None
@@ -62,19 +95,28 @@ class Validator(ABC):
 
     @property
     def is_valid(self) -> bool:
-        """Indicates whether the last validation was successful."""
+        """Indicates whether the last validation was successful.
+
+        Returns:
+            bool: True if last validation passed, False otherwise.
+        """
         return self._is_valid
 
     @property
     def num_failures(self) -> int:
-        """Returns the number of failures from the last validation."""
+        """Returns the number of failures from the last validation.
+
+        Returns:
+            int: Number of failures recorded.
+        """
         return self._num_failures
 
     @property
     def messages(self) -> str:
-        """
-        Generates a summary of all validation messages, combining general messages
-        and a count-based summary of record failures.
+        """Generate a summary string combining general messages and record-level summaries.
+
+        Returns:
+            str: The consolidated validation messages and summaries.
         """
         # 1. Start with general messages
         all_messages = self._messages[:]  # Make a copy
@@ -101,29 +143,47 @@ class Validator(ABC):
         Args:
             data (pd.DataFrame): The DataFrame to validate.
             classname (str): The name of the class being validated (for logging purposes).
+
+        Returns:
+            None
         """
         pass
 
     def validate(self, data: pd.DataFrame, classname: str) -> bool:
+        """Public method to validate data and generate a report.
+
+        Args:
+            data (pd.DataFrame): The DataFrame to validate.
+            classname (str): The name of the class being validated (for logging purposes).
+
+        Returns:
+            bool: True if validation passed, False otherwise.
+        """
+        logger.debug(f"Validating data for class {classname}...")
         self._validate(data=data, classname=classname)
-        self.report()
+        self.report(classname=classname)
         return self._is_valid
 
-    def report(self) -> None:
-        """
-        Prints the validation report to the console.
+    def report(self, classname: str) -> None:
+        """Print or log the validation report for a given class.
+
+        Args:
+            classname (str): The name of the class for which the report is generated.
+
+        Returns:
+            None
         """
         if self._is_valid:
-            logger.info(f"Validation Report for {self._classname}: No issues found.")
+            logger.info(f"Validation Report for {classname}: No issues found.")
         else:
-            logger.info(f"Validation Report for {self._classname}:\n{self.messages}")
+            logger.info(f"Validation Report for {classname}:\n{self.messages}")
             self.log_failed_records()
 
     def log_failed_records(self) -> None:
-        """
-        Logs the failed records for each reason using print statements.
-        This is a simple way to output the failures; in a real application,
-        you might want to use a logging framework or write to a file.
+        """Log failed record DataFrames to CSV files for each reason.
+
+        Returns:
+            None
         """
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         for self._classname, reasons in self._failed_records.items():
@@ -135,9 +195,13 @@ class Validator(ABC):
                 IOService.write(data=df, filepath=log_filepath)
 
     def add_message(self, message: str) -> None:
-        """
-        Adds a general validation message (e.g., 'Missing file') that isn't tied
-        to specific records. This always indicates a failure.
+        """Add a general (non-record) validation message and mark validation as failed.
+
+        Args:
+            message (str): Message describing the validation issue.
+
+        Returns:
+            None
         """
         self._is_valid = False
         self._num_failures += 1
@@ -147,12 +211,14 @@ class Validator(ABC):
         # If a message relates to a failure count, the user must update it separately.
 
     def add_failed_records(self, reason: str, records: pd.DataFrame) -> None:
-        """
-        Adds failed records for a specific reason.
+        """Add failed records for a specific reason and update failure counts.
 
         Args:
             reason (str): The reason for failure.
             records (pd.DataFrame): The DataFrame containing the failed records.
+
+        Returns:
+            None
         """
         self._is_valid = False
         self._num_failures += len(records)
@@ -171,15 +237,14 @@ class Validator(ABC):
             )
 
     def _get_log_filepath(self, reason: str, timestamp: str | None = None) -> Path:
-        """Generates a log file path for failed records and ensures parent directories exist.
+        """Generate a log file path for failed records and ensure parent directories exist.
 
         Args:
             reason (str): The reason for failure used to name the file.
-
-            timestamp (str | None): Timestamp string to include in the directory name. If None, the current timestamp is used.
+            timestamp (str | None): Timestamp string to include in the directory name. If None, current timestamp is used.
 
         Returns:
-            pathlib.Path: Path to the log file with parent directories created.
+            Path: Path to the log file with parent directories created.
         """
         if timestamp is None:
             timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -203,18 +268,27 @@ class Validator(ABC):
 
 # ------------------------------------------------------------------------------------------------ #
 class MissingColumnValidator(Validator):
-    """Validator for DataFrame columns."""
+    """Validator ensuring required columns are present.
+
+    Args:
+        required_columns (List[str]): List of column names that must be present in the DataFrame.
+    """
 
     def __init__(self, required_columns: List[str]) -> None:
         super().__init__()
         self._required_columns = required_columns
 
     def _validate(self, data: pd.DataFrame, classname: str) -> None:
-        """Validates that all required columns are present in the DataFrame.
+        """Validate that all required columns are present.
 
         Args:
             data (pd.DataFrame): The DataFrame to validate.
+            classname (str): The name of the class being validated (for logging purposes).
+
+        Returns:
+            None
         """
+        logger.debug(f"\tValidating required columns for class {classname}.")
         for col in self._required_columns:
             if col not in data.columns:
                 message = f"Class: {classname}: Required column {col} is missing from the dataset."
@@ -223,19 +297,28 @@ class MissingColumnValidator(Validator):
 
 # ------------------------------------------------------------------------------------------------ #
 class ColumnTypeValidator(Validator):
-    """Validator for DataFrame column data types."""
+    """Validator checking that columns match expected dtypes.
+
+    Args:
+        column_types (Dict[str, type]): Mapping from column name to expected Python type.
+    """
 
     def __init__(self, column_types: Dict[str, type]) -> None:
         super().__init__()
         self._column_types = column_types
 
     def _validate(self, data: pd.DataFrame, classname: str) -> None:
-        """Validates that columns in the DataFrame have the expected data types.
+        """Validate that columns have expected data types.
 
         Args:
             data (pd.DataFrame): The DataFrame to validate.
             classname (str): The name of the class being validated (for logging purposes).
+
+        Returns:
+            None
         """
+        logger.debug(f"\tValidating column data types for class {classname}.")
+
         for col in data.columns:
             dtype = str(data[col].dtype)
             if not dtype == DTYPES[col]:
@@ -246,18 +329,28 @@ class ColumnTypeValidator(Validator):
 
 # ------------------------------------------------------------------------------------------------ #
 class NonNegativeColumnValidator(Validator):
+    """Validator ensuring specified columns contain only non-negative values.
+
+    Args:
+        columns (List[str]): List of column names that must be non-negative.
+    """
+
     def __init__(self, columns: List[str]) -> None:
         super().__init__()
 
         self._columns = columns
 
     def _validate(self, data: pd.DataFrame, classname: str) -> None:
-        """Validates that specified columns in the DataFrame contain only non-negative values.
+        """Validate that specified columns contain no negative values.
 
         Args:
             data (pd.DataFrame): The DataFrame to validate.
             classname (str): The name of the class being validated (for logging purposes).
+
+        Returns:
+            None
         """
+        logger.debug(f"\tValidating non-negative values for class {classname}.")
         for col in self._columns:
             if col in data.columns:
                 negative_values = data[data[col] < 0]

@@ -11,16 +11,19 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday October 12th 2025 11:51:12 pm                                                #
-# Modified   : Tuesday October 21st 2025 05:42:45 pm                                               #
+# Modified   : Tuesday October 21st 2025 06:47:43 pm                                               #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
 # ================================================================================================ #
 
+from typing import Optional
+
 from loguru import logger
 import pandas as pd
 
 from valuation.flow.dataprep.task import SISODataPrepTask, SISODataPrepTaskConfig
+from valuation.flow.validation import Validation
 from valuation.infra.store.dataset import DatasetStore
 
 # ------------------------------------------------------------------------------------------------ #
@@ -46,20 +49,28 @@ class CleanSalesDataTask(SISODataPrepTask):
     The ingestion adds category and date information to the raw sales data.
 
     Args:
-        weeks (pd.DataFrame): The week decode table containing start and end dates for each week
-            number.
-
+        config (SISODataPrepTaskConfig): Task configuration.
+        dataset_store (DatasetStore): DatasetStore used to persist/read datasets.
+        validation (Optional[Validation]): Optional Validation instance for data checks.
     """
 
     def __init__(
         self,
         config: SISODataPrepTaskConfig,
         dataset_store: DatasetStore,
+        validation: Optional[Validation] = None,
     ) -> None:
-        super().__init__(config=config, dataset_store=dataset_store)
+        super().__init__(config=config, dataset_store=dataset_store, validation=validation)
 
     def _execute(self, df: pd.DataFrame, **kwargs) -> pd.DataFrame:
+        """Execute the cleaning pipeline on the provided DataFrame.
 
+        Args:
+            df (pd.DataFrame): Input DataFrame to be cleaned.
+
+        Returns:
+            pd.DataFrame: Cleaned DataFrame after all transformations.
+        """
         logger.debug("Cleaning sales data.")
 
         return (
@@ -70,11 +81,11 @@ class CleanSalesDataTask(SISODataPrepTask):
         )
 
     def _remove_invalid_records(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Removes records that do not meet the following criteria:
-        1.  'OK' flag is '1'
-        2.  'PRICE' is greater than 0
-        3.  'MOVE' is greater than 0
-        4.  'QTY' is greater than 0
+        """Removes records that do not meet business criteria:
+        1. 'OK' flag is '1'
+        2. 'PRICE' is greater than 0
+        3. 'MOVE' is greater than 0
+        4. 'QTY' is greater than or equal to 1
 
         Args:
             df (pd.DataFrame): The ingested sales data.
@@ -97,10 +108,11 @@ class CleanSalesDataTask(SISODataPrepTask):
         return df_clean
 
     def _normalize_columns(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Standardizes column names and drops unneeded columns.
+        """Standardize column names and drop unneeded columns.
 
         Args:
             df (pd.DataFrame): The cleaned sales data.
+
         Returns:
             pd.DataFrame: The cleaned sales data with standardized column names.
         """
@@ -115,7 +127,7 @@ class CleanSalesDataTask(SISODataPrepTask):
         return df_clean
 
     def _calculate_revenue(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Calculates transaction-level revenue, accounting for product bundles.
+        """Calculate transaction-level revenue, accounting for product bundles.
 
         Revenue is derived from bundle price, individual units sold, and bundle size.
         The formula used is: revenue = (price * move) / qty.
@@ -132,7 +144,7 @@ class CleanSalesDataTask(SISODataPrepTask):
         return df
 
     def _calculate_gross_profit(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Calculates transaction-level gross profit.
+        """Calculate transaction-level gross profit.
 
         Gross profit is derived from revenue and gross margin percentage.
         The formula used is: gross_profit = revenue * (gross_margin_pct / 100).
@@ -140,6 +152,7 @@ class CleanSalesDataTask(SISODataPrepTask):
         Args:
             df (pd.DataFrame): The cleaned sales data. Must contain lowercase columns
                 'revenue' and 'gross_margin_pct'.
+
         Returns:
             pd.DataFrame: The input DataFrame with an added 'gross_profit' column.
         """

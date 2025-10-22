@@ -11,13 +11,13 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Saturday October 18th 2025 10:52:13 pm                                              #
-# Modified   : Tuesday October 21st 2025 05:42:30 pm                                               #
+# Modified   : Tuesday October 21st 2025 06:48:41 pm                                               #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
 # ================================================================================================ #
 """Module for filtering sales data to remove partial years."""
-from typing import cast
+from typing import Optional, cast
 
 from dataclasses import dataclass
 
@@ -25,6 +25,7 @@ import pandas as pd
 
 from valuation.core.dataclass import DataClass
 from valuation.flow.dataprep.task import SISODataPrepTask
+from valuation.flow.validation import Validation
 from valuation.infra.file.io import IOService
 from valuation.infra.store.dataset import DatasetStore
 
@@ -63,8 +64,9 @@ class FilterPartialYearsTask(SISODataPrepTask):
         config: FilterPartialYearsTaskConfig,
         dataset_store: DatasetStore,
         io: type[IOService] = IOService,
+        validation: Optional[Validation] = None,
     ) -> None:
-        super().__init__(config=config, dataset_store=dataset_store)
+        super().__init__(config=config, dataset_store=dataset_store, validation=validation)
 
         self._io = io
 

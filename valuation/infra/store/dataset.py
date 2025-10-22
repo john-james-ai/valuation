@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday October 17th 2025 11:19:18 pm                                                #
-# Modified   : Tuesday October 21st 2025 02:16:42 pm                                               #
+# Modified   : Tuesday October 21st 2025 07:08:26 pm                                               #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -131,5 +131,4 @@ class DatasetStore(AssetStoreBase):
             bool: True if the dataset exists, False otherwise.
         """
         passport_filepath = self._file_system.get_passport_filepath(dataset_id=dataset_id)  # type: ignore
-
         return passport_filepath.exists()

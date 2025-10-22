@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 9th 2025 07:11:18 pm                                               #
-# Modified   : Tuesday October 21st 2025 06:26:10 pm                                               #
+# Modified   : Tuesday October 21st 2025 08:13:40 pm                                               #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -23,6 +23,7 @@ from typing import Optional
 
 from dataclasses import dataclass
 from pathlib import Path
+import shutil
 
 from loguru import logger
 import pandas as pd
@@ -105,8 +106,11 @@ class FileInfo(DataClass):
             True if the file has been modified since this object was created,
             False otherwise.
         """
-        current_mod_time = self.filepath.stat().st_mtime
-        return current_mod_time > self.modified_timestamp
+        try:
+            current_mod_time = self.filepath.stat().st_mtime
+            return current_mod_time > self.modified_timestamp
+        except Exception:
+            return True
 
     @classmethod
     def from_filepath(cls, filepath: Path | str) -> FileInfo:
@@ -119,13 +123,18 @@ class FileInfo(DataClass):
             A new instance of FileInfo populated with the file's metadata.
         """
         filepath = Path(filepath)
-        stat = filepath.stat()
-        file_size_mb = stat.st_size / (1024 * 1024)
+        try:
+            stat = filepath.stat()
+            file_size_mb = stat.st_size / (1024 * 1024)
 
-        # Use st_birthtime for creation time where available (macOS, some Linux/Windows)
-        # Fall back to st_ctime on other Unix systems.
-        created_timestamp = getattr(stat, "st_birthtime", stat.st_ctime)
-        modified_timestamp = stat.st_mtime
+            # Use st_birthtime for creation time where available (macOS, some Linux/Windows)
+            # Fall back to st_ctime on other Unix systems.
+            created_timestamp = getattr(stat, "st_birthtime", stat.st_ctime)
+            modified_timestamp = stat.st_mtime
+        except Exception:
+            file_size_mb = 0.0
+            created_timestamp = 0.0
+            modified_timestamp = 0.0
 
         return cls(
             filepath=filepath,
@@ -350,8 +359,11 @@ class Dataset(Asset):
         """Deletes the file associated with this Dataset from the filesystem."""
         if not self._asset_filepath:
             raise ValueError("Filepath is not set. No file to delete.")
-        logger.debug(f"Deleting file {self._asset_filepath}")
-        self._asset_filepath.unlink(missing_ok=True)
+        logger.debug(f"Deleting file(s) {self._asset_filepath}")
+        if self._asset_filepath.is_file():
+            self._asset_filepath.unlink(missing_ok=True)
+        else:
+            shutil.rmtree(self._asset_filepath, ignore_errors=True)
         self._fileinfo = None
 
     def exists(self) -> bool:
@@ -398,7 +410,6 @@ class Dataset(Asset):
         # If self._df exists and is not empty, normalize dtypes
         if self._df is not None and not self._df.empty:
             self._df = self._normalize_dtypes(self._df)
-            self.save(overwrite=True)
 
     def _normalize_dtypes(self, df: pd.DataFrame) -> pd.DataFrame:
         """Applies predefined data types to the DataFrame's columns.

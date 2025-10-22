@@ -11,17 +11,20 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 16th 2025 06:18:02 pm                                              #
-# Modified   : Tuesday October 21st 2025 05:42:13 pm                                               #
+# Modified   : Tuesday October 21st 2025 06:48:08 pm                                               #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
 # ================================================================================================ #
 """Module for aggregating sales data to the store-category-week level."""
 
+from typing import Optional
+
 from loguru import logger
 import pandas as pd
 
 from valuation.flow.dataprep.task import DataPrepTaskConfig, SISODataPrepTask
+from valuation.flow.validation import Validation
 from valuation.infra.store.dataset import DatasetStore
 
 # ------------------------------------------------------------------------------------------------ #
@@ -56,8 +59,9 @@ class AggregateSalesDataTask(SISODataPrepTask):
         self,
         config: DataPrepTaskConfig,
         dataset_store: DatasetStore,
+        validation: Optional[Validation] = None,
     ) -> None:
-        super().__init__(config=config, dataset_store=dataset_store)
+        super().__init__(config=config, dataset_store=dataset_store, validation=validation)
 
     def _execute(self, df: pd.DataFrame) -> pd.DataFrame:
         """Runs the ingestion process on the provided DataFrame.

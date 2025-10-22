@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday October 17th 2025 11:19:18 pm                                                #
-# Modified   : Tuesday October 21st 2025 02:10:29 pm                                               #
+# Modified   : Tuesday October 21st 2025 07:29:16 pm                                               #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -21,6 +21,7 @@ from typing import Optional
 
 from abc import abstractmethod
 from pathlib import Path
+import shutil
 
 from loguru import logger
 import pandas as pd
@@ -163,7 +164,10 @@ class AssetStoreBase(AssetStore):
         """
         path = Path(filepath)
         if path.exists():
-            path.unlink()
+            if path.is_file():
+                path.unlink()
+            else:
+                shutil.rmtree(path, ignore_errors=True)
             logger.debug(f"Removed file at '{filepath}'.")
         else:
             logger.debug(

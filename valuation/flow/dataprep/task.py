@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday October 10th 2025 02:27:30 am                                                #
-# Modified   : Tuesday October 21st 2025 05:36:09 pm                                               #
+# Modified   : Tuesday October 21st 2025 06:43:22 pm                                               #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -119,8 +119,9 @@ class SISODataPrepTask(DataPrepTask):
         self,
         config: SISODataPrepTaskConfig,
         dataset_store: DatasetStore = DatasetStore,
+        validation: Optional[Validation] = None,
     ) -> None:
-        super().__init__()
+        super().__init__(validation=validation)
         self._config = config
         self._dataset_store = dataset_store
 

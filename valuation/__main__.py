@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 9th 2025 11:01:16 pm                                               #
-# Modified   : Tuesday October 21st 2025 03:41:31 pm                                               #
+# Modified   : Tuesday October 21st 2025 07:02:45 pm                                               #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -27,15 +27,26 @@ from valuation.core.file import FileFormat
 from valuation.core.stage import DatasetStage
 from valuation.flow.base.pipeline import PipelineConfig, PipelineResult
 from valuation.flow.dataprep.pipeline import DataPrepPipeline
-from valuation.flow.dataprep.sales.aggregate import AggregateSalesDataTask
-from valuation.flow.dataprep.sales.clean import CleanSalesDataTask
+from valuation.flow.dataprep.sales.aggregate import (
+    NON_NEGATIVE_COLUMNS_AGGREGATE,
+    REQUIRED_COLUMNS_AGGREGATE,
+    AggregateSalesDataTask,
+)
+from valuation.flow.dataprep.sales.clean import (
+    NON_NEGATIVE_COLUMNS_CLEAN,
+    REQUIRED_COLUMNS_CLEAN,
+    CleanSalesDataTask,
+)
 from valuation.flow.dataprep.sales.ingest import (
     CONFIG_FILEPATH,
+    NON_NEGATIVE_COLUMNS_INGEST,
+    REQUIRED_COLUMNS_INGEST,
     WEEK_DECODE_TABLE_FILEPATH,
     IngestSalesDataTask,
     IngestSalesDataTaskConfig,
 )
 from valuation.flow.dataprep.task import DataPrepTask, SISODataPrepTaskConfig
+from valuation.flow.validation import ValidationBuilder
 from valuation.infra.loggers import configure_logging
 from valuation.infra.store.dataset import DatasetStore
 
@@ -88,6 +99,15 @@ def get_aggregate_sales_data_task(source: DatasetPassport) -> DataPrepTask:
     Args:
         force (bool): Whether to force reprocessing if the file already exists.
     """
+    # Build a validator for the clean sales data task
+    validation = (
+        ValidationBuilder()
+        .with_column_type_validator(column_types=REQUIRED_COLUMNS_AGGREGATE)
+        .with_missing_column_validator(required_columns=REQUIRED_COLUMNS_AGGREGATE.keys())
+        .with_non_negative_column_validator(NON_NEGATIVE_COLUMNS_AGGREGATE)
+        .build()
+    )
+
     # Create the output DatasetPassport for the aggregated sales data
     passport = DatasetPassport.create(
         name="sales_aggregated",
@@ -107,11 +127,20 @@ def get_aggregate_sales_data_task(source: DatasetPassport) -> DataPrepTask:
     dataset_store = DatasetStore()
 
     # Run the sales data processing task
-    return AggregateSalesDataTask(config=config, dataset_store=dataset_store)
+    return AggregateSalesDataTask(config=config, dataset_store=dataset_store, validation=validation)
 
 
 # ------------------------------------------------------------------------------------------------ #
 def get_clean_sales_data_task(source: DatasetPassport) -> CleanSalesDataTask:
+
+    # Build a validator for the clean sales data task
+    validation = (
+        ValidationBuilder()
+        .with_column_type_validator(column_types=REQUIRED_COLUMNS_CLEAN)
+        .with_missing_column_validator(required_columns=REQUIRED_COLUMNS_CLEAN.keys())
+        .with_non_negative_column_validator(NON_NEGATIVE_COLUMNS_CLEAN)
+        .build()
+    )
 
     # Create the output DatasetPassport for the cleaned sales data
     passport = DatasetPassport.create(
@@ -133,7 +162,7 @@ def get_clean_sales_data_task(source: DatasetPassport) -> CleanSalesDataTask:
     dataset_store = DatasetStore()
 
     # Run the sales data processing task
-    return CleanSalesDataTask(config=config, dataset_store=dataset_store)
+    return CleanSalesDataTask(config=config, dataset_store=dataset_store, validation=validation)
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -143,6 +172,14 @@ def get_ingest_sales_data_task() -> IngestSalesDataTask:
     Args:
         force (bool): Whether to force reprocessing if the file already exists.
     """
+    # Build a validator for the ingest sales data task
+    validation = (
+        ValidationBuilder()
+        .with_column_type_validator(column_types=REQUIRED_COLUMNS_INGEST)
+        .with_missing_column_validator(required_columns=REQUIRED_COLUMNS_INGEST.keys())
+        .with_non_negative_column_validator(NON_NEGATIVE_COLUMNS_INGEST)
+        .build()
+    )
     # Create DatasetPassport for Target Dataset
     passport = DatasetPassport.create(
         name="sales_ingest",
@@ -173,8 +210,8 @@ def get_ingest_sales_data_task() -> IngestSalesDataTask:
     )
     # Instantiate Dataset Store
     dataset_store = DatasetStore()
-    # Run the sales data processing task
-    return IngestSalesDataTask(config=config, dataset_store=dataset_store)
+    # Return the sales data processing task
+    return IngestSalesDataTask(config=config, dataset_store=dataset_store, validation=validation)
 
 
 def run_sales_data_pipeline(force: bool) -> PipelineResult:
@@ -185,8 +222,8 @@ def run_sales_data_pipeline(force: bool) -> PipelineResult:
     """
     # Construct the data preparation pipeline tasks
     ingest_sales_data_task = get_ingest_sales_data_task()
-    clean_sales_data_task = get_clean_sales_data_task(ingest_sales_data_task)  # type: ignore
-    aggregate_sales_data_task = get_aggregate_sales_data_task(clean_sales_data_task)
+    clean_sales_data_task = get_clean_sales_data_task(ingest_sales_data_task.config.target)  # type: ignore
+    aggregate_sales_data_task = get_aggregate_sales_data_task(clean_sales_data_task.config.target)
 
     # Pipeline Configuration
     config = PipelineConfig(name="Sales Data Preparation Pipeline")

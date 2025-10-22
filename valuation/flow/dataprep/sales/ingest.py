@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday October 12th 2025 11:51:12 pm                                                #
-# Modified   : Tuesday October 21st 2025 05:41:37 pm                                               #
+# Modified   : Tuesday October 21st 2025 07:55:45 pm                                               #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -31,6 +31,7 @@ from valuation.core.entity import Entity
 from valuation.core.stage import DatasetStage
 from valuation.core.state import Status
 from valuation.flow.dataprep.task import DataPrepTask, DataPrepTaskConfig, DataPrepTaskResult
+from valuation.flow.validation import Validation
 from valuation.infra.file.dataset import DatasetFileSystem
 from valuation.infra.file.io import IOService
 from valuation.infra.store.dataset import DatasetStore
@@ -88,15 +89,17 @@ class IngestSalesDataTask(DataPrepTask):
         file_system: type[DatasetFileSystem] = DatasetFileSystem,
         dataset_store: DatasetStore = DatasetStore,
         io: IOService = IOService,
+        validation: Optional[Validation] = None,
     ) -> None:
         """Initializes the ingestion task with the provided configuration."""
-        super().__init__()
+        super().__init__(validation=validation)
 
         self._config = config
         self._dataset_store = dataset_store
         self._io = io
         self._file_system = file_system()
 
+    @property
     def config(self) -> IngestSalesDataTaskConfig:
         return self._config
 
@@ -218,18 +221,15 @@ class IngestSalesDataTask(DataPrepTask):
                 result.status_obj = Status.FAIL
                 raise ValueError("Data validation failed.")
             else:
-                self._dataset_store.add(dataset=dataset_out, overwrite=True)
+                result.end_task()
+                logger.info(result)
                 logger.info(f"Saved ingested dataset {dataset_out.passport.label} to the store.")
+                return result
 
         except Exception as e:
             logger.critical(f"Task {self.task_name} failed with exception: {e}")
             result.status_obj = Status.FAIL
             raise e
-
-        finally:
-            result.end_task()
-            logger.info(result)
-            return result
 
     def _add_category(self, df: pd.DataFrame, category: str) -> pd.DataFrame:
         """Adds a category column to the DataFrame.
