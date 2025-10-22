@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday October 17th 2025 11:19:18 pm                                                #
-# Modified   : Tuesday October 21st 2025 07:29:16 pm                                               #
+# Modified   : Wednesday October 22nd 2025 08:55:58 am                                             #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -71,6 +71,15 @@ class AssetStoreBase(AssetStore):
             AssetType: The enum value representing the asset type handled by the store.
         """
         pass
+
+    @property
+    def file_system(self) -> FileSystem:
+        """Get the filesystem helper.
+
+        Returns:
+            FileSystem: The filesystem helper instance.
+        """
+        return self._file_system
 
     @property
     def registry(self) -> pd.DataFrame:

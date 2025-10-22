@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 16th 2025 06:18:02 pm                                              #
-# Modified   : Wednesday October 22nd 2025 04:54:47 am                                             #
+# Modified   : Wednesday October 22nd 2025 11:04:15 am                                             #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -20,12 +20,10 @@
 
 from typing import Optional
 
-from dataclasses import dataclass
-
 from loguru import logger
 import pandas as pd
 
-from valuation.flow.dataprep.task import DataPrepTaskConfig, DataPrepTaskResult, SISODataPrepTask
+from valuation.flow.base.task import Task
 from valuation.flow.validation import Validation
 
 # ------------------------------------------------------------------------------------------------ #
@@ -45,13 +43,7 @@ NON_NEGATIVE_COLUMNS_AGGREGATE = ["revenue", "gross_profit", "gross_margin_pct"]
 
 
 # ------------------------------------------------------------------------------------------------ #
-@dataclass
-class AggregateSalesDataTaskResult(DataPrepTaskResult):
-    """Holds the results of the AggregateSalesDataTask execution."""
-
-
-# ------------------------------------------------------------------------------------------------ #
-class AggregateSalesDataTask(SISODataPrepTask):
+class AggregateSalesDataTask(Task):
     """Aggregates a raw sales data file.
 
     The ingestion adds category and date information to the raw sales data.
@@ -62,27 +54,15 @@ class AggregateSalesDataTask(SISODataPrepTask):
 
     """
 
-    _config: DataPrepTaskConfig
-    _result: type[AggregateSalesDataTaskResult]
-
     def __init__(
         self,
-        config: DataPrepTaskConfig,
-        result: type[AggregateSalesDataTaskResult] = AggregateSalesDataTaskResult,
         validation: Optional[Validation] = None,
     ) -> None:
-        super().__init__(config=config, validation=validation, result=result)
+        super().__init__()
+        self._validation = validation or Validation()
 
-    def _execute(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Runs the ingestion process on the provided DataFrame.
-        Args:
-            data (pd.DataFrame): The raw sales data DataFrame.
-            category (str): The category name to assign to all records in the DataFrame.
+    def run(self, df: pd.DataFrame) -> pd.DataFrame:
 
-        Returns:
-            pd.DataFrame: The processed sales data with added category and date information.
-
-        """
         logger.debug("Aggregating sales data.")
         # 1: Group by store, category, and week, summing revenue and gross profit
         aggregated = (

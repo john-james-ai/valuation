@@ -11,12 +11,12 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 16th 2025 08:29:37 pm                                              #
-# Modified   : Wednesday October 22nd 2025 04:58:04 am                                             #
+# Modified   : Wednesday October 22nd 2025 11:30:13 am                                             #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
 # ================================================================================================ #
-"""Module for data validation results."""
+"""Module for df validation results."""
 from __future__ import annotations
 
 from typing import DefaultDict, Dict, List
@@ -38,7 +38,7 @@ from valuation.infra.file.io import IOService
 class Validation:
 
     def __init__(self) -> None:
-        self._validators = {}
+        self._validators: Dict[str, Validator] = {}
         self._is_valid = True
         self._num_errors = 0
         self._num_warnings = 0
@@ -91,19 +91,19 @@ class Validation:
         """
         self._validators[name] = validator
 
-    def validate(self, data: pd.DataFrame, classname: str) -> bool:
-        """Run all registered validators against provided data.
+    def validate(self, df: pd.DataFrame, classname: str) -> bool:
+        """Run all registered validators against provided df.
 
         Args:
-            data (pd.DataFrame): The DataFrame to validate.
+            df (pd.DataFrame): The DataFrame to validate.
             classname (str): The name of the class being validated (for logging purposes).
 
         Returns:
             bool: True if all validators pass, False otherwise.
         """
-        logger.debug(f"Validating data for class {classname}...")
+        logger.debug(f"Validating df for class {classname}...")
         for validator in self._validators.values():
-            validator.validate(data=data, classname=classname)
+            validator.validate(df=df, classname=classname)
             if not validator.is_valid:
                 self._is_valid = False
             self._num_errors += validator.num_errors
@@ -122,7 +122,7 @@ class Validation:
 
 # ------------------------------------------------------------------------------------------------ #
 class Validator(ABC):
-    """Base class for data validators.
+    """Base class for df validators.
 
     Attributes:
         _classname (Optional[str]): Last validated class name.
@@ -176,11 +176,11 @@ class Validator(ABC):
         return self._num_warnings
 
     @abstractmethod
-    def _validate(self, data: pd.DataFrame, classname: str) -> None:
+    def _validate(self, df: pd.DataFrame, classname: str) -> None:
         """Performs the actual validation logic.
 
         Args:
-            data (pd.DataFrame): The DataFrame to validate.
+            df (pd.DataFrame): The DataFrame to validate.
             classname (str): The name of the class being validated (for logging purposes).
 
         Returns:
@@ -188,18 +188,18 @@ class Validator(ABC):
         """
         pass
 
-    def validate(self, data: pd.DataFrame, classname: str) -> bool:
-        """Public method to validate data and generate a report.
+    def validate(self, df: pd.DataFrame, classname: str) -> bool:
+        """Public method to validate df and generate a report.
 
         Args:
-            data (pd.DataFrame): The DataFrame to validate.
+            df (pd.DataFrame): The DataFrame to validate.
             classname (str): The name of the class being validated (for logging purposes).
 
         Returns:
             bool: True if validation passed, False otherwise.
         """
         logger.debug(f"\tRunning validator {self.__class__.__name__} for class {classname}...")
-        self._validate(data=data, classname=classname)
+        self._validate(df=df, classname=classname)
         return self._is_valid
 
     def report(self) -> None:
@@ -324,7 +324,7 @@ class Validator(ABC):
         safe_anomaly_type = anomaly_type.replace(" ", "_").replace("'", "")
         file_path = (
             Path("logs")
-            / f"dataset.{timestamp}"
+            / f"dfset.{timestamp}"
             / "validation_anomaly_records"
             / f"{safe_anomaly_type}.csv"
         )
@@ -350,18 +350,18 @@ class MissingColumnValidator(Validator):
         super().__init__()
         self._required_columns = required_columns
 
-    def _validate(self, data: pd.DataFrame, classname: str) -> None:
+    def _validate(self, df: pd.DataFrame, classname: str) -> None:
         """Validate that all required columns are present.
 
         Args:
-            data (pd.DataFrame): The DataFrame to validate.
+            df (pd.DataFrame): The DataFrame to validate.
             classname (str): The name of the class being validated (for logging purposes).
 
         Returns:
             None
         """
         for col in self._required_columns:
-            if col not in data.columns:
+            if col not in df.columns:
 
                 self._add_anomalies(
                     classname=classname,
@@ -370,7 +370,7 @@ class MissingColumnValidator(Validator):
                     column=col,
                     count=1,
                 )
-                msg = f"{classname} {self.__class__.__name__} validation found column'{col}' missing in the dataset."
+                msg = f"{classname} {self.__class__.__name__} validation found column'{col}' missing in the dfset."
                 logger.debug(msg)
 
 
@@ -386,19 +386,19 @@ class ColumnTypeValidator(Validator):
         super().__init__()
         self._column_types = column_types
 
-    def _validate(self, data: pd.DataFrame, classname: str) -> None:
-        """Validate that columns have expected data types.
+    def _validate(self, df: pd.DataFrame, classname: str) -> None:
+        """Validate that columns have expected df types.
 
         Args:
-            data (pd.DataFrame): The DataFrame to validate.
+            df (pd.DataFrame): The DataFrame to validate.
             classname (str): The name of the class being validated (for logging purposes).
 
         Returns:
             None
         """
 
-        for col in data.columns:
-            dtype = str(data[col].dtype)
+        for col in df.columns:
+            dtype = str(df[col].dtype)
             if not dtype == DTYPES[col]:
 
                 self._add_anomalies(
@@ -425,19 +425,19 @@ class NonNegativeValidator(Validator):
 
         self._columns = columns
 
-    def _validate(self, data: pd.DataFrame, classname: str) -> None:
+    def _validate(self, df: pd.DataFrame, classname: str) -> None:
         """Validate that specified columns contain no negative values.
 
         Args:
-            data (pd.DataFrame): The DataFrame to validate.
+            df (pd.DataFrame): The DataFrame to validate.
             classname (str): The name of the class being validated (for logging purposes).
 
         Returns:
             None
         """
         for col in self._columns:
-            if col in data.columns:
-                negative_values = data[data[col] < 0]
+            if col in df.columns:
+                negative_values = df[df[col] < 0]
                 if not negative_values.empty:
 
                     anomaly_type = "NegativeValue"
@@ -467,10 +467,10 @@ class RangeValidator(Validator):
         self._min_value = min_value
         self._max_value = max_value
 
-    def _validate(self, data: pd.DataFrame, classname: str) -> None:
+    def _validate(self, df: pd.DataFrame, classname: str) -> None:
 
-        below_min = data[data[self._column] < self._min_value]
-        above_max = data[data[self._column] > self._max_value]
+        below_min = df[df[self._column] < self._min_value]
+        above_max = df[df[self._column] > self._max_value]
         out_of_range = pd.concat([below_min, above_max])
         if not out_of_range.empty:
             anomaly_type = "OutOfRangeValue"
@@ -496,6 +496,9 @@ class ValidationBuilder:
     """Builder for constructing Validation objects with various validators."""
 
     def __init__(self) -> None:
+        self.reset()
+
+    def reset(self) -> None:
         self._validation = Validation()
 
     def with_missing_column_validator(self, required_columns: List[str]) -> ValidationBuilder:
@@ -523,4 +526,6 @@ class ValidationBuilder:
         return self
 
     def build(self) -> Validation:
-        return self._validation
+        validation = self._validation
+        self.reset()
+        return validation

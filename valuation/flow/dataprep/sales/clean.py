@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday October 12th 2025 11:51:12 pm                                                #
-# Modified   : Wednesday October 22nd 2025 02:30:19 am                                             #
+# Modified   : Wednesday October 22nd 2025 11:03:52 am                                             #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -19,16 +19,10 @@
 
 from typing import Optional
 
-from dataclasses import dataclass
-
 from loguru import logger
 import pandas as pd
 
-from valuation.flow.dataprep.task import (
-    DataPrepTaskResult,
-    SISODataPrepTask,
-    SISODataPrepTaskConfig,
-)
+from valuation.flow.base.task import Task
 from valuation.flow.validation import Validation
 
 # ------------------------------------------------------------------------------------------------ #
@@ -41,40 +35,23 @@ REQUIRED_COLUMNS_CLEAN = {
     "end": "datetime64[ns]",
     "revenue": "float64",
     "gross_profit": "float64",
-    "gross_margin_pct": "float64",
 }
 
 NON_NEGATIVE_COLUMNS_CLEAN = ["revenue"]
 
 
 # ------------------------------------------------------------------------------------------------ #
-@dataclass
-class CleanSalesDataTaskResult(DataPrepTaskResult):
-    """Holds the results of the CleanSalesDataTask execution."""
-
-
-# ------------------------------------------------------------------------------------------------ #
-class CleanSalesDataTask(SISODataPrepTask):
-    """Cleans a raw sales data file.
-
-    The ingestion adds category and date information to the raw sales data.
-
-    Args:
-        config (SISODataPrepTaskConfig): Task configuration.
-        validation (Optional[Validation]): Optional Validation instance for data checks.
-    """
-
-    _result: type[CleanSalesDataTaskResult]
+class CleanSalesDataTask(Task):
+    """"""
 
     def __init__(
         self,
-        config: SISODataPrepTaskConfig,
-        result: type[CleanSalesDataTaskResult] = CleanSalesDataTaskResult,
         validation: Optional[Validation] = None,
     ) -> None:
-        super().__init__(config=config, validation=validation, result=result)
+        super().__init__()
+        self._validation = validation if validation else Validation()
 
-    def _execute(self, df: pd.DataFrame, **kwargs) -> pd.DataFrame:
+    def run(self, df: pd.DataFrame, **kwargs) -> pd.DataFrame:
         """Execute the cleaning pipeline on the provided DataFrame.
 
         Args:
@@ -90,6 +67,7 @@ class CleanSalesDataTask(SISODataPrepTask):
             .pipe(self._normalize_columns)
             .pipe(self._calculate_revenue)
             .pipe(self._calculate_gross_profit)
+            .pipe(self._drop_gross_margin_pct)
         )
 
     def _remove_invalid_records(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -107,7 +85,6 @@ class CleanSalesDataTask(SISODataPrepTask):
         Returns:
             pd.DataFrame: The cleaned sales data.
         """
-        logger.debug("Removing invalid records based on business rules.")
         # Define the query string for filtering
         query_string = """
             ok == 1 and \
@@ -130,7 +107,6 @@ class CleanSalesDataTask(SISODataPrepTask):
         Returns:
             pd.DataFrame: The cleaned sales data with standardized column names.
         """
-        logger.debug("Normalizing column names and dropping unneeded columns.")
         df_clean = df.copy()
         # Rename columns for clarity and drop unneeded ones.
         df_clean = (
@@ -152,7 +128,6 @@ class CleanSalesDataTask(SISODataPrepTask):
         Returns:
             pd.DataFrame: DataFrame with an added 'revenue' column.
         """
-        logger.debug("Calculating transaction-level revenue.")
         df["revenue"] = (df["price"] * df["move"]) / df["qty"]
         return df
 
@@ -170,4 +145,16 @@ class CleanSalesDataTask(SISODataPrepTask):
         """
         logger.debug("Calculating transaction-level gross profit.")
         df["gross_profit"] = df["revenue"] * (df["gross_margin_pct"] / 100.0)
+        return df
+
+    def _drop_gross_margin_pct(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Drops the gross margin percentage column from the DataFrame.
+
+        Args:
+            df (pd.DataFrame): The cleaned sales data.
+        Returns:
+            pd.DataFrame: DataFrame without the 'gross_margin_pct' column.
+        """
+
+        df = df.drop(columns=["gross_margin_pct"])
         return df
