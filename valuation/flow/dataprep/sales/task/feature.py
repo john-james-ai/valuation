@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday October 12th 2025 11:51:12 pm                                                #
-# Modified   : Thursday October 23rd 2025 11:01:08 am                                              #
+# Modified   : Thursday October 23rd 2025 12:43:09 pm                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -63,6 +63,6 @@ class FeatureEngineeringTask(DataPrepTask):
         )
         df = df.sort_values(by=["unique_id", "week"]).reset_index(drop=True)
         df = df.rename(columns={"revenue": "y"})
-        df = df.rename(columns={"start": "ds"})
+        df = df.rename(columns={"end": "ds"})
 
         return df[["unique_id", "ds", "y"]]

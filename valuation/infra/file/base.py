@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Saturday October 18th 2025 06:47:58 pm                                              #
-# Modified   : Tuesday October 21st 2025 01:40:32 pm                                               #
+# Modified   : Thursday October 23rd 2025 04:20:34 pm                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -25,7 +25,6 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from valuation.asset.identity.base import ID, Passport
-from valuation.core.entity import Entity
 from valuation.core.stage import Stage
 from valuation.core.types import AssetType
 
@@ -100,11 +99,6 @@ class FileSystem(ABC):
     @abstractmethod
     def get_stage_location(self, stage: Stage, mode: str = MODE) -> Path:
         """Builds the full filepath for an asset stage directory."""
-        pass
-
-    @abstractmethod
-    def get_stage_entity_location(self, stage: Stage, entity: Entity, mode: str = MODE) -> Path:
-        """Builds the full filepath for an asset stage/entity directory."""
         pass
 
     @property

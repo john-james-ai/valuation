@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 23rd 2025 07:02:20 am                                              #
-# Modified   : Thursday October 23rd 2025 11:50:28 am                                              #
+# Modified   : Thursday October 23rd 2025 12:45:23 pm                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -59,7 +59,7 @@ class DensifySalesDataTask(DataPrepTask):
                 and missing revenues filled with 0.0.
         """
         logger.debug("Creating Feature Engineered Dataset.")
-        week_date_lookup = df[["week", "start"]].drop_duplicates()
+        week_date_lookup = df[["week", "end"]].drop_duplicates()
         # Extract required columns
         # Obtain all unique stores, categories, weeks
         all_stores = df["store"].unique()
