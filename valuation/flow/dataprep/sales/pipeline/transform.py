@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Tuesday October 14th 2025 10:53:05 pm                                               #
-# Modified   : Wednesday October 22nd 2025 08:37:07 pm                                             #
+# Modified   : Wednesday October 22nd 2025 10:08:47 pm                                             #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -25,15 +25,15 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from loguru import logger
-import pandas as pd
+import polars as pl
 
-from valuation.asset.dataset.base import DTYPES, Dataset
+from valuation.asset.dataset.base import DTYPES_PL, Dataset
 from valuation.asset.identity.dataset import DatasetPassport
 from valuation.core.state import Status
 from valuation.flow.base.pipeline import PipelineResult
 from valuation.flow.dataprep.pipeline import DataPrepPipeline, DataPrepPipelineBuilder
-from valuation.flow.dataprep.sales.task.aggregate import AggregateSalesDataTask
-from valuation.flow.dataprep.sales.task.filter import FilterPartialYearsTask
+from valuation.flow.dataprep.sales.task.agg_pl import AggregateSalesDataTask
+from valuation.flow.dataprep.sales.task.filter_pl import FilterPartialYearsTask
 from valuation.infra.store.dataset import DatasetStore
 
 
@@ -59,6 +59,10 @@ class TransformSalesDataPipelineResult(PipelineResult):
     last_year: Optional[int] = None
     num_years: int = 0
     weeks: int = 0
+
+    def end_pipeline(self) -> None:
+        super().end_pipeline()
+        self.pct_change = ((self.records_in - self.records_out) / self.records_in) * 100.0
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -102,12 +106,13 @@ class TransformSalesDataPipeline(DataPrepPipeline):
             logger.info(f"Loading source data from {self._source}")
             df = self._load(filepath=Path(self._source), **self._target.read_kwargs)  # type: ignore
 
-            self._result.records_in = df.shape[0]
+            # Initial metrics
+            logger.info("Calculating initial dataset metrics.")
+            self._result.records_in = df.select(pl.count()).collect().item(0, 0)
 
             for task in self._tasks:
 
                 logger.info(f"Running task: {task.__class__.__name__}")
-
                 # Run the task
                 df = task.run(df=df)
 
@@ -123,6 +128,9 @@ class TransformSalesDataPipeline(DataPrepPipeline):
                     task.validation.report()
                     break
 
+            # Convert the polars DataFrame to a pandas DataFrame for storage
+            logger.info("Converting Polars DataFrame to Pandas DataFrame for storage.")
+            df = df.to_pandas()  # type: ignore
             # Create the target dataset
             dataset = Dataset(passport=self._target, df=df)
             # Persist the dataset to the store
@@ -145,7 +153,7 @@ class TransformSalesDataPipeline(DataPrepPipeline):
             self._result.end_pipeline()
             raise e
 
-    def _update_metrics(self, df: pd.DataFrame) -> None:
+    def _update_metrics(self, df: pl.DataFrame) -> None:
         """Updates pipeline result metrics based on the provided DataFrame.
         Args:
             df (pd.DataFrame): The DataFrame to analyze for metrics.
@@ -153,46 +161,64 @@ class TransformSalesDataPipeline(DataPrepPipeline):
             None
         """
 
-        self._result.records_out = df.shape[0]
-        if self._result.records_in > 0:
-            self._result.pct_change = (
-                (self._result.records_in - self._result.records_out) / self._result.records_in
-            ) * 100.0
-        else:
-            self._result.pct_change = 0.0
+        # 1. Get row count (Polars uses .height)
+        self._result.records_out = df.height
 
-        self._result.stores = df["store"].nunique()
-        self._result.categories = df["category"].nunique()
+        # 2. Get unique counts (Polars uses .n_unique())
+        self._result.stores = df.get_column("store").n_unique()
+        self._result.categories = df.get_column("category").n_unique()
+        self._result.weeks = df.get_column("week").n_unique()
 
-        years = df["year"].unique()
-        if years.size > 0:
-            self._result.first_year = int(years.min())
-            self._result.last_year = int(years.max())
-            self._result.num_years = int(years.size)
+        # 3. Get all year stats in one efficient pass
+        #    Polars aggregations (min, max, n_unique) run in parallel
+        year_stats = df.select(
+            [
+                pl.col("year").n_unique().alias("num_years"),
+                pl.col("year").min().alias("first_year"),
+                pl.col("year").max().alias("last_year"),
+            ]
+        )
+
+        # 4. Assign the results
+        #    year_stats is a 1-row DataFrame. We extract the values.
+        num_years = year_stats.item(0, "num_years")
+        first_year = year_stats.item(0, "first_year")
+        last_year = year_stats.item(0, "last_year")
+
+        self._result.num_years = int(num_years)
+
+        if self._result.num_years > 0:
+            # We cast to int() here, as Polars might return None
+            # if the column was all null, but int(None) fails.
+            self._result.first_year = int(first_year) if first_year is not None else None
+            self._result.last_year = int(last_year) if last_year is not None else None
         else:
             self._result.first_year = None
             self._result.last_year = None
-            self._result.num_years = 0
 
-        self._result.weeks = df["week"].nunique()
-
-    def _load(self, filepath: Path, **kwargs) -> pd.DataFrame:
-        """Load and concatenate all parquet files in a directory into a single DataFrame.
-
+    def _load(self, filepath: Path, **kwargs) -> pl.LazyFrame:
+        """Loads sales data from the specified filepath into a Polars DataFrame.
         Args:
-            directory (Path): Path to the directory containing parquet files.
-            **kwargs: Additional keyword arguments forwarded to read_parquet.
-
+            filepath (Path): Path to the sales data file or directory.
+            **kwargs: Additional keyword arguments for data loading.
         Returns:
-            pd.DataFrame: Concatenated DataFrame containing data from all parquet files.
+            pl.DataFrame: Loaded sales data as a Polars DataFrame.
         """
-        try:
-            df = pd.read_parquet(filepath, **kwargs)
-            df = df.astype({k: v for k, v in DTYPES.items() if k in df.columns})
-            return df
-        except Exception as e:
-            logger.exception(f"Unable to read parquet directory {filepath} directly: {e}")
-            raise e
+        logger.debug(f"Loading sales data from {filepath} with Polars.")
+        # Use Polars to read all parquet files in the directory
+        directory_path = str(filepath)
+        df = pl.scan_parquet(f"{directory_path}/*.parquet")
+
+        # 2. Get your DataFrame's columns (using a set is faster)
+        df_cols = df.collect_schema().names()  # Ensure schema is collected
+
+        # 3. Filter the DTYPES dict, just like in your Pandas code
+        casts_to_apply = {k: v for k, v in DTYPES_PL.items() if k in df_cols}
+
+        # 4. Apply the casts
+        df = df.cast(casts_to_apply)
+
+        return df
 
 
 # ------------------------------------------------------------------------------------------------ #

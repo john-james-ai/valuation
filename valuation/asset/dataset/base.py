@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 9th 2025 07:11:18 pm                                               #
-# Modified   : Tuesday October 21st 2025 08:13:40 pm                                               #
+# Modified   : Wednesday October 22nd 2025 09:25:24 pm                                             #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -27,6 +27,7 @@ import shutil
 
 from loguru import logger
 import pandas as pd
+import polars as pl
 
 from valuation.asset.base import Asset, Passport
 from valuation.asset.identity.dataset import DatasetPassport
@@ -72,6 +73,28 @@ STRING_COLUMNS = [k for k, v in DTYPES.items() if v == "str"]
 
 NUMERIC_PLACEHOLDER = -1  # Placeholder for missing numeric values
 STRING_PLACEHOLDER = "Unknown"  # Placeholder for missing string values
+# ------------------------------------------------------------------------------------------------ #
+DTYPES_PL = {
+    "category": pl.Utf8,
+    "store": pl.Int64,
+    "date": pl.Datetime,
+    "upc": pl.Int64,
+    "week": pl.Int64,
+    "qty": pl.Int64,
+    "move": pl.Int64,
+    "ok": pl.Int64,
+    "price": pl.Float64,
+    "revenue": pl.Float64,
+    "profit": pl.Float64,
+    "year": pl.Int64,
+    "start": pl.Datetime,
+    "end": pl.Datetime,
+    "gross_margin_pct": pl.Float64,
+    "gross_margin": pl.Float64,
+    "gross_profit": pl.Float64,
+    "price_hex": pl.Utf8,
+    "profit_hex": pl.Utf8,
+}
 
 
 # ------------------------------------------------------------------------------------------------ #
