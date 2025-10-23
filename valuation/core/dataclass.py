@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 9th 2025 07:11:18 pm                                               #
-# Modified   : Tuesday October 21st 2025 11:12:04 am                                               #
+# Modified   : Thursday October 23rd 2025 06:00:52 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -23,7 +23,11 @@ from typing import Any, Dict, List, Tuple, Union
 
 from abc import ABC
 from dataclasses import asdict, dataclass, fields, is_dataclass
+import datetime
+import decimal
 from enum import Enum, StrEnum
+import fractions
+import uuid
 
 import numpy as np
 import pandas as pd
@@ -33,20 +37,52 @@ import pandas as pd
 # ------------------------------------------------------------------------------------------------ #
 # ------------------------------------------------------------------------------------------------ #
 IMMUTABLE_TYPES: Tuple = (
+    # --- Python Built-in Scalars ---
     str,
     int,
     float,
     bool,
+    complex,
+    bytes,
+    type(None),  # The type of None (NoneType)
+    # --- Python Built-in Immutable Containers ---
+    # You may or may not want these, depending on your goal
+    tuple,
+    frozenset,
+    # --- Standard Library (Enums, Time, Numerics) ---
     Enum,
     StrEnum,
+    datetime.datetime,
+    datetime.date,
+    datetime.timedelta,
+    decimal.Decimal,
+    fractions.Fraction,
+    uuid.UUID,
+    # --- NumPy Scalar Types (Integers) ---
+    np.int8,
     np.int16,
     np.int32,
     np.int64,
-    np.int8,
+    np.uint8,
+    np.uint16,
+    np.uint32,
+    np.uint64,
+    # --- NumPy Scalar Types (Floats) ---
     np.float16,
     np.float32,
     np.float64,
-    np.float128,
+    np.float128,  # Note: 128-bit float precision is platform-dependent
+    # --- NumPy Scalar Types (Other) ---
+    np.complex64,
+    np.complex128,
+    np.bool_,
+    np.datetime64,  # NumPy's nanosecond-precision datetime
+    np.timedelta64,  # NumPy's time duration
+    # --- Pandas Specific Scalar Types ---
+    pd.Timestamp,  # Pandas's primary datetime object (equivalent to np.datetime64)
+    pd.Timedelta,  # Pandas's time duration (equivalent to np.timedelta64)
+    pd.Period,  # Represents a time span (e.g., '2025-Q3')
+    type(pd.NA),  # The type for Pandas's nullable missing value (pd.NA)
 )
 SEQUENCE_TYPES: Tuple = (
     list,

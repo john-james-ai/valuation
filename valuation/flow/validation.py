@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 16th 2025 08:29:37 pm                                              #
-# Modified   : Wednesday October 22nd 2025 12:15:14 pm                                             #
+# Modified   : Thursday October 23rd 2025 10:53:40 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -230,14 +230,10 @@ class Validator(ABC):
                 )
 
     def _log_anomaly_records(self) -> None:
-        """Log failed record DataFrames to CSV files for each anomaly_type.
+        """Log failed record DataFrames to CSV files for each anomaly type.
 
-        Returns:
-            None
-        """
-        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-
-        """Log failed record DataFrames to CSV files for each anomaly_type.
+        Iterates the internal anomaly records structure and writes non-empty DataFrames
+        to CSV files using the IOService. A timestamped directory is used to avoid collisions.
 
         Returns:
             None
@@ -460,6 +456,14 @@ class NonNegativeValidator(Validator):
 
 # ------------------------------------------------------------------------------------------------ #
 class RangeValidator(Validator):
+    """Validator ensuring a numeric column's values fall within an inclusive range.
+
+    Args:
+        column (str): Column name to validate.
+        min_value (float): Inclusive minimum allowed value.
+        max_value (float): Inclusive maximum allowed value.
+    """
+
     def __init__(self, column: str, min_value: float, max_value: float) -> None:
         super().__init__()
 
@@ -488,6 +492,38 @@ class RangeValidator(Validator):
                 records=out_of_range,
             )
             msg = f"{classname} {self.__class__.__name__} validation found {len(out_of_range)} rows with out of range values in the '{self._column}' column."
+            logger.debug(msg)
+
+
+# ------------------------------------------------------------------------------------------------ #
+class DensifyValidator(Validator):
+    """Validator ensuring the DataFrame has the expected number of rows after densification.
+
+    Args:
+        categories (int): Number of unique categories expected.
+        weeks (int): Number of unique weeks expected.
+        stores (int): Number of unique stores expected.
+    """
+
+    def __init__(self, categories: int = 28, weeks: int = 365, stores: int = 93) -> None:
+        super().__init__()
+        self._categories = categories
+        self._weeks = weeks
+        self._stores = stores
+
+    def _validate(self, df: pd.DataFrame, classname: str) -> None:
+        expected_rows = self._categories * self._weeks * self._stores
+        actual_rows = len(df)
+        if actual_rows != expected_rows:
+            anomaly_type = "IncorrectRowCount"
+            self._add_anomalies(
+                classname=classname,
+                severity=str(Severity.ERROR),
+                anomaly_type=anomaly_type,
+                column="row_count",
+                count=1,
+            )
+            msg = f"{classname} {self.__class__.__name__} validation found incorrect row count: expected {expected_rows}, got {actual_rows}."
             logger.debug(msg)
 
 
@@ -524,6 +560,11 @@ class ValidationBuilder:
         self._validation.add_validator(
             name, RangeValidator(column=column, min_value=min_value, max_value=max_value)
         )
+        return self
+
+    def with_densify_validator(self) -> ValidationBuilder:
+        name = "DensifyValidator"
+        self._validation.add_validator(name, DensifyValidator())
         return self
 
     def build(self) -> Validation:

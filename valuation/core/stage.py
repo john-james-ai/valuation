@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Saturday October 18th 2025 08:07:16 pm                                              #
-# Modified   : Thursday October 23rd 2025 04:30:30 am                                              #
+# Modified   : Thursday October 23rd 2025 08:26:56 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -32,7 +32,7 @@ class DatasetStage(Stage):
     INGEST = "ingest"
     CLEAN = "clean"
     TRANSFORM = "transform"
-    FEATURES = "feature_engineered"
+    MODEL = "model"
     ENRICHED = "enriched"
     EXTERNAL = "external"
     REFERENCE = "reference"

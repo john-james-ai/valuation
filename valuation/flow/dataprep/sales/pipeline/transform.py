@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Tuesday October 14th 2025 10:53:05 pm                                               #
-# Modified   : Wednesday October 22nd 2025 10:12:05 pm                                             #
+# Modified   : Thursday October 23rd 2025 06:04:24 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -88,7 +88,7 @@ class TransformSalesDataPipeline(DataPrepPipeline):
         self._target = None
 
     def run(self, force: bool = False) -> Optional[TransformSalesDataPipelineResult]:
-        self._result.status_obj = Status.RUNNING
+        self._result.start_pipeline()
 
         try:
             if self._target is not None:
@@ -101,6 +101,9 @@ class TransformSalesDataPipeline(DataPrepPipeline):
                     self._result.status_obj = Status.SKIPPED
                     self._result.end_pipeline()
                     return self._result
+
+            # Delete the target if it exists
+            self._dataset_store.remove(passport=self._target)
 
             # Load data using same kwargs as target
             logger.debug(f"Loading source data from {self._source}")
@@ -143,7 +146,7 @@ class TransformSalesDataPipeline(DataPrepPipeline):
 
             # Finalize the result and log it.
             self._result.end_pipeline()
-            logger.debug(self._result)
+            logger.info(self._result)
 
             return self._result
 

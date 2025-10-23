@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 9th 2025 11:01:16 pm                                               #
-# Modified   : Wednesday October 22nd 2025 08:26:23 pm                                             #
+# Modified   : Thursday October 23rd 2025 10:42:46 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -34,6 +34,11 @@ from valuation.flow.dataprep.sales.pipeline.clean import (
     CleanSalesDataPipelineBuilder,
     CleanSalesDataPipelineResult,
 )
+from valuation.flow.dataprep.sales.pipeline.model_data import (
+    ModelDataPipelineBuilder,
+    ModelDataPipelineConfig,
+    ModelDataPipelineResult,
+)
 from valuation.flow.dataprep.sales.pipeline.transform import (
     TransformSalesDataPipelineBuilder,
     TransformSalesDataPipelineResult,
@@ -49,6 +54,86 @@ MODE = os.getenv("MODE", "dev")
 # ------------------------------------------------------------------------------------------------ #
 CONFIG_FILEPATH = Path("config.yaml")
 WEEK_DECODE_TABLE_FILEPATH = Path("reference/week_decode_table.csv")
+
+
+# ------------------------------------------------------------------------------------------------ #
+def run_model_data_pipeline(force: bool = False) -> Optional[ModelDataPipelineResult]:
+
+    source = DatasetPassport.create(
+        name="sales_transform",
+        description="Transformed Sales Data",
+        entity=Entity.SALES,
+        stage=DatasetStage.TRANSFORM,
+        file_format=FileFormat.PARQUET,
+        read_kwargs={
+            "engine": "pyarrow",
+            "columns": None,
+            "filters": None,
+            "use_threads": True,
+            "dtype_backend": "pyarrow",
+        },
+        write_kwargs={
+            "engine": "pyarrow",
+            "compression": "snappy",
+            "index": False,
+            "row_group_size": 256_000,
+            "partition_cols": None,
+        },
+    )
+    train_val_target = DatasetPassport.create(
+        name="train_val",
+        description="Training and Validation Set",
+        entity=Entity.SALES,
+        stage=DatasetStage.MODEL,
+        file_format=FileFormat.PARQUET,
+        read_kwargs={
+            "engine": "pyarrow",
+            "columns": None,
+            "filters": None,
+            "use_threads": True,
+            "dtype_backend": "pyarrow",
+        },
+        write_kwargs={
+            "engine": "pyarrow",
+            "compression": "snappy",
+            "index": False,
+            "row_group_size": 256_000,
+            "partition_cols": None,
+        },
+    )
+    test_target = DatasetPassport.create(
+        name="test",
+        description="Test Set",
+        entity=Entity.SALES,
+        stage=DatasetStage.MODEL,
+        file_format=FileFormat.PARQUET,
+        read_kwargs={
+            "engine": "pyarrow",
+            "columns": None,
+            "filters": None,
+            "use_threads": True,
+            "dtype_backend": "pyarrow",
+        },
+        write_kwargs={
+            "engine": "pyarrow",
+            "compression": "snappy",
+            "index": False,
+            "row_group_size": 256_000,
+            "partition_cols": None,
+        },
+    )
+    config = ModelDataPipelineConfig(
+        source=source, train_val_target=train_val_target, test_target=test_target
+    )
+
+    pipeline = (
+        ModelDataPipelineBuilder()
+        .with_config(config=config)
+        .with_densify()
+        .with_feature_engineering()
+        .build()
+    )
+    return pipeline.run(force=force)
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -159,6 +244,13 @@ def main(
         case_sensitive=False,
         help="Run Data Transform Pipeline.",
     ),
+    model_data: bool = typer.Option(
+        False,
+        "--model_data",
+        "-m",
+        case_sensitive=False,
+        help="Run Model Data Prep Pipeline.",
+    ),
 ):
     """Main entry point for the Valuation package."""
     if str(MODE).lower() == "prod":
@@ -174,6 +266,9 @@ def main(
     elif transform:
         # Only run transform pipeline
         run_sales_data_transform_pipeline(force=force)
+    elif model_data:
+        # Only run transform pipeline
+        run_model_data_pipeline(force=force)
     else:
         # Default: run both pipelines
         run_sales_data_clean_pipeline(force=force)

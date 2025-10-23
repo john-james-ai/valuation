@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Tuesday October 14th 2025 10:53:05 pm                                               #
-# Modified   : Wednesday October 22nd 2025 08:15:16 pm                                             #
+# Modified   : Thursday October 23rd 2025 10:03:46 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -19,10 +19,17 @@
 """Pipeline Base Module"""
 from __future__ import annotations
 
-from typing import Union
+from typing import Any, Dict, Union
 
+from pathlib import Path
+
+from loguru import logger
+import pandas as pd
+
+from valuation.asset.dataset.base import DTYPES
 from valuation.asset.identity.dataset import DatasetPassport
 from valuation.flow.base.pipeline import Pipeline, PipelineBuilder
+from valuation.infra.file.io import IOService
 from valuation.infra.store.dataset import DatasetStore
 
 
@@ -45,6 +52,19 @@ class DataPrepPipeline(Pipeline):
     def add_target(self, target: DatasetPassport) -> DataPrepPipeline:
         self._target = target
         return self
+
+    def _load(self, filepath: Path, **kwargs) -> pd.DataFrame | Dict[str, Any]:
+
+        try:
+
+            data = IOService.read(filepath=filepath, **kwargs)
+            # Ensure correct data types
+            if isinstance(data, pd.DataFrame):
+                data = data.astype({k: v for k, v in DTYPES.items() if k in data.columns})
+            return data
+        except Exception as e:
+            logger.critical(f"Failed to load data from {filepath.name} with exception: {e}")
+            raise e
 
 
 # ------------------------------------------------------------------------------------------------ #

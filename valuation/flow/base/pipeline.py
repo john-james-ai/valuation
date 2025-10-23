@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Tuesday October 14th 2025 10:53:05 pm                                               #
-# Modified   : Wednesday October 22nd 2025 11:33:36 am                                             #
+# Modified   : Thursday October 23rd 2025 06:03:33 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -57,6 +57,12 @@ class PipelineResult(DataClass):
 
     status: str = None
     status_obj: Status = Status.NOTSTARTED
+
+    def start_pipeline(self) -> None:
+        """Marks the start of the pipeline execution."""
+        self.started = datetime.now()
+        self.status_obj = Status.RUNNING
+        self.status = self.status_obj.value[0]
 
     def end_pipeline(self) -> None:
         """Marks the completion of the pipeline and calculates duration."""

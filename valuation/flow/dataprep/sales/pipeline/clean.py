@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Tuesday October 14th 2025 10:53:05 pm                                               #
-# Modified   : Wednesday October 22nd 2025 08:19:22 pm                                             #
+# Modified   : Thursday October 23rd 2025 10:04:07 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -19,7 +19,7 @@
 """Pipeline Base Module"""
 from __future__ import annotations
 
-from typing import Dict, Optional, Union
+from typing import Optional
 
 from dataclasses import dataclass
 from pathlib import Path
@@ -28,7 +28,7 @@ from loguru import logger
 import pandas as pd
 from tqdm import tqdm
 
-from valuation.asset.dataset.base import DTYPES, Dataset
+from valuation.asset.dataset.base import Dataset
 from valuation.asset.identity.dataset import DatasetPassport
 from valuation.core.entity import Entity
 from valuation.core.stage import DatasetStage
@@ -98,7 +98,7 @@ class CleanSalesDataPipeline(DataPrepPipeline):
         Returns:
             Optional[CleanSalesDataPipelineResult]: Pipeline result object if execution completes or is skipped.
         """
-        self._result.status_obj = Status.RUNNING
+        self._result.start_pipeline()
 
         try:
 
@@ -186,28 +186,6 @@ class CleanSalesDataPipeline(DataPrepPipeline):
             self._result.status_obj = Status.FAIL
             logger.critical(f"Pipeline execution failed with exception: {e}")
             self._result.end_pipeline()
-            raise e
-
-    def _load(self, filepath: Path, **kwargs) -> Union[pd.DataFrame, Dict[str, str]]:
-        """Load sales data from the given filepath using the IO service.
-
-        Args:
-            filepath (Path): Path to the sales data file.
-            **kwargs: Additional keyword arguments forwarded to the IO service or
-                load_parquet_directory
-
-        Returns:
-            pd.DataFrame: Loaded sales data DataFrame.
-        """
-        try:
-
-            data = IOService.read(filepath=filepath, **kwargs)
-            # Ensure correct data types
-            if isinstance(data, pd.DataFrame):
-                data = data.astype({k: v for k, v in DTYPES.items() if k in data.columns})
-            return data
-        except Exception as e:
-            logger.critical(f"Failed to load data from {filepath.name} with exception: {e}")
             raise e
 
     def _update_metrics(self, validation: Validation) -> None:

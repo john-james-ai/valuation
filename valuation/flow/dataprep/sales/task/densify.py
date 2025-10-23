@@ -4,71 +4,87 @@
 # Project    : Valuation - Discounted Cash Flow Method                                             #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
-# Filename   : /valuation/flow/dataprep/sales/task/filter.py                                       #
+# Filename   : /valuation/flow/dataprep/sales/task/densify.py                                      #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
-# Created    : Saturday October 18th 2025 10:52:13 pm                                              #
-# Modified   : Thursday October 23rd 2025 09:34:24 am                                              #
+# Created    : Thursday October 23rd 2025 07:02:20 am                                              #
+# Modified   : Thursday October 23rd 2025 11:50:28 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
 # ================================================================================================ #
-"""Module for filtering sales data to remove partial years."""
+
 from typing import Optional
 
+from loguru import logger
 import pandas as pd
 
 from valuation.flow.dataprep.task import DataPrepTask
 from valuation.flow.validation import Validation
 
 # ------------------------------------------------------------------------------------------------ #
-REQUIRED_COLUMNS_FILTER = {
+REQUIRED_COLUMNS_DENSIFY = {
     "category": "string",
     "store": "Int64",
     "week": "Int64",
-    "year": "Int64",
-    "start": "datetime64[ns]",
-    "end": "datetime64[ns]",
     "revenue": "float64",
-    "gross_profit": "float64",
-    "gross_margin_pct": "float64",
 }
-NON_NEGATIVE_COLUMNS_FILTER = ["revenue", "gross_profit", "gross_margin_pct"]
-MIN_WEEKS_PER_YEAR = 50
 
 
 # ------------------------------------------------------------------------------------------------ #
-class FilterPartialYearsTask(DataPrepTask):
+class DensifySalesDataTask(DataPrepTask):
+    """Create a dense panel (store x category x week) for aggregated sales.
+
+    Args:
+        validation (Optional[Validation]): Optional Validation instance used by the task.
+    """
 
     def __init__(
         self,
-        min_weeks: int = 50,
         validation: Optional[Validation] = None,
     ) -> None:
         super().__init__(validation=validation)
-        self._min_weeks = min_weeks
 
     def run(self, df: pd.DataFrame, **kwargs) -> pd.DataFrame:
-        """Executes the filtering of partial years.
+        """Run densification to produce a dense panel with revenue filled.
 
         Args:
-            df (pd.DataFrame): Sales data DataFrame.
+            df (pd.DataFrame): Input DataFrame containing at minimum the required columns.
 
         Returns:
-            DatasetContainer: Container with filtered data and list of full years.
+            pd.DataFrame: Dense DataFrame with rows for every (store, category, week) combination
+                and missing revenues filled with 0.0.
         """
+        logger.debug("Creating Feature Engineered Dataset.")
+        week_date_lookup = df[["week", "start"]].drop_duplicates()
+        # Extract required columns
+        # Obtain all unique stores, categories, weeks
+        all_stores = df["store"].unique()
+        all_categories = df["category"].unique()
+        all_weeks = df["week"].unique()
 
-        """Returns a DataFrame containing only full years of data."""
-        # 1. Group by year and count the number of unique weeks in each group
-        weeks_per_year = df.groupby("year")["week"].nunique()
+        # Create a MultiIndex of all combinations
+        scaffold = pd.MultiIndex.from_product(
+            [all_stores, all_categories, all_weeks], names=["store", "category", "week"]
+        ).to_frame(index=False)
 
-        # 2. Filter to get a sorted list of years that have more than min_weeks of data
-        years = weeks_per_year[weeks_per_year >= self._min_weeks].index.tolist()
+        # Merge to add start dates back
+        df_panel = pd.merge(scaffold, week_date_lookup, on="week", how="left")
 
-        # 3. Filter the original DataFrame to include only rows from the full years
-        df_out = df[df["year"].isin(years)].copy()
+        # Merge with original data to create dense panel
+        df_panel = pd.merge(
+            df_panel,
+            df[["store", "category", "week", "revenue"]],
+            on=["store", "category", "week"],
+            how="left",
+        )
 
-        return df_out
+        # Fill missing revenue with 0.0
+        df_panel["revenue"] = df_panel["revenue"].fillna(0.0)
+
+        logger.debug("Densified sales data with shape: {}", df_panel.shape)
+
+        return df_panel

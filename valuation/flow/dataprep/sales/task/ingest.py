@@ -4,14 +4,14 @@
 # Project    : Valuation - Discounted Cash Flow Method                                             #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
-# Filename   : /valuation/flow/dataprep/sales/ingest.py                                            #
+# Filename   : /valuation/flow/dataprep/sales/task/ingest.py                                       #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday October 12th 2025 11:51:12 pm                                                #
-# Modified   : Wednesday October 22nd 2025 12:07:21 pm                                             #
+# Modified   : Thursday October 23rd 2025 09:34:40 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -65,7 +65,7 @@ class IngestSalesDataTask(DataPrepTask):
         super().__init__(validation=validation)
         self._week_decode_table = week_decode_table
 
-    def run(self, df: pd.DataFrame, category: str) -> pd.DataFrame:
+    def run(self, df: pd.DataFrame, category: str, **kwargs) -> pd.DataFrame:
         # Add category and dates to the data
         df_out = self._add_category(df=df, category=category).pipe(
             self._add_dates, week_dates=self._week_decode_table

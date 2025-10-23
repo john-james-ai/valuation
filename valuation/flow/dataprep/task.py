@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday October 10th 2025 02:27:30 am                                                #
-# Modified   : Wednesday October 22nd 2025 12:07:11 pm                                             #
+# Modified   : Thursday October 23rd 2025 09:34:49 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -40,7 +40,7 @@ class DataPrepTask(Task):
         return self._validation
 
     @abstractmethod
-    def run(self, df: pd.DataFrame, force: bool = False) -> pd.DataFrame:
+    def run(self, df: pd.DataFrame, **kwargs) -> pd.DataFrame:
         """Execute the task using the supplied DataFrame and produce a transformed DataFrame.
 
         Args:
