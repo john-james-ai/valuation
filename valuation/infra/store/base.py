@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday October 17th 2025 11:19:18 pm                                                #
-# Modified   : Wednesday October 22nd 2025 08:55:58 am                                             #
+# Modified   : Thursday October 23rd 2025 05:28:24 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -146,6 +146,20 @@ class AssetStoreBase(AssetStore):
         """
 
     @abstractmethod
+    def get_passport(self, asset_id: ID) -> Optional[Passport]:
+        """Retrieve an asset passport by its ID.
+
+        Args:
+            asset_id (ID): Identifier containing name and stage for the asset.
+
+        Returns:
+            Optional[Passport]: The reconstructed Passport instance.
+
+        Raises:
+            FileNotFoundError: If the passport file for the requested asset does not exist.
+        """
+
+    @abstractmethod
     def remove(self, asset_id: ID, **kwargs) -> None:
         """Remove an asset and its passport by ID.
 
@@ -156,6 +170,7 @@ class AssetStoreBase(AssetStore):
         Returns:
             None
         """
+        pass
 
     def exists(self, asset_id: ID, **kwargs) -> bool:
         passport_filepath = self._file_system.get_passport_filepath(asset_id=asset_id)

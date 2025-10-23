@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Saturday October 18th 2025 08:07:16 pm                                              #
-# Modified   : Wednesday October 22nd 2025 06:54:24 pm                                             #
+# Modified   : Thursday October 23rd 2025 04:30:30 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -39,14 +39,8 @@ class DatasetStage(Stage):
     FINAL = "final"
     TEST = "test"
 
-    def __str__(self):
-        return self.value
-
 
 class ModelStage(Stage):
     INITIAL = "initial"
     TUNED = "tuned"
     FINAL = "final"
-
-    def __str__(self):
-        return self.value

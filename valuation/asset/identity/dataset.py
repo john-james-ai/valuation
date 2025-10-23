@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Wednesday October 8th 2025 02:52:13 pm                                              #
-# Modified   : Tuesday October 21st 2025 08:37:22 pm                                               #
+# Modified   : Thursday October 23rd 2025 04:17:53 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -104,9 +104,9 @@ class DatasetID(ID):
     """An immutable, unique identifier for a dataset asset."""
 
     name: str
-    asset_type: AssetType
-    entity: Entity
     stage: DatasetStage
+    entity: Entity = Entity.SALES
+    asset_type: AssetType = AssetType.DATASET
 
     def label(self) -> str:
         return f"{str(self.entity).capitalize()} {str(self.asset_type).capitalize()} {self.name} of the {self.stage.value} stage"

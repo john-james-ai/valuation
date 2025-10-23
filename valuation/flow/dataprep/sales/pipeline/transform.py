@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Tuesday October 14th 2025 10:53:05 pm                                               #
-# Modified   : Wednesday October 22nd 2025 10:08:47 pm                                             #
+# Modified   : Wednesday October 22nd 2025 10:12:05 pm                                             #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -103,11 +103,11 @@ class TransformSalesDataPipeline(DataPrepPipeline):
                     return self._result
 
             # Load data using same kwargs as target
-            logger.info(f"Loading source data from {self._source}")
+            logger.debug(f"Loading source data from {self._source}")
             df = self._load(filepath=Path(self._source), **self._target.read_kwargs)  # type: ignore
 
             # Initial metrics
-            logger.info("Calculating initial dataset metrics.")
+            logger.debug("Calculating initial dataset metrics.")
             self._result.records_in = df.select(pl.count()).collect().item(0, 0)
 
             for task in self._tasks:
@@ -129,12 +129,12 @@ class TransformSalesDataPipeline(DataPrepPipeline):
                     break
 
             # Convert the polars DataFrame to a pandas DataFrame for storage
-            logger.info("Converting Polars DataFrame to Pandas DataFrame for storage.")
+            logger.debug("Converting Polars DataFrame to Pandas DataFrame for storage.")
             df = df.to_pandas()  # type: ignore
             # Create the target dataset
             dataset = Dataset(passport=self._target, df=df)
             # Persist the dataset to the store
-            logger.info(f"Saving dataset {self._target.label} to the dataset store.")  # type: ignore
+            logger.debug(f"Saving dataset {self._target.label} to the dataset store.")  # type: ignore
             self._dataset_store.add(dataset=dataset, overwrite=force)
 
             # Save the dataset in the result
@@ -143,7 +143,7 @@ class TransformSalesDataPipeline(DataPrepPipeline):
 
             # Finalize the result and log it.
             self._result.end_pipeline()
-            logger.info(self._result)
+            logger.debug(self._result)
 
             return self._result
 

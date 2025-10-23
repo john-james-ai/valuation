@@ -11,16 +11,19 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday October 17th 2025 11:19:18 pm                                                #
-# Modified   : Tuesday October 21st 2025 08:44:27 pm                                               #
+# Modified   : Thursday October 23rd 2025 05:28:41 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
 # ================================================================================================ #
 """Manages the Dataset Store."""
 
+from typing import Optional
+
 from loguru import logger
 
 from valuation.asset.dataset.base import Dataset
+from valuation.asset.identity.base import Passport
 from valuation.asset.identity.dataset import DatasetID, DatasetPassport
 from valuation.core.types import AssetType
 from valuation.infra.file.base import MODE
@@ -39,6 +42,8 @@ class DatasetStore(AssetStoreBase):
     Args:
         filesystem (DatasetFileSystem): The filesystem helper used by the base store.
     """
+
+    _file_system: DatasetFileSystem
 
     def __init__(self) -> None:
         """Initialize the DatasetStore.
@@ -112,6 +117,31 @@ class DatasetStore(AssetStoreBase):
         # Instantiate the appropriate asset type
         dataset = Dataset(passport=passport)
         return dataset
+
+    def get_passport(self, dataset_id: DatasetID) -> Optional[Passport]:
+        """Retrieve an asset passport by its ID.
+
+        Args:
+            asset_id (ID): Identifier containing name and stage for the asset.
+
+        Returns:
+            Optional[Passport]: The reconstructed Passport instance.
+
+        Raises:
+            FileNotFoundError: If the passport file for the requested asset does not exist.
+        """
+        passport_filepath = self._file_system.get_passport_filepath(dataset_id=dataset_id)  # type: ignore
+
+        if not passport_filepath.exists():
+            raise FileNotFoundError(f"Passport file not found at '{passport_filepath}'")
+
+        data = self._io.read(passport_filepath)
+        if data is None:
+            return None
+
+        passport = DatasetPassport.from_dict(data)
+
+        return passport
 
     def remove(self, passport: DatasetPassport, **kwargs) -> None:
         """Remove a dataset from the store by its passport.

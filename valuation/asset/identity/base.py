@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Wednesday October 8th 2025 02:52:13 pm                                              #
-# Modified   : Tuesday October 21st 2025 08:37:04 pm                                               #
+# Modified   : Thursday October 23rd 2025 04:32:29 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -19,8 +19,9 @@
 """Valuation package."""
 from __future__ import annotations
 
-from typing import Any, Dict, Optional, cast
+from typing import Any, Dict, Optional
 
+from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime
 
@@ -32,7 +33,7 @@ from valuation.core.types import AssetType
 
 # ------------------------------------------------------------------------------------------------ #
 @dataclass
-class Passport(DataClass):
+class Passport(DataClass, ABC):
     """An immutable, unique idasset for an asset."""
 
     name: str
@@ -78,24 +79,16 @@ class Passport(DataClass):
         )
 
     @property
+    @abstractmethod
     def id(self) -> ID:
         """Converts the Passport to an ID."""
-        return ID.from_passport(passport=self)
+        pass
 
     @classmethod
+    @abstractmethod
     def from_dict(cls, data: dict) -> Passport:
         """Creates a Passport from a dictionary."""
-        data["name"] = str(data["name"])
-        data["description"] = str(data["description"])
-        data["asset_type"] = AssetType(data["asset_type"])
-        data["stage"] = Stage(data["stage"])
-        data["file_format"] = FileFormat(data["file_format"])
-        data["read_kwargs"] = dict(data.get("read_kwargs", {}))
-        data["write_kwargs"] = dict(data.get("write_kwargs", {}))
-        if data.get("created"):
-            data["created"] = datetime.strptime(data["created"], "%Y%m%d-%H%M%S")
-
-        return cls(**data)
+        pass
 
     def to_dict(self) -> Dict[str, Any]:
         """Converts the Passport to a dictionary."""
@@ -114,23 +107,4 @@ class Passport(DataClass):
 # ------------------------------------------------------------------------------------------------ #
 @dataclass
 class ID(DataClass):
-    """An immutable, unique identifier for an asset."""
-
-    name: str
-    asset_type: AssetType
-    stage: Stage
-
-    def label(self) -> str:
-        """Returns a string label for the ID."""
-        return f"{str(self.asset_type).capitalize()} {self.name} of the {self.stage.value} stage"
-
-    @classmethod
-    def from_passport(cls, passport: Passport) -> ID:
-        """Creates an ID from a Passport."""
-        passport = cast(ID, passport)
-
-        return cls(
-            name=passport.name,
-            asset_type=passport.asset_type,
-            stage=passport.stage,
-        )
+    """Base Class for Asset IDs."""
