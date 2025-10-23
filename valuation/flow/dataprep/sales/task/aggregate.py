@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 16th 2025 06:18:02 pm                                              #
-# Modified   : Wednesday October 22nd 2025 11:04:15 am                                             #
+# Modified   : Wednesday October 22nd 2025 12:27:45 pm                                             #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -23,7 +23,7 @@ from typing import Optional
 from loguru import logger
 import pandas as pd
 
-from valuation.flow.base.task import Task
+from valuation.flow.dataprep.task import DataPrepTask
 from valuation.flow.validation import Validation
 
 # ------------------------------------------------------------------------------------------------ #
@@ -43,7 +43,7 @@ NON_NEGATIVE_COLUMNS_AGGREGATE = ["revenue", "gross_profit", "gross_margin_pct"]
 
 
 # ------------------------------------------------------------------------------------------------ #
-class AggregateSalesDataTask(Task):
+class AggregateSalesDataTask(DataPrepTask):
     """Aggregates a raw sales data file.
 
     The ingestion adds category and date information to the raw sales data.
@@ -58,10 +58,9 @@ class AggregateSalesDataTask(Task):
         self,
         validation: Optional[Validation] = None,
     ) -> None:
-        super().__init__()
-        self._validation = validation or Validation()
+        super().__init__(validation=validation)
 
-    def run(self, df: pd.DataFrame) -> pd.DataFrame:
+    def run(self, df: pd.DataFrame, **kwargs) -> pd.DataFrame:
 
         logger.debug("Aggregating sales data.")
         # 1: Group by store, category, and week, summing revenue and gross profit

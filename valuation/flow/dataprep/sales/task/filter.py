@@ -4,14 +4,14 @@
 # Project    : Valuation - Discounted Cash Flow Method                                             #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
-# Filename   : /valuation/flow/dataprep/sales/filter.py                                            #
+# Filename   : /valuation/flow/dataprep/sales/task/filter.py                                       #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Saturday October 18th 2025 10:52:13 pm                                              #
-# Modified   : Wednesday October 22nd 2025 11:05:34 am                                             #
+# Modified   : Wednesday October 22nd 2025 08:18:01 pm                                             #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -21,7 +21,7 @@ from typing import Optional
 
 import pandas as pd
 
-from valuation.flow.base.task import Task
+from valuation.flow.dataprep.task import DataPrepTask
 from valuation.flow.validation import Validation
 
 # ------------------------------------------------------------------------------------------------ #
@@ -37,21 +37,21 @@ REQUIRED_COLUMNS_FILTER = {
     "gross_margin_pct": "float64",
 }
 NON_NEGATIVE_COLUMNS_FILTER = ["revenue", "gross_profit", "gross_margin_pct"]
+MIN_WEEKS_PER_YEAR = 50
 
 
 # ------------------------------------------------------------------------------------------------ #
-class FilterPartialYearsTask(Task):
+class FilterPartialYearsTask(DataPrepTask):
 
     def __init__(
         self,
         min_weeks: int = 50,
         validation: Optional[Validation] = None,
     ) -> None:
-        super().__init__()
-        self._validation = validation or Validation()
+        super().__init__(validation=validation)
         self._min_weeks = min_weeks
 
-    def _execute(self, df: pd.DataFrame) -> pd.DataFrame:
+    def run(self, df: pd.DataFrame) -> pd.DataFrame:
         """Executes the filtering of partial years.
 
         Args:

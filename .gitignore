@@ -1,7 +1,7 @@
 # Data
 /data/
 tests/data
-entities/
+asset_store/
 # Mac OS-specific storage files
 .DS_Store
 

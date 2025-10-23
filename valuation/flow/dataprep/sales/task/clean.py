@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday October 12th 2025 11:51:12 pm                                                #
-# Modified   : Wednesday October 22nd 2025 11:03:52 am                                             #
+# Modified   : Wednesday October 22nd 2025 04:49:22 pm                                             #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -22,7 +22,7 @@ from typing import Optional
 from loguru import logger
 import pandas as pd
 
-from valuation.flow.base.task import Task
+from valuation.flow.dataprep.task import DataPrepTask
 from valuation.flow.validation import Validation
 
 # ------------------------------------------------------------------------------------------------ #
@@ -41,15 +41,14 @@ NON_NEGATIVE_COLUMNS_CLEAN = ["revenue"]
 
 
 # ------------------------------------------------------------------------------------------------ #
-class CleanSalesDataTask(Task):
+class CleanSalesDataTask(DataPrepTask):
     """"""
 
     def __init__(
         self,
         validation: Optional[Validation] = None,
     ) -> None:
-        super().__init__()
-        self._validation = validation if validation else Validation()
+        super().__init__(validation=validation)
 
     def run(self, df: pd.DataFrame, **kwargs) -> pd.DataFrame:
         """Execute the cleaning pipeline on the provided DataFrame.
@@ -129,6 +128,7 @@ class CleanSalesDataTask(Task):
             pd.DataFrame: DataFrame with an added 'revenue' column.
         """
         df["revenue"] = (df["price"] * df["move"]) / df["qty"]
+        df["revenue"] = df["revenue"].astype("float64")
         return df
 
     def _calculate_gross_profit(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -143,8 +143,8 @@ class CleanSalesDataTask(Task):
         Returns:
             pd.DataFrame: DataFrame with an added 'gross_profit' column.
         """
-        logger.debug("Calculating transaction-level gross profit.")
         df["gross_profit"] = df["revenue"] * (df["gross_margin_pct"] / 100.0)
+        df["gross_profit"] = df["gross_profit"].astype("float64")
         return df
 
     def _drop_gross_margin_pct(self, df: pd.DataFrame) -> pd.DataFrame:

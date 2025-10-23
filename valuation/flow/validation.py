@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 16th 2025 08:29:37 pm                                              #
-# Modified   : Wednesday October 22nd 2025 11:30:13 am                                             #
+# Modified   : Wednesday October 22nd 2025 12:15:14 pm                                             #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -218,7 +218,7 @@ class Validator(ABC):
             warnings = anomalies[anomalies["severity"] == str(Severity.WARNING)]
             if not warnings.empty:
                 warning_df = pd.DataFrame(warnings)
-                logger.info(
+                logger.debug(
                     f"\tValidation Warning Report for   {self.__class__.__name__}:\n{warning_df.to_string(index=False)}"
                 )
 
@@ -498,8 +498,9 @@ class ValidationBuilder:
     def __init__(self) -> None:
         self.reset()
 
-    def reset(self) -> None:
+    def reset(self) -> ValidationBuilder:
         self._validation = Validation()
+        return self
 
     def with_missing_column_validator(self, required_columns: List[str]) -> ValidationBuilder:
         name = "ColumnValidator"

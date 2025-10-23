@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday October 19th 2025 12:18:21 am                                                #
-# Modified   : Tuesday October 21st 2025 11:05:20 am                                               #
+# Modified   : Wednesday October 22nd 2025 12:04:39 pm                                             #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -35,7 +35,6 @@ from valuation.core.entity import Entity
 from valuation.core.stage import DatasetStage
 from valuation.core.state import Status
 from valuation.core.types import AssetType
-from valuation.flow.dataprep.task import DataPrepTaskResult
 from valuation.infra.file.dataset import DatasetFileSystem
 from valuation.infra.file.io import IOService
 from valuation.infra.loggers import configure_logging
@@ -94,11 +93,9 @@ class RawSalesDataGenerator:
     def generate_stratified_sample(self) -> pd.DataFrame:
         """Generates the mode sales data."""
         logger.info("Generating stratified sample of raw sales data...")
-        result = DataPrepTaskResult(task_name="GenrateStratifiedSample", dataset_name="sales")
+
         if self._mode == "prod":
             raise RuntimeError("Mode sales data generation is not allowed in 'prod' mode.")
-
-        result.started = datetime.now()
 
         # Load raw sales data
         logger.info(
@@ -108,7 +105,7 @@ class RawSalesDataGenerator:
         df = self._io.read(filepath=self._config.source_dataset)
         duration = round((datetime.now() - start).total_seconds() / 60, 2)
         logger.info(f"\t...exactly {duration} minutes to be precise. Damn!")
-        result.records_in = len(df)
+
         logger.info(f"\tLoaded raw sales data with {len(df)} records.")
         logger.info(f"\tColumns: {list(df.columns)}")
 

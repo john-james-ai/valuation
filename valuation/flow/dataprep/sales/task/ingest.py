@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday October 12th 2025 11:51:12 pm                                                #
-# Modified   : Wednesday October 22nd 2025 11:03:19 am                                             #
+# Modified   : Wednesday October 22nd 2025 12:07:21 pm                                             #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -21,7 +21,7 @@ from typing import Optional
 import pandas as pd
 
 from valuation.asset.dataset.base import DTYPES
-from valuation.flow.base.task import Task
+from valuation.flow.dataprep.task import DataPrepTask
 from valuation.flow.validation import Validation
 
 # ------------------------------------------------------------------------------------------------ #
@@ -45,7 +45,7 @@ NON_NEGATIVE_COLUMNS_INGEST = ["qty", "move", "price"]
 
 
 # ------------------------------------------------------------------------------------------------ #
-class IngestSalesDataTask(Task):
+class IngestSalesDataTask(DataPrepTask):
     """Ingests a raw sales data file.
 
     The ingestion adds category and date information to the raw sales data.
@@ -62,9 +62,8 @@ class IngestSalesDataTask(Task):
         validation: Optional[Validation] = None,
     ) -> None:
         """Initializes the ingestion task with the provided configuration."""
-        super().__init__()
+        super().__init__(validation=validation)
         self._week_decode_table = week_decode_table
-        self._validation = validation or Validation()
 
     def run(self, df: pd.DataFrame, category: str) -> pd.DataFrame:
         # Add category and dates to the data

@@ -4,52 +4,50 @@
 # Project    : Valuation - Discounted Cash Flow Method                                             #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
-# Filename   : /valuation/flow/dataprep/pipeline.py                                                #
+# Filename   : /valuation/flow/dataprep/task.py                                                    #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
-# Created    : Tuesday October 14th 2025 10:53:05 pm                                               #
-# Modified   : Wednesday October 22nd 2025 08:15:16 pm                                             #
+# Created    : Friday October 10th 2025 02:27:30 am                                                #
+# Modified   : Wednesday October 22nd 2025 12:07:11 pm                                             #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
 # ================================================================================================ #
-"""Pipeline Base Module"""
+"""Base classes for data preparation tasks."""
 from __future__ import annotations
 
-from typing import Union
+from typing import Optional
 
-from valuation.asset.identity.dataset import DatasetPassport
-from valuation.flow.base.pipeline import Pipeline, PipelineBuilder
-from valuation.infra.store.dataset import DatasetStore
+from abc import abstractmethod
+
+import pandas as pd
+
+from valuation.flow.base.task import Task
+from valuation.flow.validation import Validation
 
 
 # ------------------------------------------------------------------------------------------------ #
-class DataPrepPipeline(Pipeline):
-
-    _dataset_store: DatasetStore
-
-    def __init__(
-        self,
-        dataset_store: type[DatasetStore] = DatasetStore,
-    ) -> None:
+class DataPrepTask(Task):
+    def __init__(self, validation: Optional[Validation] = None) -> None:
         super().__init__()
-        self._dataset_store = dataset_store()
+        self._validation = validation or Validation()
 
-    def add_source(self, source: Union[str, DatasetPassport]) -> DataPrepPipeline:
-        self._source = source
-        return self
+    @property
+    def validation(self) -> Validation:
+        return self._validation
 
-    def add_target(self, target: DatasetPassport) -> DataPrepPipeline:
-        self._target = target
-        return self
+    @abstractmethod
+    def run(self, df: pd.DataFrame, force: bool = False) -> pd.DataFrame:
+        """Execute the task using the supplied DataFrame and produce a transformed DataFrame.
 
+        Args:
+            df (pd.DataFrame): Input DataFrame to be processed by the task.
+            force (bool): If True, force reprocessing even if outputs already exist. Defaults to False.
 
-# ------------------------------------------------------------------------------------------------ #
-class DataPrepPipelineBuilder(PipelineBuilder):
-    """Builds Data Preparation Pipelines."""
-
-    def build(self) -> None:
-        raise NotImplementedError("DataPrepPipelineBuilder.build() is not implemented.")
+        Returns:
+            pd.DataFrame: The resulting DataFrame after task execution.
+        """
+        pass
