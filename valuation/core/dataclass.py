@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 9th 2025 07:11:18 pm                                               #
-# Modified   : Thursday October 23rd 2025 06:00:52 am                                              #
+# Modified   : Friday October 24th 2025 04:13:37 pm                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -84,6 +84,26 @@ IMMUTABLE_TYPES: Tuple = (
     pd.Period,  # Represents a time span (e.g., '2025-Q3')
     type(pd.NA),  # The type for Pandas's nullable missing value (pd.NA)
 )
+INTEGERS = (
+    int,
+    np.int8,
+    np.int16,
+    np.int32,
+    np.int64,
+    np.uint8,
+    np.uint16,
+    np.uint32,
+    np.uint64,
+)
+
+FLOATS = (
+    float,
+    np.float16,
+    np.float32,
+    np.float64,
+    np.float128,
+)
+
 SEQUENCE_TYPES: Tuple = (
     list,
     tuple,
@@ -128,7 +148,14 @@ class DataClass(ABC):  # noqa
         d = self.as_dict()
         for k, v in d.items():
             if type(v) in IMMUTABLE_TYPES:
-                s += f"\n{k.rjust(width,' ')} | {v}"
+                if type(v) in INTEGERS:
+                    s += f"\n{k.rjust(width,' ')} | {v:,}"
+                elif type(v) in FLOATS:
+                    s += f"\n{k.rjust(width,' ')} | {v:,.2f}"
+                else:
+                    s += f"\n{k.rjust(width,' ')} | {v}"
+            if type(v) in SEQUENCE_TYPES:
+                s += f"\n{k.rjust(width,' ')} | {','.join(map(str,v))}"
         s += "\n\n"
         return s
 

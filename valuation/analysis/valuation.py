@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday October 24th 2025 01:00:33 pm                                                #
-# Modified   : Friday October 24th 2025 02:32:30 pm                                                #
+# Modified   : Friday October 24th 2025 07:42:14 pm                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -20,6 +20,7 @@
 
 from typing import Dict, Optional, Tuple
 
+from pathlib import Path
 import warnings
 
 from attr import dataclass
@@ -33,8 +34,25 @@ from valuation.core.dataclass import DataClass
 
 warnings.filterwarnings("ignore")
 # ------------------------------------------------------------------------------------------------ #
+ANALYSIS_DIRECTORY = Path("analysis")
+# ------------------------------------------------------------------------------------------------ #
 
 
+@dataclass
+class ValuationAssumptions(DataClass):
+    """Holds core assumptions for the DCF valuation."""
+
+    # WACC Components (used if WACC is not directly provided)
+    risk_free_rate: float = 0.06  # Example: 1997 10-year Treasury
+    market_risk_premium: float = 0.08  # Example: Historical average
+    beta: float = 1.2  # Example: Retail sector beta
+
+    # Terminal Value Assumptions
+    terminal_growth_rate: float = 0.03  # Perpetual growth rate after forecast period
+    terminal_fcf_multiple: float = 12  # Exit multiple (alternative TV method)
+
+
+# ------------------------------------------------------------------------------------------------ #
 @dataclass
 class ValuationAnalysisResults(DataClass):
     """Dataclass to hold valuation analysis results."""
@@ -65,7 +83,7 @@ class ValuationDCF:
         wacc: Optional[float] = None,
         terminal_growth_rate: float = 0.03,
         terminal_fcf_multiple: float = 12,
-        net_debt: float = 0,
+        net_debt: float = 0.0,
         minority_interest: float = 0,
         other_adjustments: float = 0,
     ):
@@ -96,7 +114,7 @@ class ValuationDCF:
 
         # Initialize containers
         self.assumptions = {}
-        self.company_revenue_weekly = None
+        self.company_revenue_weekly_df = None
         self.annual_revenue = None
         self.dcf_df = None
         self.terminal_value = None
@@ -159,7 +177,7 @@ class ValuationDCF:
         logger.info(f"  CapEx % of Revenue: {capex_pct:.1%}")
         logger.info(f"  Working Capital % of Rev Change: {working_capital_pct:.1%}")
 
-    def aggregate_revenue(self) -> pd.DataFrame:
+    def aggregate_revenue(self) -> None:
         """
         Aggregate bottom-level forecasts to total company revenue.
 
@@ -170,32 +188,25 @@ class ValuationDCF:
         logger.info("AGGREGATING TO TOTAL COMPANY REVENUE")
         logger.info("=" * 80)
 
-        # Filter to bottom-level forecasts to avoid double-counting
-        if "level" in self.forecast_df.columns:
-            bottom_forecasts = self.forecast_df[self.forecast_df["level"] == "bottom"].copy()
-        else:
-            bottom_forecasts = self.forecast_df[
-                self.forecast_df["unique_id"].str.contains("_")
-            ].copy()
+        is_bottom_level = self.forecast_df["unique_id"].str.contains("/")
 
-        logger.info(f"Bottom-level series: {bottom_forecasts['unique_id'].nunique()}")
+        bottom_panel = self.forecast_df[is_bottom_level].copy()
 
-        # Aggregate to total company revenue by week
-        self.company_revenue_weekly = (
-            bottom_forecasts.groupby("ds")[self.forecast_col].sum().reset_index()
+        self.company_revenue_weekly_df = (
+            bottom_panel.groupby("ds")[[self.forecast_col]].sum().reset_index()
         )
-        self.company_revenue_weekly.columns = ["ds", "revenue"]
-        self.company_revenue_weekly = self.company_revenue_weekly.sort_values("ds")
+        self.company_revenue_weekly_df.columns = ["ds", "revenue"]
+        self.company_revenue_weekly_df = self.company_revenue_weekly_df.sort_values("ds")
 
         logger.info(
-            f"Total company weekly revenue forecasts: {len(self.company_revenue_weekly)} weeks"
+            f"Total company weekly revenue forecasts: {len(self.company_revenue_weekly_df)} weeks"
         )
         logger.info(
-            f"Average weekly revenue: ${self.company_revenue_weekly['revenue'].mean():,.0f}"
+            f"Average weekly revenue: ${self.company_revenue_weekly_df['revenue'].mean():,.0f}"
         )
-        logger.info(f"Total 5-year revenue: ${self.company_revenue_weekly['revenue'].sum():,.0f}")
-
-        return self.company_revenue_weekly
+        logger.info(
+            f"Total 5-year revenue: ${self.company_revenue_weekly_df['revenue'].sum():,.0f}"
+        )
 
     def convert_to_annual(self) -> pd.DataFrame:
         """
@@ -208,16 +219,16 @@ class ValuationDCF:
         logger.info("CONVERTING TO ANNUAL REVENUE")
         logger.info("=" * 80)
 
-        if self.company_revenue_weekly is None:
+        if self.company_revenue_weekly_df is None:
             self.aggregate_revenue()
-        if self.company_revenue_weekly is None:
+        if self.company_revenue_weekly_df is None:
             raise ValueError("Company revenue weekly data is not available.")
         # Extract year from date
-        self.company_revenue_weekly["year"] = self.company_revenue_weekly["ds"].dt.year
+        self.company_revenue_weekly_df["year"] = self.company_revenue_weekly_df["ds"].dt.year
 
         # Aggregate to annual revenue
         self.annual_revenue = (
-            self.company_revenue_weekly.groupby("year")["revenue"].sum().reset_index()
+            self.company_revenue_weekly_df.groupby("year")["revenue"].sum().reset_index()
         )
         self.annual_revenue.columns = ["year", "revenue"]
 
@@ -507,7 +518,9 @@ class ValuationDCF:
 
         return self.sensitivity_df
 
-    def create_visualizations(self, output_path: str = "dcf_valuation_dashboard.png") -> None:
+    def create_visualizations(
+        self, output_path: str = ANALYSIS_DIRECTORY / "dcf_valuation_dashboard.png"
+    ) -> None:
         """
         Create comprehensive DCF visualization dashboard.
 
@@ -690,16 +703,16 @@ class ValuationDCF:
         ax8.grid(alpha=0.3)
 
         # Weekly Revenue Data Check
-        if self.company_revenue_weekly is None:
+        if self.company_revenue_weekly_df is None:
             self.aggregate_revenue()
-        if self.company_revenue_weekly is None:
+        if self.company_revenue_weekly_df is None:
             raise ValueError("Company revenue weekly data is not available.")
 
         # 9. Weekly Revenue Trend
         ax9 = plt.subplot(3, 3, 9)
         ax9.plot(
-            self.company_revenue_weekly["ds"],
-            self.company_revenue_weekly["revenue"] / 1000,
+            self.company_revenue_weekly_df["ds"],
+            self.company_revenue_weekly_df["revenue"] / 1000,
             color="steelblue",
             alpha=0.7,
             linewidth=1,
@@ -722,9 +735,9 @@ class ValuationDCF:
 
     def export_results(
         self,
-        dcf_path: str = "dcf_model_annual.csv",
-        sensitivity_path: str = "dcf_sensitivity_analysis.csv",
-        summary_path: str = "dcf_valuation_summary.csv",
+        dcf_path: str = ANALYSIS_DIRECTORY / "dcf_model_annual.csv",
+        sensitivity_path: str = ANALYSIS_DIRECTORY / "dcf_sensitivity_analysis.csv",
+        summary_path: str = ANALYSIS_DIRECTORY / "dcf_valuation_summary.csv",
     ) -> None:
         """
         Export DCF results to CSV files.
