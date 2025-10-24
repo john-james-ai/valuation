@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Tuesday October 14th 2025 10:53:05 pm                                               #
-# Modified   : Friday October 24th 2025 12:48:06 am                                                #
+# Modified   : Friday October 24th 2025 10:29:15 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -85,6 +85,7 @@ class ModelDataPipelineConfig:
     """
 
     source: DatasetPassport
+    target: DatasetPassport
     train_val_target: DatasetPassport
     test_target: DatasetPassport
 
@@ -145,6 +146,11 @@ class ModelDataPipeline(DataPrepPipeline):
                     logger.error(msg)
                     self._result.status_obj = Status.FAIL
                     raise ValueError(msg)
+
+            # Store the full dataset after preprocessing
+            full_dataset = Dataset(passport=self._config.target, df=df)
+            self._dataset_store.remove(passport=self._config.target)  # Just in case it exists
+            self._dataset_store.add(dataset=full_dataset)
 
             # Split the data into train_val and test sets
             splitter = TimeSeriesDataSplitter(year_to_split=YEAR_TO_SPLIT)

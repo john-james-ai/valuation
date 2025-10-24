@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 9th 2025 11:01:16 pm                                               #
-# Modified   : Thursday October 23rd 2025 11:09:10 pm                                              #
+# Modified   : Friday October 24th 2025 10:27:52 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -80,6 +80,27 @@ def run_model_data_pipeline(force: bool = False) -> Optional[ModelDataPipelineRe
             "partition_cols": None,
         },
     )
+    target = DatasetPassport.create(
+        name="full_sales_dataset",
+        description="Full Sales Dataset for Modeling",
+        entity=Entity.SALES,
+        stage=DatasetStage.MODEL,
+        file_format=FileFormat.PARQUET,
+        read_kwargs={
+            "engine": "pyarrow",
+            "columns": None,
+            "filters": None,
+            "use_threads": True,
+            "dtype_backend": "pyarrow",
+        },
+        write_kwargs={
+            "engine": "pyarrow",
+            "compression": "snappy",
+            "index": False,
+            "row_group_size": 256_000,
+            "partition_cols": None,
+        },
+    )
     train_val_target = DatasetPassport.create(
         name="train_val",
         description="Training and Validation Set",
@@ -123,7 +144,7 @@ def run_model_data_pipeline(force: bool = False) -> Optional[ModelDataPipelineRe
         },
     )
     config = ModelDataPipelineConfig(
-        source=source, train_val_target=train_val_target, test_target=test_target
+        source=source, target=target, train_val_target=train_val_target, test_target=test_target
     )
 
     pipeline = (

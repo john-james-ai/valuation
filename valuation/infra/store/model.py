@@ -11,11 +11,12 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday October 17th 2025 11:19:18 pm                                                #
-# Modified   : Friday October 24th 2025 09:19:55 am                                                #
+# Modified   : Friday October 24th 2025 11:26:21 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
 # ================================================================================================ #
+"""Manages the Model Store."""
 """Manages the Model Store."""
 
 from typing import Optional
@@ -67,7 +68,7 @@ class ModelStore(AssetStoreBase):
         """
         return AssetType.MODEL
 
-    def add(self, model: Model, overwrite: bool = False) -> None:
+    def add(self, model: MLForecastModel, overwrite: bool = False) -> None:
         """Add a model to the store.
 
         Saves the model passport and model data to the configured filesystem.
@@ -96,7 +97,7 @@ class ModelStore(AssetStoreBase):
             logger.debug(msg)
 
         # Save passport using the to_dict method for formatting purposes
-        self._io.write(filepath=passport_filepath, data=model.as_dict())
+        self._io.write(filepath=passport_filepath, data=model.passport.to_dict())
         logger.debug(f"Saved model passport for {model.passport.label}.")
 
         # Save model
