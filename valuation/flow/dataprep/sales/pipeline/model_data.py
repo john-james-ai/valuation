@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Tuesday October 14th 2025 10:53:05 pm                                               #
-# Modified   : Thursday October 23rd 2025 11:22:01 pm                                              #
+# Modified   : Friday October 24th 2025 12:48:06 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -55,6 +55,7 @@ class ModelDataPipelineResult(PipelineResult):
     records_in: int = 0
     records_out: int = 0
     records_imputed: int = 0
+    precent_imputed: float = 0.0
 
     train_val_size: int = 0
     test_size: int = 0
@@ -64,6 +65,9 @@ class ModelDataPipelineResult(PipelineResult):
     def end_pipeline(self) -> None:
         super().end_pipeline()
         self.records_imputed = self.records_out - self.records_in
+        self.precent_imputed = (
+            round(self.records_imputed / self.records_out * 100, 2) if self.records_out > 0 else 0.0
+        )
         if self.records_out > 0:
             self.train_val_percent = round(self.train_val_size / self.records_out * 100, 2)
             self.test_percent = round(self.test_size / self.records_out * 100, 2)

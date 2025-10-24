@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 23rd 2025 11:49:35 pm                                              #
-# Modified   : Friday October 24th 2025 12:19:48 am                                                #
+# Modified   : Friday October 24th 2025 01:35:35 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -32,12 +32,11 @@ N_JOBS = NUM_CORES - 2
 @dataclass
 class LightGBMHP(DataClass):
     verbosity: int = -1  # Suppress LightGBM output
-    n_estimators: int = 100  # Number of trees for LightGBM
-    verbose: int = -1  # Suppress LightGBM output
-    learning_rate: float = 0.01  # Learning rate
-    max_depth: int = 5  # Maximum tree depth
-    num_leaves: int = 15  # Number of leaves in full trees
-    min_child_samples: int = 100  # Minimum data in leaf
+    n_estimators: int = 500  # Number of trees for LightGBM
+    learning_rate: float = 0.05  # Learning rate
+    max_depth: int = 7  # Maximum tree depth
+    num_leaves: int = 63  # Number of leaves in full trees
+    min_child_samples: int = 20  # Minimum data in leaf
     subsample: float = 0.7  # Row subsampling
     colsample_bytree: float = 0.7  # Feature subsampling
     reg_alpha: float = 1.0  # L1 regularization
