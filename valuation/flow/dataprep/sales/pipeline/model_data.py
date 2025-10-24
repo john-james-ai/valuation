@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Tuesday October 14th 2025 10:53:05 pm                                               #
-# Modified   : Thursday October 23rd 2025 09:08:16 pm                                              #
+# Modified   : Thursday October 23rd 2025 11:22:01 pm                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -52,6 +52,10 @@ class ModelDataPipelineResult(PipelineResult):
     train_val_dataset: Optional[Dataset] = None
     test_dataset: Optional[Dataset] = None
 
+    records_in: int = 0
+    records_out: int = 0
+    records_imputed: int = 0
+
     train_val_size: int = 0
     test_size: int = 0
     train_val_percent: float = 0.0
@@ -59,10 +63,10 @@ class ModelDataPipelineResult(PipelineResult):
 
     def end_pipeline(self) -> None:
         super().end_pipeline()
-        total = self.train_val_size + self.test_size
-        if total > 0:
-            self.train_val_percent = round(self.train_val_size / total * 100, 2)
-            self.test_percent = round(self.test_size / total * 100, 2)
+        self.records_imputed = self.records_out - self.records_in
+        if self.records_out > 0:
+            self.train_val_percent = round(self.train_val_size / self.records_out * 100, 2)
+            self.test_percent = round(self.test_size / self.records_out * 100, 2)
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -127,6 +131,7 @@ class ModelDataPipeline(DataPrepPipeline):
             # Load data
             dataset = self._dataset_store.get(passport=self._config.source)
             df = dataset.data
+            self._result.records_in = df.shape[0]
 
             for task in self._tasks:
                 logger.info(f"Running task: {task.__class__.__name__}")
@@ -186,6 +191,7 @@ class ModelDataPipeline(DataPrepPipeline):
         ) and self._dataset_store.exists(dataset_id=self._config.test_target.id)
 
     def _update_metrics(self, data: Dict[str, pd.DataFrame]) -> None:
+        self._result.records_out = data["train_val"].shape[0] + data["test"].shape[0]
         self._result.train_val_size = data["train_val"].shape[0]
         self._result.test_size = data["test"].shape[0]
 

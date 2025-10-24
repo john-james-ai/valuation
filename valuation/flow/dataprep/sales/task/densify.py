@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 23rd 2025 07:02:20 am                                              #
-# Modified   : Thursday October 23rd 2025 09:03:45 pm                                              #
+# Modified   : Thursday October 23rd 2025 11:17:54 pm                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -82,11 +82,34 @@ class DensifySalesDataTask(DataPrepTask):
             how="left",
         )
 
-        # NOTE: Don't fill revenue with zeros. Creates bias in dataset. Models like LightGBM can
-        # handle NaNs.
-        # df_panel["revenue"] = df_panel["revenue"].fillna(0.0)
-
         logger.debug("Densified sales data with shape: {}", df_panel.shape)
-        logger.debug(f"Coverage: {df_panel['revenue'].notna().sum() / len(df_panel) * 100:.1f}%")
+        original_non_null = df_panel["revenue"].notna().sum()
+        logger.debug(f"Coverage before imputation: {original_non_null / len(df_panel) * 100:.1f}%")
+
+        # Sort by store, category, and week for proper time series ordering
+        df_panel = df_panel.sort_values(["store", "category", "week"]).reset_index(drop=True)
+
+        # Apply imputation per store-category combination
+        df_panel["revenue"] = df_panel.groupby(["store", "category"])["revenue"].transform(
+            impute_series
+        )
+        imputed_count = df_panel["revenue"].notna().sum() - original_non_null
+        logger.debug(f"Imputed {imputed_count} values ({imputed_count / len(df_panel) * 100:.1f}%)")
+        logger.debug(
+            f"Coverage after imputation: {df_panel['revenue'].notna().sum() / len(df_panel) * 100:.1f}%"
+        )
+        logger.debug(f"Remaining NaN values: {df_panel['revenue'].isna().sum()}")
 
         return df_panel
+
+
+# Principled imputation for missing revenue values
+def impute_series(series):
+    """Interpolate gaps in middle, then forward/backward fill edges."""
+    # Linear interpolation for gaps within the series
+    series = series.interpolate(method="linear", limit_direction="both")
+    # Forward fill for gaps at the start
+    series = series.ffill()
+    # Backward fill for any remaining gaps at the end
+    series = series.bfill()
+    return series

@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 9th 2025 11:01:16 pm                                               #
-# Modified   : Thursday October 23rd 2025 09:10:58 pm                                              #
+# Modified   : Thursday October 23rd 2025 11:09:10 pm                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -127,7 +127,11 @@ def run_model_data_pipeline(force: bool = False) -> Optional[ModelDataPipelineRe
     )
 
     pipeline = (
-        ModelDataPipelineBuilder().with_config(config=config).with_feature_engineering().build()
+        ModelDataPipelineBuilder()
+        .with_config(config=config)
+        .with_densify()
+        .with_feature_engineering()
+        .build()
     )
     return pipeline.run(force=force)
 
