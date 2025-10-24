@@ -11,11 +11,13 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 23rd 2025 04:30:54 pm                                              #
-# Modified   : Friday October 24th 2025 09:45:18 am                                                #
+# Modified   : Friday October 24th 2025 09:49:07 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
 # ================================================================================================ #
+
+from typing import Any, Optional
 
 from dataclasses import asdict
 
@@ -33,9 +35,9 @@ class MLForecastModel(Model):
     def __init__(
         self,
         passport: ModelPassport,
-        params: ModelParams | None,
-        performance: PerformanceMetrics | None,
-        model: MLForecast | None = None,
+        params: Optional[ModelParams] = None,
+        performance: Optional[PerformanceMetrics] | None = None,
+        model: Optional[Any] = None,
     ) -> None:
         super().__init__(passport=passport, params=params, model=model, performance=performance)
         self._asset_filepath = ModelFileSystem().get_asset_filepath(passport=passport)
