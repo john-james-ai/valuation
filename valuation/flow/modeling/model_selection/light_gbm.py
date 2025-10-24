@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 23rd 2025 11:49:35 pm                                              #
-# Modified   : Friday October 24th 2025 02:49:14 am                                                #
+# Modified   : Friday October 24th 2025 03:15:12 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -34,12 +34,12 @@ class LightGBMHP(DataClass):
     verbosity: int = -1  # Suppress LightGBM output
     objective: str = "tweedie"  # Objective function
     tweedie_variance_power: float = 1.2  # Tweedie variance power
-    n_estimators: int = 500  # Number of trees for LightGBM
-    learning_rate: float = 0.05  # Learning rate
+    n_estimators: int = 1000  # Number of trees for LightGBM
+    learning_rate: float = 0.02  # Learning rate
     max_depth: int = 7  # Maximum tree depth
     num_leaves: int = 63  # Number of leaves in full trees
     min_child_samples: int = 20  # Minimum data in leaf
-    subsample: float = 0.7  # Row subsampling
+    subsample: float = 0.8  # Row subsampling
     colsample_bytree: float = 0.7  # Feature subsampling
     reg_alpha: float = 1.0  # L1 regularization
     reg_lambda: float = 1.0  # L2 regularization

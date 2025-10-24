@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 23rd 2025 11:37:53 pm                                              #
-# Modified   : Friday October 24th 2025 02:36:11 am                                                #
+# Modified   : Friday October 24th 2025 03:40:25 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -31,7 +31,7 @@ NUM_THREADS = max(1, NUM_CORES - 2)  # Use all but two cores for training
 @dataclass
 class MLForecastHP(DataClass):
     freq: str = "W-WED"  # Weekly frequency ending on Wednesday
-    lags: list[int] = field(default_factory=lambda: [1, 2, 4, 8])
+    lags: list[int] = field(default_factory=lambda: [1, 2, 4, 13, 52, 43])
     lag_transforms: dict[int, list] = field(
         default_factory=lambda: {
             1: [RollingMean(window_size=4), RollingMean(window_size=13)],

@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 23rd 2025 04:31:27 pm                                              #
-# Modified   : Thursday October 23rd 2025 04:39:19 pm                                              #
+# Modified   : Friday October 24th 2025 03:13:06 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -26,6 +26,7 @@ from loguru import logger
 from valuation.asset.base import Asset
 from valuation.asset.identity.model import ModelPassport
 from valuation.core.types import AssetType
+from valuation.flow.modeling.model_selection.base import ModelParams
 
 # ------------------------------------------------------------------------------------------------ #
 
@@ -35,9 +36,11 @@ class Model(Asset):
     def __init__(
         self,
         passport: ModelPassport,
+        params: ModelParams | None = None,
         model: Optional[Any] = None,
     ) -> None:
         self._passport = passport
+        self._params = params
         self._model = model
         self._asset_filepath = None
 
@@ -49,6 +52,11 @@ class Model(Asset):
     def passport(self) -> ModelPassport:
         """The model's unique idasset."""
         return self._passport
+
+    @property
+    def params(self) -> Optional[ModelParams]:
+        """The model's hyperparameters."""
+        return self._params
 
     @property
     def asset_type(self) -> AssetType:
