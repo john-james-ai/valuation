@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 23rd 2025 04:31:27 pm                                              #
-# Modified   : Friday October 24th 2025 03:13:06 am                                                #
+# Modified   : Friday October 24th 2025 09:48:00 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -27,6 +27,7 @@ from valuation.asset.base import Asset
 from valuation.asset.identity.model import ModelPassport
 from valuation.core.types import AssetType
 from valuation.flow.modeling.model_selection.base import ModelParams
+from valuation.flow.modeling.model_selection.selector import PerformanceMetrics
 
 # ------------------------------------------------------------------------------------------------ #
 
@@ -36,11 +37,13 @@ class Model(Asset):
     def __init__(
         self,
         passport: ModelPassport,
-        params: ModelParams | None = None,
+        params: Optional[ModelParams] = None,
+        performance: Optional[PerformanceMetrics] | None = None,
         model: Optional[Any] = None,
     ) -> None:
         self._passport = passport
         self._params = params
+        self._performance = performance
         self._model = model
         self._asset_filepath = None
 
@@ -59,6 +62,11 @@ class Model(Asset):
         return self._params
 
     @property
+    def performance(self) -> Optional[PerformanceMetrics]:
+        """The model's hyperparameters."""
+        return self._performance
+
+    @property
     def asset_type(self) -> AssetType:
         """The type of asset."""
         return AssetType.MODEL  # type: ignore
@@ -67,6 +75,10 @@ class Model(Asset):
     def file_exists(self) -> bool:
         """Indicates if the model file exists on disk."""
         return self._asset_filepath.exists() if self._asset_filepath else False
+
+    @abstractmethod
+    def as_dict(self) -> dict:
+        """Returns the Model as a dictionary."""
 
     @abstractmethod
     def load(self) -> None:

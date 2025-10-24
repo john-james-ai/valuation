@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday October 17th 2025 11:19:18 pm                                                #
-# Modified   : Thursday October 23rd 2025 06:04:11 pm                                              #
+# Modified   : Friday October 24th 2025 09:19:55 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -96,7 +96,7 @@ class ModelStore(AssetStoreBase):
             logger.debug(msg)
 
         # Save passport using the to_dict method for formatting purposes
-        self._io.write(filepath=passport_filepath, data=model.passport.to_dict())
+        self._io.write(filepath=passport_filepath, data=model.as_dict())
         logger.debug(f"Saved model passport for {model.passport.label}.")
 
         # Save model
