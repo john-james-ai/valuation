@@ -20,4 +20,5 @@ dependencies:
   - pandoc
   - lightgbm
   - hierarchicalforecast
+  - utilsforecast
 prefix: /home/john/anaconda3/envs/valuation
