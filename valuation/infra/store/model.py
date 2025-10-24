@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday October 17th 2025 11:19:18 pm                                                #
-# Modified   : Thursday October 23rd 2025 04:28:16 pm                                              #
+# Modified   : Thursday October 23rd 2025 06:04:11 pm                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -26,6 +26,7 @@ from mlforecast import MLForecast
 from valuation.asset.identity.base import Passport
 from valuation.asset.identity.model import ModelID, ModelPassport
 from valuation.asset.model.base import Model
+from valuation.asset.model.mlforecast import MLForecastModel
 from valuation.core.types import AssetType
 from valuation.infra.file.model import ModelFileSystem
 from valuation.infra.store.base import AssetStoreBase
@@ -99,7 +100,8 @@ class ModelStore(AssetStoreBase):
         logger.debug(f"Saved model passport for {model.passport.label}.")
 
         # Save model
-        model.model.save()
+        asset_filepath = self._file_system.get_asset_filepath(passport=model.passport)
+        model.model.save(path=asset_filepath)  # type: ignore
         logger.debug(f"Saved model data for {model.passport.label} to the store.")
 
     def get(self, passport: ModelPassport) -> Model:
@@ -112,7 +114,7 @@ class ModelStore(AssetStoreBase):
             Model: The retrieved Model instance.
         """
         # Instantiate the appropriate asset type
-        model = Model(passport=passport)
+        model = MLForecastModel(passport=passport)
         return model
 
     def get_passport(self, model_id: ModelID) -> Optional[Passport]:

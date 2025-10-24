@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday October 17th 2025 11:19:18 pm                                                #
-# Modified   : Thursday October 23rd 2025 05:28:41 am                                              #
+# Modified   : Thursday October 23rd 2025 08:46:18 pm                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -64,6 +64,12 @@ class DatasetStore(AssetStoreBase):
             AssetType: The AssetType for datasets (AssetType.DATASET).
         """
         return AssetType.DATASET
+
+    @property
+    def file_system(self) -> DatasetFileSystem:
+        """The dataset file system."""
+
+        return self._file_system
 
     def add(self, dataset: Dataset, overwrite: bool = False) -> None:
         """Add a dataset to the store.

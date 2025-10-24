@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Tuesday October 14th 2025 10:53:05 pm                                               #
-# Modified   : Thursday October 23rd 2025 11:04:44 am                                              #
+# Modified   : Thursday October 23rd 2025 09:08:16 pm                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -33,7 +33,6 @@ from valuation.flow.base.pipeline import PipelineResult
 from valuation.flow.dataprep.pipeline import DataPrepPipeline, DataPrepPipelineBuilder
 from valuation.flow.dataprep.sales.task.densify import DensifySalesDataTask
 from valuation.flow.dataprep.sales.task.feature import FeatureEngineeringTask
-from valuation.flow.validation import ValidationBuilder
 from valuation.infra.store.dataset import DatasetStore
 from valuation.utils.split import TimeSeriesDataSplitter
 
@@ -226,9 +225,8 @@ class ModelDataPipelineBuilder(DataPrepPipelineBuilder):
         Returns:
             ModelDataPipelineBuilder: The builder instance.
         """
-        validation = ValidationBuilder().with_densify_validator().build()
 
-        task = DensifySalesDataTask(validation=validation)
+        task = DensifySalesDataTask()
         self._tasks.append(task)
         return self
 

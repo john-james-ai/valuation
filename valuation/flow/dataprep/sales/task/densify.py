@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 23rd 2025 07:02:20 am                                              #
-# Modified   : Thursday October 23rd 2025 12:45:23 pm                                              #
+# Modified   : Thursday October 23rd 2025 09:03:45 pm                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -59,32 +59,34 @@ class DensifySalesDataTask(DataPrepTask):
                 and missing revenues filled with 0.0.
         """
         logger.debug("Creating Feature Engineered Dataset.")
+        # Create a week and date lookup table
         week_date_lookup = df[["week", "end"]].drop_duplicates()
-        # Extract required columns
-        # Obtain all unique stores, categories, weeks
-        all_stores = df["store"].unique()
-        all_categories = df["category"].unique()
-        all_weeks = df["week"].unique()
+        # Create a dataframe of all actual store/category combinations
+        actual_combinations = df[["store", "category"]].drop_duplicates()
 
-        # Create a MultiIndex of all combinations
-        scaffold = pd.MultiIndex.from_product(
-            [all_stores, all_categories, all_weeks], names=["store", "category", "week"]
-        ).to_frame(index=False)
+        # Create complete week scaffold
+        all_weeks_df = pd.DataFrame({"week": df["week"].unique()})
+        all_weeks_df["_key"] = 1
+        actual_combinations["_key"] = 1
 
-        # Merge to add start dates back
-        df_panel = pd.merge(scaffold, week_date_lookup, on="week", how="left")
+        # Cross join actual combinations with all weeks
+        scaffold = actual_combinations.merge(all_weeks_df, on="_key").drop("_key", axis=1)
+
+        # Merge to add dates
+        df_panel = scaffold.merge(week_date_lookup, on="week", how="left")
 
         # Merge with original data to create dense panel
-        df_panel = pd.merge(
-            df_panel,
+        df_panel = df_panel.merge(
             df[["store", "category", "week", "revenue"]],
             on=["store", "category", "week"],
             how="left",
         )
 
-        # Fill missing revenue with 0.0
-        df_panel["revenue"] = df_panel["revenue"].fillna(0.0)
+        # NOTE: Don't fill revenue with zeros. Creates bias in dataset. Models like LightGBM can
+        # handle NaNs.
+        # df_panel["revenue"] = df_panel["revenue"].fillna(0.0)
 
         logger.debug("Densified sales data with shape: {}", df_panel.shape)
+        logger.debug(f"Coverage: {df_panel['revenue'].notna().sum() / len(df_panel) * 100:.1f}%")
 
         return df_panel
