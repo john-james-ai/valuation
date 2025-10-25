@@ -11,7 +11,25 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday October 17th 2025 11:19:18 pm                                                #
-# Modified   : Thursday October 23rd 2025 08:46:18 pm                                              #
+# Modified   : Saturday October 25th 2025 02:09:56 am                                              #
+# ------------------------------------------------------------------------------------------------ #
+# License    : MIT License                                                                         #
+# Copyright  : (c) 2025 John James                                                                 #
+# ================================================================================================ #
+#!/usr/bin/env python3
+# -*- coding:utf-8 -*-
+# ================================================================================================ #
+# Project    : Valuation - Discounted Cash Flow Method                                             #
+# Version    : 0.1.0                                                                               #
+# Python     : 3.12.11                                                                             #
+# Filename   : /valuation/infra/store/dataset.py                                                   #
+# ------------------------------------------------------------------------------------------------ #
+# Author     : John James                                                                          #
+# Email      : john.james.ai.studio@gmail.com                                                      #
+# URL        : https://github.com/john-james-ai/valuation                                          #
+# ------------------------------------------------------------------------------------------------ #
+# Created    : Friday October 17th 2025 11:19:18 pm                                                #
+# Modified   : Saturday October 25th 2025 12:19:47 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -22,7 +40,7 @@ from typing import Optional
 
 from loguru import logger
 
-from valuation.asset.dataset.base import Dataset
+from valuation.asset.dataset.dataset import Dataset
 from valuation.asset.identity.base import Passport
 from valuation.asset.identity.dataset import DatasetID, DatasetPassport
 from valuation.core.types import AssetType

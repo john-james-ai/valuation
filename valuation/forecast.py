@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday October 24th 2025 10:47:20 am                                                #
-# Modified   : Friday October 24th 2025 11:38:57 am                                                #
+# Modified   : Friday October 24th 2025 09:31:37 pm                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -55,7 +55,7 @@ app = typer.Typer()
 run = wandb.init(project="valuation", job_type="final_training", name="5year_forecast")
 # ------------------------------------------------------------------------------------------------ #
 FORECAST_HORIZON = 260  # 52 weeks/year * 5 years
-FORECAST_FILEPATH = f"data/prod/model/sales/forecasts_5year_1997_2002.csv"
+FORECAST_FILEPATH = f"report/forecasts_5year_1997_2002.csv"
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -290,7 +290,6 @@ def save_model_and_forecasts(
     # Log to wandb
     output_path = Path(output_path)
     wandb.save(output_path)
-    wandb.log({"forecast_5year_csv": wandb.Artifact(output_path.stem, type="forecast")})
 
     return str(output_path)
 

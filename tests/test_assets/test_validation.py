@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Tuesday October 21st 2025 04:51:55 pm                                               #
-# Modified   : Tuesday October 21st 2025 11:26:59 pm                                               #
+# Modified   : Saturday October 25th 2025 01:40:59 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -23,11 +23,8 @@ from loguru import logger
 import pandas as pd
 import pytest
 
-from valuation.flow.dataprep.sales.ingest import (
-    NON_NEGATIVE_COLUMNS_INGEST,
-    REQUIRED_COLUMNS_INGEST,
-)
-from valuation.flow.validation import (
+from valuation.flow.dataprep.ingest import NON_NEGATIVE_COLUMNS_INGEST, REQUIRED_COLUMNS_INGEST
+from valuation.flow.dataprep.validation import (
     ColumnTypeValidator,
     MissingColumnValidator,
     NonNegativeValidator,

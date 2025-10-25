@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Wednesday October 8th 2025 02:52:13 pm                                              #
-# Modified   : Thursday October 23rd 2025 04:17:53 am                                              #
+# Modified   : Saturday October 25th 2025 03:03:20 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -21,11 +21,10 @@ from __future__ import annotations
 
 from typing import Any, Dict, Optional, cast
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 
 from valuation.asset.identity.base import ID, Passport
-from valuation.core.entity import Entity
 from valuation.core.file import FileFormat
 from valuation.core.stage import DatasetStage
 from valuation.core.types import AssetType
@@ -36,14 +35,11 @@ from valuation.core.types import AssetType
 class DatasetPassport(Passport):
     """An immutable, unique idasset for a dataset."""
 
-    entity: Optional[Entity] = field(default=Entity.SALES)
-
     @classmethod
     def create(
         cls,
         name: str,
         description: str,
-        entity: Entity,
         stage: DatasetStage,
         file_format: Optional[FileFormat] = None,
         read_kwargs: Optional[Dict[str, str]] = None,
@@ -54,7 +50,6 @@ class DatasetPassport(Passport):
             name=name,
             description=description,
             asset_type=AssetType.DATASET,
-            entity=entity,
             stage=stage,
             file_format=file_format,
             read_kwargs=read_kwargs if read_kwargs is not None else {},
@@ -73,7 +68,6 @@ class DatasetPassport(Passport):
         data["name"] = str(data["name"])
         data["description"] = str(data["description"])
         data["asset_type"] = AssetType(data["asset_type"])
-        data["entity"] = Entity(data["entity"])
         data["stage"] = DatasetStage(data["stage"])
         data["file_format"] = FileFormat(data["file_format"])
         data["read_kwargs"] = dict(data.get("read_kwargs", {}))
@@ -89,7 +83,6 @@ class DatasetPassport(Passport):
             "name": self.name,
             "description": self.description,
             "asset_type": str(self.asset_type),
-            "entity": str(self.entity),
             "stage": str(self.stage),
             "file_format": str(self.file_format),
             "read_kwargs": self.read_kwargs,
@@ -105,11 +98,10 @@ class DatasetID(ID):
 
     name: str
     stage: DatasetStage
-    entity: Entity = Entity.SALES
     asset_type: AssetType = AssetType.DATASET
 
     def label(self) -> str:
-        return f"{str(self.entity).capitalize()} {str(self.asset_type).capitalize()} {self.name} of the {self.stage.value} stage"
+        return f"{str(self.asset_type).capitalize()} {self.name} of the {self.stage.value} stage"
 
     @classmethod
     def from_passport(cls, passport: DatasetPassport) -> DatasetID:
@@ -119,6 +111,5 @@ class DatasetID(ID):
         return cls(
             name=passport.name,
             asset_type=passport.asset_type,
-            entity=passport.entity if passport.entity is not None else "",
             stage=passport.stage,
         )

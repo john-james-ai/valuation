@@ -11,15 +11,11 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday October 17th 2025 05:55:14 pm                                                #
-# Modified   : Sunday October 19th 2025 03:36:53 pm                                                #
+# Modified   : Saturday October 25th 2025 03:03:42 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
 # ================================================================================================ #
-class EntityNotFoundError(Exception):
-    """Exception raised when there is a file conflict, such as attempting to overwrite an existing file without permission."""
-
-    pass
 
 
 class DatasetNotFoundError(Exception):

@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday October 19th 2025 02:58:43 pm                                                #
-# Modified   : Monday October 20th 2025 03:03:38 am                                                #
+# Modified   : Saturday October 25th 2025 03:06:45 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -24,7 +24,6 @@ from loguru import logger
 import pytest
 
 from valuation.asset.identity.dataset import DatasetID
-from valuation.core.entity import Entity
 from valuation.core.stage import DatasetStage
 from valuation.core.types import AssetType
 from valuation.infra.store.dataset import DatasetStore
@@ -61,19 +60,17 @@ class TestDatasetStoreProd:  # pragma: no cover
         logger.info(single_line)
 
     # ============================================================================================ #
-    def test_remove(self, caplog) -> None:
+    def test_remove(self, dataset, caplog) -> None:
         start = datetime.now()
         logger.info(
             f"\n\nStarted {self.__class__.__name__} {inspect.stack()[0][3]} at {start.strftime('%I:%M:%S %p')} on {start.strftime('%m/%d/%Y')}"
         )
         logger.info(double_line)
         # ---------------------------------------------------------------------------------------- #
-        dataset_id = DatasetID(
-            name="test", asset_type=AssetType.DATASET, stage=DatasetStage.RAW, entity=Entity.SALES
-        )
+        dataset_id = DatasetID(name="test", asset_type=AssetType.DATASET, stage=DatasetStage.RAW)
         store = DatasetStore()
         with pytest.raises(RuntimeError):
-            store.remove(dataset_id=dataset_id)
+            store.remove(passport=dataset.passport)
 
         # ---------------------------------------------------------------------------------------- #
         end = datetime.now()

@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday October 19th 2025 09:13:25 pm                                                #
-# Modified   : Monday October 20th 2025 03:03:38 am                                                #
+# Modified   : Saturday October 25th 2025 03:07:13 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -27,8 +27,7 @@ import pandas as pd
 from pandas.testing import assert_frame_equal
 import pytest
 
-from valuation.asset.dataset.base import Dataset, DatasetProfile
-from valuation.core.entity import Entity
+from valuation.asset.dataset.dataset import Dataset, DatasetProfile
 from valuation.core.types import AssetType
 from valuation.infra.exception import DatasetExistsError, DatasetNotFoundError
 from valuation.infra.file.dataset import DatasetFileSystem
@@ -92,7 +91,6 @@ class TestSalesDataset:  # pragma: no cover
 
         # No data provided and file does not exist
         passport = copy(dataset_passport)
-        passport.entity = Entity.CUSTOMER
         with pytest.raises((DatasetNotFoundError, FileNotFoundError)):
             Dataset(passport=passport)
 
@@ -120,7 +118,7 @@ class TestSalesDataset:  # pragma: no cover
         logger.info(f"Original passport: \n{dataset.passport}")
         logger.info(f"New passport: \n{new_passport}")
         fs = DatasetFileSystem()
-        filepath = fs.get_asset_filepath(id_or_passport=new_passport)
+        filepath = fs.get_asset_filepath(passport=new_passport)
         logger.info(f"Dataset file path: {filepath}")
         ds = Dataset(passport=new_passport)
         assert isinstance(ds, Dataset)
@@ -174,7 +172,7 @@ class TestSalesDataset:  # pragma: no cover
         logger.info(double_line)
         # ---------------------------------------------------------------------------------------- #
         passport = copy(dataset_passport)
-        passport.entity = Entity.CUSTOMER
+
         dataset = Dataset(passport=dataset_passport, df=sales_df)
         assert dataset.passport == dataset_passport
         assert_frame_equal(dataset.data, sales_df)

@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday October 24th 2025 01:00:33 pm                                                #
-# Modified   : Friday October 24th 2025 08:42:30 pm                                                #
+# Modified   : Friday October 24th 2025 09:32:44 pm                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -24,6 +24,7 @@ from dataclasses import dataclass
 from pathlib import Path
 import warnings
 
+from IPython.display import display
 from loguru import logger
 import matplotlib.pyplot as plt
 import numpy as np
@@ -35,7 +36,7 @@ from valuation.core.dataclass import DataClass
 
 warnings.filterwarnings("ignore")
 # ------------------------------------------------------------------------------------------------ #
-ANALYSIS_DIRECTORY = Path("analysis")
+REPORT_DIRECTORY = Path("report")
 # ------------------------------------------------------------------------------------------------ #
 
 
@@ -45,8 +46,8 @@ class ValuationAssumptions(DataClass):
 
     # WACC Components (used if WACC is not directly provided)
     risk_free_rate: float = 0.06  # Example: 1997 10-year Treasury
-    market_risk_premium: float = 0.08  # Example: Historical average
-    beta: float = 1.2  # Example: Retail sector beta
+    market_risk_premium: float = 0.05  # Example: Historical average
+    beta: float = 0.6  # Example: Retail sector beta
 
     # Terminal Value Assumptions
     terminal_growth_rate: float = 0.03  # Perpetual growth rate after forecast period
@@ -246,8 +247,8 @@ class ValuationDCF:
         wacc = self.assumptions.wacc if self.assumptions.wacc is not None else 0.1
 
         for idx, row in self.annual_revenue.iterrows():  # type: ignore
-            year = row["year"]
-            revenue = row["revenue"]
+            year = row["year"].astype(int)
+            revenue = f"${row["revenue"]:,.0f}"
 
             # Calculate FCF components
             fcf_calc = self.calculate_fcf(revenue, prior_revenue)
@@ -274,7 +275,22 @@ class ValuationDCF:
 
             prior_revenue = revenue
 
+        formatter = {
+            "year": "{:,.0f}",
+            "years_from_val": "{:.1f}",
+            "revenue": "${:,.0f}",
+            "ebit": "${:,.0f}",
+            "nopat": "${:,.0f}",
+            "capex": "${:,.0f}",
+            "nwc_change": "{:.1f}",
+            "fcf": "${:,.0f}",
+            "discount_factor": "{:.4f}",
+            "pv_fcf": "${:,.0f}",
+        }
+
         self.dcf_df = pd.DataFrame(dcf_model)
+        dcf_df_formatted = self.dcf_df.style.format(formatter)
+        display(dcf_df_formatted)
 
         logger.info("DCF Model - Annual Projections:")
         logger.info(f"\n{self.dcf_df.to_string(index=False)}")
@@ -479,7 +495,7 @@ class ValuationDCF:
         return self.sensitivity_df
 
     def create_visualizations(
-        self, output_path: str = ANALYSIS_DIRECTORY / "dcf_valuation_dashboard.png"
+        self, output_path: str = REPORT_DIRECTORY / "dcf_valuation_dashboard.png"
     ) -> None:
         """
         Create comprehensive DCF visualization dashboard.
@@ -699,9 +715,9 @@ class ValuationDCF:
 
     def export_results(
         self,
-        dcf_path: str = ANALYSIS_DIRECTORY / "dcf_model_annual.csv",
-        sensitivity_path: str = ANALYSIS_DIRECTORY / "dcf_sensitivity_analysis.csv",
-        summary_path: str = ANALYSIS_DIRECTORY / "dcf_valuation_summary.csv",
+        dcf_path: str = REPORT_DIRECTORY / "dcf_model_annual.csv",
+        sensitivity_path: str = REPORT_DIRECTORY / "dcf_sensitivity_analysis.csv",
+        summary_path: str = REPORT_DIRECTORY / "dcf_valuation_summary.csv",
     ) -> None:
         """
         Export DCF results to CSV files.

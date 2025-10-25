@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 16th 2025 05:59:08 pm                                              #
-# Modified   : Tuesday October 21st 2025 08:46:37 am                                               #
+# Modified   : Saturday October 25th 2025 04:42:24 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -545,7 +545,10 @@ class PickleIO(IO):  # pragma: no cover
 class ParquetIO(IO):  # pragma: no cover
     @classmethod
     def _read(cls, filepath: str, **kwargs) -> Any:
-        df = pd.read_parquet(filepath, **kwargs)
+        # Build kwargs with defaults
+        read_kwargs = cls._build_kwargs(kwargs, ".parquet", operation="read")
+
+        df = pd.read_parquet(filepath, **read_kwargs)
 
         # Drop old index artifacts (__index_level_0__, Unnamed, etc.)
         df = df.loc[:, ~df.columns.str.match(r"^(Unnamed:|__index_level__)")]
@@ -561,9 +564,67 @@ class ParquetIO(IO):  # pragma: no cover
     @classmethod
     def _write(cls, filepath: str, data: pd.DataFrame, **kwargs) -> None:
         """Writes a parquet file using pandas API."""
+        # Build kwargs with defaults
+        write_kwargs = cls._build_kwargs(kwargs, ".parquet", operation="write")
+
         if data.index.name or not data.index.equals(pd.RangeIndex(len(data))):
             data = data.reset_index(drop=True)
-        data.to_parquet(path=filepath, **kwargs)
+
+        data.to_parquet(path=filepath, **write_kwargs)
+
+    @classmethod
+    def _build_kwargs(
+        cls, all_kwargs: Dict[str, Any], file_extension: str, operation: str = "read"
+    ) -> Dict[str, Any]:
+        """
+        Filter to only supported kwargs for pandas parquet operations and
+        inject safe, performant defaults.
+
+        Args:
+            all_kwargs: User-provided kwargs that may include unsupported options
+            file_extension: File extension (e.g., ".parquet")
+            operation: Either "read" or "write"
+
+        Returns:
+            Filtered kwargs with sensible defaults
+        """
+
+        # Define valid kwargs for each operation
+        valid_read_keys = {
+            "columns",
+            "use_nullable_dtypes",
+            "dtype_backend",
+            "filesystem",
+            "filters",
+            "storage_options",
+            "engine",
+        }
+        valid_write_keys = {
+            "engine",
+            "compression",
+            "index",
+            "partition_cols",
+            "storage_options",
+            "row_group_size",
+            "version",
+            "use_dictionary",
+            "compression_level",
+        }
+
+        # Filter to valid keys
+        valid_keys = valid_read_keys if operation == "read" else valid_write_keys
+        filtered = {k: v for k, v in all_kwargs.items() if k in valid_keys}
+
+        # Inject defaults
+        if operation == "read":
+            filtered.setdefault("engine", "pyarrow")  # Most stable with BytesIO
+            filtered.setdefault("dtype_backend", "pyarrow")  # Modern nullable types (pandas >=2.0)
+        else:  # write
+            filtered.setdefault("engine", "pyarrow")  # Most stable and performant
+            filtered.setdefault("index", False)  # Don't persist index to parquet
+            filtered.setdefault("compression", "snappy")  # Good default balance
+
+        return filtered
 
 
 # ------------------------------------------------------------------------------------------------ #

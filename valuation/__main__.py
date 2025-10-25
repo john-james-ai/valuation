@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 9th 2025 11:01:16 pm                                               #
-# Modified   : Friday October 24th 2025 10:27:52 am                                                #
+# Modified   : Saturday October 25th 2025 04:52:03 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -27,23 +27,22 @@ from dotenv import load_dotenv
 import typer
 
 from valuation.asset.identity.dataset import DatasetPassport
-from valuation.core.entity import Entity
 from valuation.core.file import FileFormat
 from valuation.core.stage import DatasetStage
-from valuation.flow.dataprep.sales.pipeline.clean import (
+from valuation.flow.dataprep.fast.pipeline.clean import (
     CleanSalesDataPipelineBuilder,
     CleanSalesDataPipelineResult,
 )
-from valuation.flow.dataprep.sales.pipeline.model_data import (
+from valuation.flow.dataprep.fast.pipeline.model_dataprep import (
     ModelDataPipelineBuilder,
     ModelDataPipelineConfig,
     ModelDataPipelineResult,
 )
-from valuation.flow.dataprep.sales.pipeline.transform import (
+from valuation.flow.dataprep.fast.pipeline.transform import (
     TransformSalesDataPipelineBuilder,
     TransformSalesDataPipelineResult,
 )
-from valuation.flow.dataprep.sales.task.filter import MIN_WEEKS_PER_YEAR
+from valuation.flow.dataprep.fast.task.filter import MIN_WEEKS_PER_YEAR
 from valuation.infra.loggers import configure_logging
 from valuation.infra.store.dataset import DatasetStore
 
@@ -62,86 +61,26 @@ def run_model_data_pipeline(force: bool = False) -> Optional[ModelDataPipelineRe
     source = DatasetPassport.create(
         name="sales_transform",
         description="Transformed Sales Data",
-        entity=Entity.SALES,
         stage=DatasetStage.TRANSFORM,
         file_format=FileFormat.PARQUET,
-        read_kwargs={
-            "engine": "pyarrow",
-            "columns": None,
-            "filters": None,
-            "use_threads": True,
-            "dtype_backend": "pyarrow",
-        },
-        write_kwargs={
-            "engine": "pyarrow",
-            "compression": "snappy",
-            "index": False,
-            "row_group_size": 256_000,
-            "partition_cols": None,
-        },
     )
     target = DatasetPassport.create(
         name="full_sales_dataset",
         description="Full Sales Dataset for Modeling",
-        entity=Entity.SALES,
         stage=DatasetStage.MODEL,
         file_format=FileFormat.PARQUET,
-        read_kwargs={
-            "engine": "pyarrow",
-            "columns": None,
-            "filters": None,
-            "use_threads": True,
-            "dtype_backend": "pyarrow",
-        },
-        write_kwargs={
-            "engine": "pyarrow",
-            "compression": "snappy",
-            "index": False,
-            "row_group_size": 256_000,
-            "partition_cols": None,
-        },
     )
     train_val_target = DatasetPassport.create(
         name="train_val",
         description="Training and Validation Set",
-        entity=Entity.SALES,
         stage=DatasetStage.MODEL,
         file_format=FileFormat.PARQUET,
-        read_kwargs={
-            "engine": "pyarrow",
-            "columns": None,
-            "filters": None,
-            "use_threads": True,
-            "dtype_backend": "pyarrow",
-        },
-        write_kwargs={
-            "engine": "pyarrow",
-            "compression": "snappy",
-            "index": False,
-            "row_group_size": 256_000,
-            "partition_cols": None,
-        },
     )
     test_target = DatasetPassport.create(
         name="test",
         description="Test Set",
-        entity=Entity.SALES,
         stage=DatasetStage.MODEL,
         file_format=FileFormat.PARQUET,
-        read_kwargs={
-            "engine": "pyarrow",
-            "columns": None,
-            "filters": None,
-            "use_threads": True,
-            "dtype_backend": "pyarrow",
-        },
-        write_kwargs={
-            "engine": "pyarrow",
-            "compression": "snappy",
-            "index": False,
-            "row_group_size": 256_000,
-            "partition_cols": None,
-        },
     )
     config = ModelDataPipelineConfig(
         source=source, target=target, train_val_target=train_val_target, test_target=test_target
@@ -162,29 +101,12 @@ def run_sales_data_transform_pipeline(
     force: bool = False,
 ) -> Optional[TransformSalesDataPipelineResult]:
     store = DatasetStore()
-    source = store.file_system.get_stage_entity_location(
-        stage=DatasetStage.CLEAN, entity=Entity.SALES
-    )
+    source = store.file_system.get_stage_entity_location(stage=DatasetStage.CLEAN)
     target = DatasetPassport.create(
         name="sales_transform",
         description="Transformed Sales Data",
-        entity=Entity.SALES,
         stage=DatasetStage.TRANSFORM,
         file_format=FileFormat.PARQUET,
-        read_kwargs={
-            "engine": "pyarrow",
-            "columns": None,
-            "filters": None,
-            "use_threads": True,
-            "dtype_backend": "pyarrow",
-        },
-        write_kwargs={
-            "engine": "pyarrow",
-            "compression": "snappy",
-            "index": False,
-            "row_group_size": 256_000,
-            "partition_cols": None,
-        },
     )
     pipeline = (
         TransformSalesDataPipelineBuilder()
@@ -209,23 +131,8 @@ def run_sales_data_clean_pipeline(force: bool = False) -> Optional[CleanSalesDat
     passport = DatasetPassport.create(
         name="sales_clean",
         description="Cleaned sales data",
-        entity=Entity.SALES,
         stage=DatasetStage.CLEAN,
         file_format=FileFormat.PARQUET,
-        read_kwargs={
-            "engine": "pyarrow",
-            "columns": None,
-            "filters": None,
-            "use_threads": True,
-            "dtype_backend": "pyarrow",
-        },
-        write_kwargs={
-            "engine": "pyarrow",
-            "compression": "snappy",
-            "index": False,
-            "row_group_size": 256_000,
-            "partition_cols": None,
-        },
     )
 
     pipeline = (
@@ -234,8 +141,6 @@ def run_sales_data_clean_pipeline(force: bool = False) -> Optional[CleanSalesDat
         .with_target(target=passport)
         .with_ingest_task(week_decode_table_filepath=WEEK_DECODE_TABLE_FILEPATH)
         .with_clean_task()
-        .with_aggregate_task()
-        .with_aggregate_task()
         .build()
     )
     return pipeline.run(force=force)

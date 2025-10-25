@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Saturday October 11th 2025 08:23:13 pm                                              #
-# Modified   : Tuesday October 21st 2025 06:16:10 pm                                               #
+# Modified   : Saturday October 25th 2025 03:00:52 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -19,9 +19,8 @@
 import pandas as pd
 import pytest
 
-from valuation.asset.dataset.base import DTYPES, Dataset
+from valuation.asset.dataset.dataset import DTYPES, Dataset
 from valuation.asset.identity.dataset import DatasetPassport
-from valuation.core.entity import Entity
 from valuation.core.file import FileFormat
 from valuation.core.stage import DatasetStage
 from valuation.infra.file.io import IOService
@@ -62,7 +61,6 @@ def dataset_passport() -> DatasetPassport:
     passport = DatasetPassport.create(
         name="test_dataset",
         description="Test dataset for unit tests.",
-        entity=Entity.SALES,
         stage=DatasetStage.TEST,
         file_format=FileFormat.PARQUET,
     )
