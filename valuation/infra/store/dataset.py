@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Saturday October 25th 2025 01:58:06 am                                              #
-# Modified   : Saturday October 25th 2025 11:04:44 am                                              #
+# Modified   : Saturday October 25th 2025 03:46:23 pm                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -128,7 +128,7 @@ class DatasetStore(AssetStoreBase):
         """Retrieve an asset passport by its ID.
 
         Args:
-            asset_id (ID): Identifier containing name and stage for the asset.
+            dataset_id (ID): Identifier containing name and stage for the asset.
 
         Returns:
             Optional[Passport]: The reconstructed Passport instance.

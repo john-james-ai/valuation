@@ -19,7 +19,7 @@
 """Splits data into training/validation and test sets."""
 from typing import Dict
 
-import pandas as pd
+import polars as pl
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -28,7 +28,6 @@ class TimeSeriesDataSplitter:
 
     Args:
         year_to_split (int): Year used to split test data (rows with this year become test set).
-        validation (Optional[Validation]): Optional Validation instance used by the task.
     """
 
     def __init__(
@@ -37,19 +36,38 @@ class TimeSeriesDataSplitter:
     ) -> None:
         self._year_to_split = year_to_split
 
-    def split(self, df: pd.DataFrame) -> Dict[str, pd.DataFrame]:
+    def split(self, df: pl.DataFrame | pl.LazyFrame) -> Dict[str, pl.DataFrame]:
         """Split the DataFrame into train_val and test partitions based on the configured year.
 
         Args:
-            df (pd.DataFrame): Input DataFrame containing a 'ds' datetime column.
+            df (pl.DataFrame | pl.LazyFrame): Input Polars DataFrame or LazyFrame containing a 'ds' datetime column.
 
         Returns:
-            Dict[str, pd.DataFrame]: Dictionary with keys 'train_val' and 'test' containing respective DataFrames.
+            Dict[str, pl.DataFrame]: Dictionary with keys 'train_val' and 'test' containing respective Polars DataFrames.
         """
-        df["year"] = pd.DatetimeIndex(df["ds"]).year
-        train_val_df = df[df["year"] < self._year_to_split].reset_index(drop=True)
-        test_df = df[df["year"] == self._year_to_split].reset_index(drop=True)
+        # Materialize LazyFrame if necessary
+        if isinstance(df, pl.LazyFrame):
+            df = df.collect()
 
-        train_val_df = train_val_df.drop(columns=["year"])
-        test_df = test_df.drop(columns=["year"])
+        # Ensure 'ds' exists
+        if "ds" not in df.columns:
+            raise ValueError("Input DataFrame must contain a 'ds' column with datetimes.")
+
+        # Try to extract year; if ds is not datetime, attempt to parse common M/D/YYYY strings
+        try:
+            df = df.with_columns(pl.col("ds").dt.year().alias("year"))
+        except Exception:
+            # Trim whitespace and attempt parsing M/D/YYYY (non-strict) then extract year
+            df = df.with_columns(
+                pl.col("ds")
+                .str.replace_all(r"^\s+|\s+$", "")
+                .str.strptime(pl.Datetime("ns"), "%m/%d/%Y", strict=False)
+                .alias("ds")
+            )
+            df = df.with_columns(pl.col("ds").dt.year().alias("year"))
+
+        # Partition
+        train_val_df = df.filter(pl.col("year") < self._year_to_split).drop("year")
+        test_df = df.filter(pl.col("year") == self._year_to_split).drop("year")
+
         return {"train_val": train_val_df, "test": test_df}

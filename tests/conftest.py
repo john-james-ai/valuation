@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Saturday October 11th 2025 08:23:13 pm                                              #
-# Modified   : Saturday October 25th 2025 11:04:42 am                                              #
+# Modified   : Saturday October 25th 2025 06:10:17 pm                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -23,7 +23,7 @@ from valuation.asset.dataset import DTYPES, Dataset
 from valuation.asset.identity.dataset import DatasetPassport
 from valuation.core.file import FileFormat
 from valuation.core.stage import DatasetStage
-from valuation.infra.file.io import IOService
+from valuation.infra.file.io.fast import IOService
 
 # ------------------------------------------------------------------------------------------------ #
 DATASET_FILEPATH = "data/test/ingest/sales/sales_ingest.parquet"

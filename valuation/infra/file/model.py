@@ -11,27 +11,35 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Saturday October 25th 2025 09:36:31 am                                              #
-# Modified   : Saturday October 25th 2025 10:05:19 am                                              #
+# Modified   : Saturday October 25th 2025 04:09:09 pm                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
 # ================================================================================================ #
 """Filesystem path utilities for model assets and passports."""
+
 from pathlib import Path
 
-from valuation.asset.identity.model import ModelID
+from valuation.asset.identity.model import ModelID, ModelPassport
 from valuation.core.stage import ModelStage
 from valuation.core.types import AssetType
 from valuation.infra.file.base import FileSystem
 
+
 # ------------------------------------------------------------------------------------------------ #
-
-
 class ModelFileSystem(FileSystem):
     """Filesystem path utilities for model assets and passports."""
 
     def __init__(self) -> None:
-        super().__init__(asset_type=AssetType.MODEL)
+        super().__init__(asset_type=AssetType.DATASET)
+
+    def get_asset_filepath(
+        self,
+        passport: ModelPassport,
+        **kwargs,
+    ) -> Path:
+        """Builds the full filepath for an asset data file and ensures the stage directory exists."""
+        return super().get_asset_filepath(passport=passport, **kwargs)
 
     def get_passport_filepath(self, model_id: ModelID) -> Path:
         """Builds the full filepath for an asset passport JSON file."""

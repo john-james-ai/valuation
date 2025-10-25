@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 9th 2025 11:01:16 pm                                               #
-# Modified   : Saturday October 25th 2025 09:33:33 am                                              #
+# Modified   : Saturday October 25th 2025 04:45:02 pm                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -34,9 +34,9 @@ from valuation.flow.dataprep.pipeline.clean import (
     CleanSalesDataPipelineResult,
 )
 from valuation.flow.dataprep.pipeline.model_dataprep import (
-    ModelDataPipelineBuilder,
-    ModelDataPipelineConfig,
-    ModelDataPipelineResult,
+    TrainDataPipelineBuilder,
+    TrainDataPipelineConfig,
+    TrainDataPipelineResult,
 )
 from valuation.flow.dataprep.pipeline.transform import (
     TransformSalesDataPipelineBuilder,
@@ -55,38 +55,38 @@ WEEK_DECODE_TABLE_FILEPATH = Path("reference/week_decode_table.csv")
 
 
 # ------------------------------------------------------------------------------------------------ #
-def run_model_data_pipeline(force: bool = False) -> Optional[ModelDataPipelineResult]:
+def run_model_data_pipeline(force: bool = False) -> Optional[TrainDataPipelineResult]:
 
     source = DatasetPassport.create(
-        name="sales_transform",
+        name="sales",
         description="Transformed Sales Data",
         stage=DatasetStage.TRANSFORM,
         file_format=FileFormat.PARQUET,
     )
     target = DatasetPassport.create(
-        name="full_sales_dataset",
-        description="Full Sales Dataset for Modeling",
-        stage=DatasetStage.MODEL,
+        name="sales_full",
+        description="Full Sales Dataset for Training",
+        stage=DatasetStage.TRAIN,
         file_format=FileFormat.PARQUET,
     )
     train_val_target = DatasetPassport.create(
-        name="train_val",
+        name="sales_train_val",
         description="Training and Validation Set",
-        stage=DatasetStage.MODEL,
+        stage=DatasetStage.TRAIN,
         file_format=FileFormat.PARQUET,
     )
     test_target = DatasetPassport.create(
-        name="test",
+        name="sales_test",
         description="Test Set",
-        stage=DatasetStage.MODEL,
+        stage=DatasetStage.TRAIN,
         file_format=FileFormat.PARQUET,
     )
-    config = ModelDataPipelineConfig(
+    config = TrainDataPipelineConfig(
         source=source, target=target, train_val_target=train_val_target, test_target=test_target
     )
 
     pipeline = (
-        ModelDataPipelineBuilder()
+        TrainDataPipelineBuilder()
         .with_config(config=config)
         .with_densify()
         .with_feature_engineering()
@@ -102,7 +102,7 @@ def run_sales_data_transform_pipeline(
     store = DatasetStore()
     source = store.file_system.get_asset_stage_location(stage=DatasetStage.CLEAN)
     target = DatasetPassport.create(
-        name="sales_transform",
+        name="sales",
         description="Transformed and Aggregated Sales Data",
         stage=DatasetStage.TRANSFORM,
         file_format=FileFormat.PARQUET,
@@ -128,7 +128,7 @@ def run_sales_data_clean_pipeline(force: bool = False) -> Optional[CleanSalesDat
         PipelineResult: Result object from executing the pipeline.
     """
     passport = DatasetPassport.create(
-        name="sales_clean",
+        name="sales",
         description="Cleaned sales data",
         stage=DatasetStage.CLEAN,
         file_format=FileFormat.PARQUET,
@@ -174,7 +174,7 @@ def main(
         "--model_data",
         "-m",
         case_sensitive=False,
-        help="Run Model Data Prep Pipeline.",
+        help="Run Train Data Prep Pipeline.",
     ),
 ):
     """Main entry point for the Valuation package."""

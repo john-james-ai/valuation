@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 23rd 2025 11:49:35 pm                                              #
-# Modified   : Friday October 24th 2025 03:15:12 am                                                #
+# Modified   : Saturday October 25th 2025 07:03:33 pm                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -48,6 +48,7 @@ class LightGBMHP(DataClass):
     min_child_weight: float = 1.0  # Minimum child weight
     random_state: int = 42  # Fixed random seed
     n_jobs: int = N_JOBS  # Use all available cores - 2
+    boost_from_average: bool = False  # Critical for non-negative targets
 
     def as_dict(self) -> Dict[str, Any]:
         """Returns the hyperparameters as a dictionary."""
@@ -67,4 +68,5 @@ class LightGBMHP(DataClass):
             "min_child_weight": self.min_child_weight,
             "random_state": self.random_state,
             "n_jobs": self.n_jobs,
+            "boost_from_average": self.boost_from_average,
         }

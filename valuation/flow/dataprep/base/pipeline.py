@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Tuesday October 14th 2025 10:53:05 pm                                               #
-# Modified   : Saturday October 25th 2025 11:04:40 am                                              #
+# Modified   : Saturday October 25th 2025 06:10:14 pm                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -29,7 +29,7 @@ import polars as pl
 from valuation.asset.dataset import DTYPES
 from valuation.asset.identity.dataset import DatasetPassport
 from valuation.flow.base.pipeline import Pipeline, PipelineBuilder
-from valuation.infra.file.io import IOService
+from valuation.infra.file.io.fast import IOService
 from valuation.infra.store.dataset import DatasetStore
 
 

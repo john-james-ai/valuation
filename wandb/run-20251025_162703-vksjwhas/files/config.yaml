@@ -1,0 +1,54 @@
+_wandb:
+    value:
+        cli_version: 0.22.2
+        e:
+            r8b6m9oykl30basqzqalwpblnk3b4kdf:
+                args:
+                    - -f
+                cpu_count: 12
+                cpu_count_logical: 24
+                cudaVersion: "13.0"
+                disk:
+                    /:
+                        total: "1081101176832"
+                        used: "67843256320"
+                email: john.james.ai.studio@gmail.com
+                executable: /home/john/anaconda3/envs/valuation/bin/python
+                git:
+                    commit: 939f75b8574905c6585088e827f436e46a69a4fc
+                    remote: https://github.com/john-james-ai/valuation
+                gpu: Quadro P400
+                gpu_count: 1
+                gpu_nvidia:
+                    - architecture: Pascal
+                      memoryTotal: "2147483648"
+                      name: Quadro P400
+                      uuid: GPU-14951fad-86f6-3b76-8b83-4cb6655490f4
+                host: Leviathan
+                memory:
+                    total: "67423563776"
+                os: Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.39
+                program: -m valuation.forecast
+                python: CPython 3.12.7
+                root: /home/john/projects/valuation
+                startedAt: "2025-10-25T20:27:03.101452Z"
+                writerId: r8b6m9oykl30basqzqalwpblnk3b4kdf
+        m: []
+        python_version: 3.12.7
+        t:
+            "1":
+                - 5
+                - 8
+                - 53
+                - 54
+            "2":
+                - 5
+                - 8
+                - 53
+                - 54
+            "3":
+                - 13
+            "4": 3.12.7
+            "5": 0.22.2
+            "12": 0.22.2
+            "13": linux-x86_64

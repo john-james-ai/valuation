@@ -1,3 +1,21 @@
+#!/usr/bin/env python3
+# -*- coding:utf-8 -*-
+# ================================================================================================ #
+# Project    : Valuation - Discounted Cash Flow Method                                             #
+# Version    : 0.1.0                                                                               #
+# Python     : 3.12.11                                                                             #
+# Filename   : /environment.yml                                                                    #
+# ------------------------------------------------------------------------------------------------ #
+# Author     : John James                                                                          #
+# Email      : john.james.ai.studio@gmail.com                                                      #
+# URL        : https://github.com/john-james-ai/valuation                                          #
+# ------------------------------------------------------------------------------------------------ #
+# Created    : Thursday October 16th 2025 05:08:27 pm                                              #
+# Modified   : Saturday October 25th 2025 01:44:51 pm                                              #
+# ------------------------------------------------------------------------------------------------ #
+# License    : MIT License                                                                         #
+# Copyright  : (c) 2025 John James                                                                 #
+# ================================================================================================ #
 name: valuation
 channels:
   - defaults
@@ -14,6 +32,7 @@ dependencies:
   - black
   - loguru
   - python-dotenv
+  - jupyter
   - ipykernel
   - statsforecast
   - jupytext
@@ -21,4 +40,6 @@ dependencies:
   - lightgbm
   - hierarchicalforecast
   - utilsforecast
+  - wandb
+  - seaborn
 prefix: /home/john/anaconda3/envs/valuation

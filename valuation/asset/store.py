@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Saturday October 18th 2025 08:00:53 pm                                              #
-# Modified   : Saturday October 25th 2025 10:01:48 am                                              #
+# Modified   : Saturday October 25th 2025 04:06:11 pm                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -22,7 +22,7 @@ from typing import Optional
 from abc import ABC, abstractmethod
 
 from valuation.asset.base import Asset
-from valuation.core.stage import Stage
+from valuation.asset.identity.base import ID, Passport
 
 # ------------------------------------------------------------------------------------------------ #
 
@@ -43,6 +43,8 @@ class AssetStore(ABC):
     def add(self, asset: Asset, overwrite: bool = False) -> None:
         """Add an asset to the store.
 
+        Serializes and persists the asset's passport and triggers the asset to save its data.
+
         Args:
             asset (Asset): The asset instance to add.
             overwrite (bool, optional): If True, overwrite an existing asset with the same name.
@@ -54,51 +56,55 @@ class AssetStore(ABC):
         Raises:
             FileExistsError: If an asset with the same passport already exists and overwrite is False.
         """
-        pass
 
     @abstractmethod
-    def get(self, name: str, stage: Stage) -> Optional[Asset]:
-        """Retrieve an asset from the store by name and stage.
+    def get(self, passport: Passport) -> Optional[Asset]:
+        """Retrieve an asset by its ID (passport identifier).
 
         Args:
-            name (str): The name of the asset to retrieve.
-            stage (Stage): The stage of the asset to retrieve.
+            asset_id (ID): Identifier containing name and stage for the asset.
+            **kwargs: Additional backend-specific keyword arguments (ignored by base).
 
         Returns:
-            Optional[Asset]: The retrieved asset instance, or None if not found.
+            Optional[Asset]: The reconstructed Asset instance.
 
         Raises:
             FileNotFoundError: If the passport file for the requested asset does not exist.
         """
-        pass
 
     @abstractmethod
-    def remove(self, name: str, stage: Stage) -> None:
-        """Remove an asset from the store by name and stage.
-
-        Deletes both the asset data file (if present) and its passport.
+    def get_passport(self, asset_id: ID) -> Optional[Passport]:
+        """Retrieve an asset passport by its ID.
 
         Args:
-            name (str): The name of the asset to remove.
-            stage (Stage): The stage of the asset to remove.
+            asset_id (ID): Identifier containing name and stage for the asset.
+
+        Returns:
+            Optional[Passport]: The reconstructed Passport instance.
+
+        Raises:
+            FileNotFoundError: If the passport file for the requested asset does not exist.
+        """
+
+    @abstractmethod
+    def remove(self, asset_id: ID, **kwargs) -> None:
+        """Remove an asset and its passport by ID.
+
+        Args:
+            asset_id (ID): Identifier containing name and stage for the asset.
+            **kwargs: Additional backend-specific keyword arguments (ignored by base).
 
         Returns:
             None
-
-        Raises:
-            FileNotFoundError: If the passport file for the requested asset does not exist.
         """
         pass
 
     @abstractmethod
-    def exists(self, name: str, stage: Stage) -> bool:
-        """Check if an asset exists in the store by name and stage.
+    def exists(self, asset_id: ID, **kwargs) -> bool:
+        """Check if an asset exists in the store by its ID.
 
         Args:
-            name (str): The name of the asset to check.
-            stage (Stage): The stage of the asset to check.
-
-        Returns:
-            bool: True if the asset exists, False otherwise.
+            asset_id (ID): Identifier containing name and stage for the asset.
+            **kwargs: Additional backend-specific keyword arguments (ignored by base).
         """
         pass

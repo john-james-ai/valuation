@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 23rd 2025 06:09:23 pm                                              #
-# Modified   : Thursday October 23rd 2025 06:28:11 pm                                              #
+# Modified   : Saturday October 25th 2025 01:37:16 pm                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -34,7 +34,7 @@ echo "...uninstalling '$PACKAGE_NAME' from pip."
 pip uninstall -y $PACKAGE_NAME
 
 # Reinstall using pip
-if pip install $PACKAGE_NAME --upgrade --force-reinstall then
+if pip install $PACKAGE_NAME --upgrade --force-reinstall; then
     echo "Pip package '$PACKAGE_NAME' reinstalled successfully. ✅"
 else
     echo "Error: Failed to reinstall pip package '$PACKAGE_NAME'. ❌"

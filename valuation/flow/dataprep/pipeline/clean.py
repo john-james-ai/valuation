@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Tuesday October 14th 2025 10:53:05 pm                                               #
-# Modified   : Saturday October 25th 2025 11:04:39 am                                              #
+# Modified   : Saturday October 25th 2025 06:10:16 pm                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -30,6 +30,7 @@ from tqdm import tqdm
 
 from valuation.asset.dataset import Dataset
 from valuation.asset.identity.dataset import DatasetPassport
+from valuation.core.stage import DatasetStage
 from valuation.core.state import Status
 from valuation.flow.base.pipeline import PipelineResult
 from valuation.flow.dataprep.base.pipeline import DataPrepPipeline, DataPrepPipelineBuilder
@@ -41,7 +42,7 @@ from valuation.flow.dataprep.task.ingest import (
     IngestSalesDataTask,
 )
 from valuation.flow.dataprep.validation import Validation, ValidationBuilder
-from valuation.infra.file.io import IOService
+from valuation.infra.file.io.fast import IOService
 from valuation.infra.store.dataset import DatasetStore
 
 # ------------------------------------------------------------------------------------------------ #
@@ -177,8 +178,10 @@ class CleanSalesDataPipeline(DataPrepPipeline):
                     df = df_validated.lazy()
 
                 # Collect final result and append to category frames
-                category_frames.append(df.collect())
+                if isinstance(df, pl.LazyFrame):
+                    df = df.collect()
 
+                category_frames.append(df)
                 # Concatenate all frames for this category
                 if category_frames:
                     df_category = pl.concat(category_frames, how="vertical")

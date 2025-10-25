@@ -1,9 +1,0 @@
-{
-  "name": "test_dataset",
-  "description": "Test dataset for unit tests.",
-  "asset_type": "dataset",
-  "entity": "sales",
-  "stage": "ingest",
-  "file_format": "parquet",
-  "created": "20251019-2102"
-}

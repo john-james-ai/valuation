@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Saturday October 25th 2025 10:54:03 am                                              #
-# Modified   : Saturday October 25th 2025 10:55:27 am                                              #
+# Modified   : Saturday October 25th 2025 02:09:13 pm                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -23,6 +23,12 @@ import polars as pl
 import seaborn as sns
 
 from valuation.analysis.analytics.base import Analytics
+from valuation.utils.format import (
+    FORMAT_DOLLAR,
+    FORMAT_INT_NO_COMMA,
+    FORMAT_PERCENTAGE_INT,
+    PolarsFormatter,
+)
 
 # ------------------------------------------------------------------------------------------------ #
 
@@ -49,7 +55,9 @@ class YoYSalesAnalytics(Analytics):
         Returns:
             DataFrame with YoY analysis including growth rates and changes
         """
-        is_lazy = isinstance(df, pl.LazyFrame)
+        # Collect at the top if LazyFrame
+        if isinstance(df, pl.LazyFrame):
+            df = df.collect()
 
         # Filter by identifier if specified
         if identifier is not None:
@@ -78,12 +86,15 @@ class YoYSalesAnalytics(Analytics):
 
         if partition_cols:
             result = result.with_columns(
-                [pl.col("total_revenue").shift(1).over(partition_cols).alias("prev_year_revenue")]
+                pl.col("total_revenue").shift(1).over(partition_cols).alias("prev_year_revenue")
             )
         else:
             result = result.with_columns(
-                [pl.col("total_revenue").shift(1).alias("prev_year_revenue")]
+                pl.col("total_revenue").shift(1).alias("prev_year_revenue")
             )
+
+        # Filter the 1st year to avoid NaN in YoY calculation
+        result = result.filter(pl.col("prev_year_revenue").is_not_null())
 
         # Calculate YoY change and growth rate
         result = result.with_columns(
@@ -92,22 +103,25 @@ class YoYSalesAnalytics(Analytics):
                 (
                     (pl.col("total_revenue") - pl.col("prev_year_revenue"))
                     / pl.col("prev_year_revenue")
-                    * 100
                 )
                 .round(2)
                 .alias("yoy_growth_pct"),
             ]
         )
 
+        # Format
+        schema = {
+            "year": FORMAT_INT_NO_COMMA,
+            "total_revenue": FORMAT_DOLLAR,
+            "prev_year_revenue": FORMAT_DOLLAR,
+            "yoy_change": FORMAT_DOLLAR,
+            "yoy_growth_pct": FORMAT_PERCENTAGE_INT,
+        }
+        result = PolarsFormatter.format_dataframe(result, schema)
+
         # Apply any sorting from kwargs
         if "sort_by" in kwargs:
             result = result.sort(kwargs["sort_by"], descending=kwargs.get("descending", False))
-
-        # Return in same format as input
-        if is_lazy and isinstance(result, pl.DataFrame):
-            return result.lazy()
-        elif not is_lazy and isinstance(result, pl.LazyFrame):
-            return result.collect()
 
         return result
 
@@ -127,7 +141,7 @@ class YoYSalesAnalytics(Analytics):
             identifier: Specific identifier for title
             **kwargs: Additional plotting arguments (figsize, title, etc.)
         """
-        # Ensure we have a DataFrame
+        # Ensure we have a DataFrame by collecting if needed
         if isinstance(df, pl.LazyFrame):
             df = df.collect()
 
@@ -145,23 +159,34 @@ class YoYSalesAnalytics(Analytics):
 
         # Plot 1: Revenue trend
         if level in ["store", "category"] and identifier is None:
-            # Multiple entities - show top 5
-            entities = df.select(pl.col(level)).unique().to_series().to_list()[:5]
-            for entity in entities:
-                entity_data = df.filter(pl.col(level) == entity)
+            # Multiple entities - show top 5 by latest year revenue
+            latest_year = df["year"].max()
+            top_entities = (
+                df.filter(pl.col("year") == latest_year)
+                .sort("total_revenue", descending=True)
+                .select(pl.col(level))
+                .head(5)
+                .to_series()
+                .to_list()
+            )
+
+            for entity in top_entities:
+                entity_data = df.filter(pl.col(level) == entity).sort("year")
                 ax1.plot(
-                    entity_data["year"],
-                    entity_data["total_revenue"],
+                    entity_data["year"].to_list(),
+                    entity_data["total_revenue"].to_list(),
                     marker="o",
-                    label=entity,
+                    label=str(entity),
                     linewidth=2,
                 )
             ax1.legend()
         else:
             # Single entity or company level
+            years = df["year"].to_list()
+            revenues = df["total_revenue"].to_list()
             ax1.plot(
-                df["year"],
-                df["total_revenue"],
+                years,
+                revenues,
                 marker="o",
                 color="steelblue",
                 linewidth=2,
@@ -176,28 +201,32 @@ class YoYSalesAnalytics(Analytics):
         # Plot 2: YoY Growth Rate
         growth_data = df.filter(pl.col("yoy_growth_pct").is_not_null())
 
-        if level in ["store", "category"] and identifier is None:
+        if level in ["store", "category"] and identifier is None and len(top_entities) > 0:
             # Multiple entities
-            for entity in entities:
-                entity_data = growth_data.filter(pl.col(level) == entity)
-                ax2.plot(
-                    entity_data["year"],
-                    entity_data["yoy_growth_pct"],
-                    marker="s",
-                    label=entity,
-                    linewidth=2,
-                )
+            for entity in top_entities:
+                entity_data = growth_data.filter(pl.col(level) == entity).sort("year")
+                if entity_data.height > 0:
+                    ax2.plot(
+                        entity_data["year"].to_list(),
+                        entity_data["yoy_growth_pct"].to_list(),
+                        marker="s",
+                        label=str(entity),
+                        linewidth=2,
+                    )
             ax2.legend()
         else:
-            # Single entity or company level
-            colors = ["green" if x > 0 else "red" for x in growth_data["yoy_growth_pct"]]
-            ax2.bar(
-                growth_data["year"],
-                growth_data["yoy_growth_pct"],
-                color=colors,
-                alpha=0.7,
-                edgecolor="black",
-            )
+            # Single entity or company level - use bar chart
+            if growth_data.height > 0:
+                years = growth_data["year"].to_list()
+                growth_pcts = growth_data["yoy_growth_pct"].to_list()
+                colors = ["green" if x > 0 else "red" for x in growth_pcts]
+                ax2.bar(
+                    years,
+                    growth_pcts,
+                    color=colors,
+                    alpha=0.7,
+                    edgecolor="black",
+                )
 
         ax2.axhline(y=0, color="black", linestyle="--", linewidth=1)
         ax2.set_xlabel("Year", fontsize=12)

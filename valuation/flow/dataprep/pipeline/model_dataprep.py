@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Tuesday October 14th 2025 10:53:05 pm                                               #
-# Modified   : Saturday October 25th 2025 11:04:43 am                                              #
+# Modified   : Saturday October 25th 2025 06:10:14 pm                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -33,7 +33,7 @@ from valuation.flow.base.pipeline import PipelineResult
 from valuation.flow.dataprep.base.pipeline import DataPrepPipeline, DataPrepPipelineBuilder
 from valuation.flow.dataprep.task.densify import DensifySalesDataTask
 from valuation.flow.dataprep.task.feature import FeatureEngineeringTask
-from valuation.infra.file.io import IOService
+from valuation.infra.file.io.fast import IOService
 from valuation.infra.store.dataset import DatasetStore
 from valuation.utils.split import TimeSeriesDataSplitter
 
@@ -43,7 +43,7 @@ YEAR_TO_SPLIT = 1996
 
 # ------------------------------------------------------------------------------------------------ #
 @dataclass
-class ModelDataPipelineResult(PipelineResult):
+class TrainDataPipelineResult(PipelineResult):
     """Holds the results of a sales pipeline execution.
 
     Attributes:
@@ -76,7 +76,7 @@ class ModelDataPipelineResult(PipelineResult):
 
 # ------------------------------------------------------------------------------------------------ #
 @dataclass
-class ModelDataPipelineConfig:
+class TrainDataPipelineConfig:
     """Configuration for the Model Data Pipeline.
 
     Attributes:
@@ -92,19 +92,19 @@ class ModelDataPipelineConfig:
 
 
 # ------------------------------------------------------------------------------------------------ #
-class ModelDataPipeline(DataPrepPipeline):
+class TrainDataPipeline(DataPrepPipeline):
     """
     Pipeline for creating model-ready datasets with train/validation and test splits.
     """
 
     _dataset_store: DatasetStore
-    _result: ModelDataPipelineResult
+    _result: TrainDataPipelineResult
 
     def __init__(
         self,
-        config: ModelDataPipelineConfig,
+        config: TrainDataPipelineConfig,
         dataset_store: type[DatasetStore] = DatasetStore,
-        result: type[ModelDataPipelineResult] = ModelDataPipelineResult,
+        result: type[TrainDataPipelineResult] = TrainDataPipelineResult,
         io: type[IOService] = IOService,
     ) -> None:
         super().__init__(dataset_store=dataset_store)
@@ -112,7 +112,7 @@ class ModelDataPipeline(DataPrepPipeline):
         self._config = config
         self._io = io
 
-    def run(self, force: bool = False) -> Optional[ModelDataPipelineResult]:
+    def run(self, force: bool = False) -> Optional[TrainDataPipelineResult]:
         """
         Execute the model data preparation pipeline.
 
@@ -120,7 +120,7 @@ class ModelDataPipeline(DataPrepPipeline):
             force: If True, force reprocessing even when target datasets exist.
 
         Returns:
-            Optional[ModelDataPipelineResult]: Pipeline result object.
+            Optional[TrainDataPipelineResult]: Pipeline result object.
         """
         self._result.start_pipeline()
 
@@ -161,9 +161,10 @@ class ModelDataPipeline(DataPrepPipeline):
             if isinstance(df, pl.LazyFrame):
                 # Collect the LazyFrame to an eager DataFrame then compute length
                 df = df.collect()
-                self._result.records_in = len(df)
+                self._result.records_in = df.height
             else:
-                self._result.records_in = len(df)
+                # polars DataFrame: use .height for row count
+                self._result.records_in = df.height
 
             # Process through tasks
             for task in self._tasks:
@@ -183,9 +184,14 @@ class ModelDataPipeline(DataPrepPipeline):
                     self._result.status_obj = Status.FAIL
                     raise ValueError(msg)
 
+            # Convert to pandas DataFrame for splitting
+            # if isinstance(df, pl.LazyFrame):
+            #     df = df.collect()
+            # df = df.to_pandas()
+
             # Store the full dataset after preprocessing
-            full_dataset = Dataset(passport=self._config.target, df=df)
             self._dataset_store.remove(passport=self._config.target)  # Remove if exists
+            full_dataset = Dataset(passport=self._config.target, df=df)
             self._dataset_store.add(dataset=full_dataset)
 
             # Split the data into train_val and test sets
@@ -249,13 +255,14 @@ class ModelDataPipeline(DataPrepPipeline):
         Args:
             data: Dictionary containing 'train_val' and 'test' DataFrames.
         """
-        self._result.train_val_size = len(data["train_val"])
-        self._result.test_size = len(data["test"])
+        # Polars DataFrame row counts via .height
+        self._result.train_val_size = data["train_val"].height
+        self._result.test_size = data["test"].height
         self._result.records_out = self._result.train_val_size + self._result.test_size
 
 
 # ------------------------------------------------------------------------------------------------ #
-class ModelDataPipelineBuilder(DataPrepPipelineBuilder):
+class TrainDataPipelineBuilder(DataPrepPipelineBuilder):
     """Builder for TransformSalesDataPipeline instances.
 
     Use the fluent `with_*` methods to configure source, target and tasks, then call `build()`.
@@ -276,32 +283,32 @@ class ModelDataPipelineBuilder(DataPrepPipelineBuilder):
         Returns:
             None
         """
-        self._pipeline = ModelDataPipeline
+        self._pipeline = TrainDataPipeline
 
-    def with_config(self, config: ModelDataPipelineConfig) -> ModelDataPipelineBuilder:
+    def with_config(self, config: TrainDataPipelineConfig) -> TrainDataPipelineBuilder:
 
         self._config = config
         return self
 
-    def with_densify(self) -> ModelDataPipelineBuilder:
+    def with_densify(self) -> TrainDataPipelineBuilder:
         """Add the aggregate task to the pipeline and configure its validator.
 
         Returns:
-            ModelDataPipelineBuilder: The builder instance.
+            TrainDataPipelineBuilder: The builder instance.
         """
 
         task = DensifySalesDataTask()
         self._tasks.append(task)
         return self
 
-    def with_feature_engineering(self) -> ModelDataPipelineBuilder:
+    def with_feature_engineering(self) -> TrainDataPipelineBuilder:
         """Add the filter partial years task to the pipeline and configure its validator.
         Args:
             min_weeks (int): Minimum number of weeks required for a year to be considered full.
                 Defaults to 50.
 
         Returns:
-            ModelDataPipelineBuilder: The builder instance.
+            TrainDataPipelineBuilder: The builder instance.
         """
         task = FeatureEngineeringTask()
         self._tasks.append(task)
@@ -309,7 +316,7 @@ class ModelDataPipelineBuilder(DataPrepPipelineBuilder):
 
     def build(
         self,
-    ) -> ModelDataPipeline:
+    ) -> TrainDataPipeline:
         """Finalize and return the built TransformSalesDataPipeline.
 
         Returns:

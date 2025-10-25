@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday October 24th 2025 01:00:33 pm                                                #
-# Modified   : Friday October 24th 2025 09:32:44 pm                                                #
+# Modified   : Saturday October 25th 2025 05:35:16 pm                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -189,7 +189,7 @@ class ValuationDCF:
 
         logger.info("Annual Revenue Forecasts:")
         for _, row in self.annual_revenue.iterrows():
-            logger.info(f"  {int(row['year'])}: ${row['revenue']:,.0f}")
+            logger.info(f"  {int(row['year'])}: {row['revenue']:,.0f}")
 
         return self.annual_revenue
 
@@ -248,7 +248,7 @@ class ValuationDCF:
 
         for idx, row in self.annual_revenue.iterrows():  # type: ignore
             year = row["year"].astype(int)
-            revenue = f"${row["revenue"]:,.0f}"
+            revenue = row["revenue"]
 
             # Calculate FCF components
             fcf_calc = self.calculate_fcf(revenue, prior_revenue)

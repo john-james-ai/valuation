@@ -1,0 +1,39 @@
+{
+  "os": "Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.39",
+  "python": "CPython 3.12.7",
+  "startedAt": "2025-10-25T23:00:47.563395Z",
+  "program": "/home/john/projects/valuation/notebooks/lab/forecast.ipynb",
+  "codePath": "notebooks/lab/forecast.ipynb",
+  "codePathLocal": "notebooks/lab/forecast.ipynb",
+  "git": {
+    "remote": "https://github.com/john-james-ai/valuation",
+    "commit": "939f75b8574905c6585088e827f436e46a69a4fc"
+  },
+  "email": "john.james.ai.studio@gmail.com",
+  "root": "/home/john/projects/valuation",
+  "host": "Leviathan",
+  "executable": "/home/john/anaconda3/envs/valuation/bin/python",
+  "cpu_count": 12,
+  "cpu_count_logical": 24,
+  "gpu": "Quadro P400",
+  "gpu_count": 1,
+  "disk": {
+    "/": {
+      "total": "1081101176832",
+      "used": "68655915008"
+    }
+  },
+  "memory": {
+    "total": "67423563776"
+  },
+  "gpu_nvidia": [
+    {
+      "name": "Quadro P400",
+      "memoryTotal": "2147483648",
+      "architecture": "Pascal",
+      "uuid": "GPU-14951fad-86f6-3b76-8b83-4cb6655490f4"
+    }
+  ],
+  "cudaVersion": "13.0",
+  "writerId": "f38tm75rmu4gakanjmynhw0k4i7kj35p"
+}

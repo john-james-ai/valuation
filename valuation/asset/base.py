@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Wednesday October 8th 2025 02:52:13 pm                                              #
-# Modified   : Saturday October 25th 2025 11:02:49 am                                              #
+# Modified   : Saturday October 25th 2025 06:10:14 pm                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -31,7 +31,7 @@ from valuation.asset.identity.base import Passport
 from valuation.core.types import AssetType
 from valuation.infra.exception import AssetExistsError
 from valuation.infra.file.base import FileSystem
-from valuation.infra.file.io import IOService
+from valuation.infra.file.io.fast import IOService
 
 
 # ------------------------------------------------------------------------------------------------ #

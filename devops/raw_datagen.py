@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday October 19th 2025 12:18:21 am                                                #
-# Modified   : Saturday October 25th 2025 02:52:12 am                                              #
+# Modified   : Saturday October 25th 2025 06:10:22 pm                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -35,7 +35,7 @@ from valuation.core.stage import DatasetStage
 from valuation.core.state import Status
 from valuation.core.types import AssetType
 from valuation.infra.file.dataset import DatasetFileSystem
-from valuation.infra.file.io import IOService
+from valuation.infra.file.io.fast import IOService
 from valuation.infra.loggers import configure_logging
 from valuation.utils.file import is_directory_empty
 

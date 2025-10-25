@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 16th 2025 08:29:37 pm                                              #
-# Modified   : Saturday October 25th 2025 08:43:27 am                                              #
+# Modified   : Saturday October 25th 2025 06:10:12 pm                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -30,7 +30,7 @@ from loguru import logger
 import polars as pl
 
 from valuation.core.validation import Severity
-from valuation.infra.file.io import IOService
+from valuation.infra.file.io.fast import IOService
 
 
 # ------------------------------------------------------------------------------------------------ #

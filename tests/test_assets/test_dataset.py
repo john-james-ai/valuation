@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday October 19th 2025 09:13:25 pm                                                #
-# Modified   : Saturday October 25th 2025 11:04:41 am                                              #
+# Modified   : Saturday October 25th 2025 06:10:16 pm                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -31,7 +31,7 @@ from valuation.asset.dataset import Dataset, DatasetProfile
 from valuation.core.types import AssetType
 from valuation.infra.exception import DatasetExistsError, DatasetNotFoundError
 from valuation.infra.file.dataset import DatasetFileSystem
-from valuation.infra.file.io import IOService
+from valuation.infra.file.io.fast import IOService
 
 # ------------------------------------------------------------------------------------------------ #
 # pylint: disable=missing-class-docstring, line-too-long

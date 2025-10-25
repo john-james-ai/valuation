@@ -4,14 +4,14 @@
 # Project    : Valuation - Discounted Cash Flow Method                                             #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
-# Filename   : /valuation/asset/dataset/fast/dataset.py                                            #
+# Filename   : /valuation/asset/dataset.py                                                         #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 9th 2025 07:11:18 pm                                               #
-# Modified   : Saturday October 25th 2025 08:43:27 am                                              #
+# Modified   : Saturday October 25th 2025 06:10:20 pm                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -34,7 +34,7 @@ from valuation.core.dataclass import DataClass
 from valuation.core.types import AssetType
 from valuation.infra.exception import DatasetExistsError
 from valuation.infra.file.dataset import DatasetFileSystem
-from valuation.infra.file.io import IOService
+from valuation.infra.file.io.fast import IOService
 
 # ------------------------------------------------------------------------------------------------ #
 DTYPES = {}
@@ -257,7 +257,7 @@ class Dataset(Asset):
     def __init__(
         self,
         passport: DatasetPassport,
-        df: pl.DataFrame = pl.DataFrame(),
+        df: pl.DataFrame | pl.LazyFrame = pl.LazyFrame(),
         io: type[IOService] = IOService,
     ) -> None:
         self._passport = passport
@@ -273,9 +273,11 @@ class Dataset(Asset):
         self._initialize()
 
     @property
-    def data(self) -> pl.DataFrame:
+    def data(self) -> pl.DataFrame | pl.LazyFrame:
         """The dataset as a Polars DataFrame, loaded lazily."""
         self._lazy_load_data()
+        if isinstance(self._df, pl.LazyFrame):
+            self._df = self._df.collect()
         return self._df
 
     @property
@@ -302,7 +304,12 @@ class Dataset(Asset):
     @property
     def data_in_memory(self) -> bool:
         """Indicates if the DataFrame is loaded in memory."""
-        return self._df is not None and self._df.height > 0
+        if self._df is None:
+            return False
+        if isinstance(self._df, pl.LazyFrame):
+            # LazyFrame is a query plan, not actual data in memory
+            return False
+        return self._df.height > 0
 
     @property
     def file_exists(self) -> bool:
@@ -317,12 +324,27 @@ class Dataset(Asset):
     @property
     def nrows(self) -> Optional[int]:
         """Returns the number of rows in the dataset."""
-        return self.data.height if self.data is not None else 0
+        if self.data is None:
+            return 0
+        if isinstance(self.data, pl.LazyFrame):
+            # For LazyFrame, we need to collect to get the count
+            # This could be expensive for large datasets
+            try:
+                return self.data.select(pl.len()).collect().item()
+            except Exception:
+                # If collection fails, return None
+                return None
+        return self.data.height
 
     @property
     def ncols(self) -> Optional[int]:
         """Returns the number of columns in the dataset."""
-        return self.data.width if self.data is not None else 0
+        if self.data is None:
+            return 0
+        # Use collect_schema() for LazyFrame to avoid warning
+        if isinstance(self.data, pl.LazyFrame):
+            return len(self.data.collect_schema())
+        return self.data.width
 
     def stamp_passport(self, passport: Passport) -> None:
         """Updates the dataset's passport.
@@ -404,6 +426,26 @@ class Dataset(Asset):
             return False
         return self._asset_filepath.exists()
 
+    def _has_data(self, df: pl.DataFrame | pl.LazyFrame) -> bool:
+        """Check if a DataFrame or LazyFrame contains data.
+
+        Args:
+            df: The DataFrame or LazyFrame to check.
+
+        Returns:
+            True if the frame contains data, False otherwise.
+        """
+        if df is None:
+            return False
+
+        if isinstance(df, pl.LazyFrame):
+            # For LazyFrame, check if it has any columns via collect_schema()
+            # This is the recommended way to avoid the performance warning
+            return len(df.collect_schema()) > 0
+
+        # For DataFrame, check height
+        return df.height > 0
+
     def _validate(self) -> None:
         """Validates the dataset's passport and filepath."""
         # Validate the passport.
@@ -415,13 +457,14 @@ class Dataset(Asset):
 
         # Get the canonical filepath from the file system.
         self._asset_filepath = self._file_system.get_asset_filepath(passport=self._passport)
+
         # If self._df is provided, yet the file exists, raise a FileExistsError to avoid overwriting.
-        if self._df.height > 0 and self._asset_filepath.exists():
+        if self._has_data(self._df) and self._asset_filepath.exists():
             raise DatasetExistsError(
                 f"Dataset file {self._asset_filepath} already exists. Cannot initialize with data to avoid overwriting."
             )
         # If self._df is empty and no file exists, raise an exception.
-        if self._df.height == 0 and not self._asset_filepath.exists():
+        if not self._has_data(self._df) and not self._asset_filepath.exists():
             raise FileNotFoundError(
                 f"No data provided and dataset file {self._asset_filepath} does not exist."
             )
@@ -434,21 +477,28 @@ class Dataset(Asset):
             self._fileinfo = FileInfo.from_filepath(filepath=self._asset_filepath)
 
         # If self._df exists and is not empty, normalize dtypes
-        if self._df is not None and self._df.height > 0:
+        if self._has_data(self._df):
             self._df = self._normalize_dtypes(self._df)
 
-    def _normalize_dtypes(self, df: pl.DataFrame) -> pl.DataFrame:
+    def _normalize_dtypes(self, df: pl.DataFrame | pl.LazyFrame) -> pl.DataFrame | pl.LazyFrame:
         """Applies predefined data types to the DataFrame's columns.
 
         Args:
-            df: The DataFrame to normalize.
+            df: The DataFrame or LazyFrame to normalize.
 
         Returns:
-            The DataFrame with enforced data types.
+            The DataFrame/LazyFrame with enforced data types.
         """
-        if DTYPES is not None and df is not None and df.height > 0:
-            valid_dtypes = {k: v for k, v in DTYPES.items() if k in df.columns}
-            df = df.cast(valid_dtypes)
+        if DTYPES is not None and df is not None and self._has_data(df):
+            # Use collect_schema() for LazyFrame to avoid warning
+            if isinstance(df, pl.LazyFrame):
+                schema = df.collect_schema()
+            else:
+                schema = df.schema
+
+            valid_dtypes = {k: v for k, v in DTYPES.items() if k in schema}
+            if valid_dtypes:
+                df = df.cast(valid_dtypes)
         return df
 
     def _lazy_load_data(self) -> None:
@@ -479,30 +529,45 @@ class Dataset(Asset):
             logger.debug("Dataset profile created.")
 
     @staticmethod
-    def _dataframes_equal(a: Optional[pl.DataFrame], b: Optional[pl.DataFrame]) -> bool:
-        """Compare two Polars DataFrames for equality.
+    def _dataframes_equal(
+        a: Optional[pl.DataFrame | pl.LazyFrame], b: Optional[pl.DataFrame | pl.LazyFrame]
+    ) -> bool:
+        """Compare two Polars DataFrames or LazyFrames for equality.
 
         Comparison strategy:
             1. If both are None -> equal.
             2. If only one is None -> not equal.
-            3. Compare height and width.
-            4. Compare schema (column names and dtypes).
-            5. Compare row content via .rows() for deterministic equality.
+            3. If types differ (one LazyFrame, one DataFrame) -> not equal.
+            4. Compare schemas (column names and dtypes).
+            5. For DataFrames: Compare height/width and row content.
+            6. For LazyFrames: Compare schemas only (query plans may differ but produce same result).
 
         Args:
-            a (Optional[pl.DataFrame]): First DataFrame.
-            b (Optional[pl.DataFrame]): Second DataFrame.
+            a: First DataFrame or LazyFrame.
+            b: Second DataFrame or LazyFrame.
 
         Returns:
-            bool: True if DataFrames are equal, False otherwise.
+            bool: True if DataFrames/LazyFrames are equal, False otherwise.
         """
         if a is None or b is None:
             return a is b
-        # Quick shape check
-        if a.height != b.height or a.width != b.width:
+
+        # Check if types match
+        if type(a) != type(b):
             return False
-        # Schema check
+
+        # Compare schemas (works for both without triggering execution)
         if a.schema != b.schema:
             return False
-        # Row-wise content check (collects into Python lists)
-        return a.rows() == b.rows()
+
+        # For DataFrames, do full comparison including data
+        if isinstance(a, pl.DataFrame) and isinstance(b, pl.DataFrame):
+            # Quick shape check
+            if a.height != b.height or a.width != b.width:
+                return False
+            # Row-wise content check
+            return a.rows() == b.rows()
+
+        # For LazyFrames, schema comparison is sufficient
+        # We avoid collecting/executing the query plans
+        return True

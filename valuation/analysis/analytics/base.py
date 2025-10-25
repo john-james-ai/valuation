@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Saturday October 25th 2025 10:54:28 am                                              #
-# Modified   : Saturday October 25th 2025 11:03:27 am                                              #
+# Modified   : Saturday October 25th 2025 06:10:16 pm                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -21,7 +21,7 @@ from pathlib import Path
 
 import polars as pl
 
-from valuation.infra.file.io import IOService
+from valuation.infra.file.io.fast import IOService
 
 
 # ------------------------------------------------------------------------------------------------ #

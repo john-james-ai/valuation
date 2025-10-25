@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Saturday October 11th 2025 05:32:44 pm                                              #
-# Modified   : Friday October 24th 2025 08:23:41 pm                                                #
+# Modified   : Saturday October 25th 2025 07:45:13 pm                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -165,12 +165,12 @@ class Financials(DataClass):
         # Profiability Metrics
         self.ebit = self.ebitda - self.depreciation_and_amortization
         # Profitability Ratios (Expressed as Ratios, not Percentages)
-        self.gross_margin = self.gross_profit / self.revenue if self.revenue else 0.0
-        self.operating_margin = self.operating_income / self.revenue if self.revenue else 0.0
-        self.net_profit_margin = self.net_income / self.revenue if self.revenue else 0.0
+        self.gross_margin = self.gross_profit / self.revenue * 100 if self.revenue else 0.0
+        self.operating_margin = self.operating_income / self.revenue * 100 if self.revenue else 0.0
+        self.net_profit_margin = self.net_income / self.revenue * 100 if self.revenue else 0.0
 
-        self.ebit_margin = self.ebit / self.revenue if self.revenue else 0.0
-        self.ebitda_margin = self.ebitda / self.revenue if self.revenue else 0.0
+        self.ebit_margin = self.ebit / self.revenue * 100 if self.revenue else 0.0
+        self.ebitda_margin = self.ebitda / self.revenue * 100 if self.revenue else 0.0
         self.nopat = int(self.ebit * (1 - self.tax_rate))
         # Average Assets & Equity
         self.average_assets = (
@@ -242,6 +242,8 @@ class Financials(DataClass):
             self.capital_expenditures / self.revenue * 100 if self.revenue else 0.0
         )
         self.capex_pct = abs(self.capex_to_sales / 100)
+        # Overriding Capex Pct.
+        self.capex_pct = 0.01
         self.nwc_to_sales = self.capital_expenditures / self.revenue * 100 if self.revenue else 0.0
 
         # Liquidity Metrics

@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Saturday October 18th 2025 06:47:58 pm                                              #
-# Modified   : Saturday October 25th 2025 10:04:02 am                                              #
+# Modified   : Saturday October 25th 2025 04:14:09 pm                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -50,18 +50,17 @@ class FileSystem(ABC):
         get_passport_filepath: Build the passport JSON filepath for an asset.
     """
 
-    __ASSET_DIR_MAP = {
-        "data": PROJ_ROOT / "data" / MODE,
+    __REGISTRY = PROJ_ROOT / "asset_store" / MODE
+    __ASSET_HOME_DIR = {
+        "dataset": PROJ_ROOT / "data" / MODE,
         "model": PROJ_ROOT / "model" / MODE,
         "artifact": PROJ_ROOT / "artifacts" / MODE,
     }
 
-    __ASSET_STORE_DIR = PROJ_ROOT / "asset_store" / MODE
-
     def __init__(self, asset_type: AssetType) -> None:
         self._asset_type = asset_type
-        self._store_location = Path(self.__ASSET_STORE_DIR) / str(AssetType)
-        self._asset_location = self.__ASSET_DIR_MAP[str(self._asset_type)]
+        self._asset_registry = Path(self.__REGISTRY) / (str(self._asset_type))
+        self._asset_location = Path(self.__ASSET_HOME_DIR[self._asset_type])
 
     @property
     def asset_location(self) -> Path:
@@ -69,27 +68,32 @@ class FileSystem(ABC):
         return self._asset_location
 
     @property
-    def asset_store_location(self) -> Path:
+    def asset_asset_registry(self) -> Path:
         """The base location for asset data files."""
-        return self._store_location
+        return self._asset_registry
 
+    @property
+    def asset_type(self) -> AssetType:
+        """The asset type for this filesystem."""
+        return self._asset_type
+
+    @abstractmethod
     def get_asset_filepath(
         self,
         passport: Passport,
         **kwargs,
     ) -> Path:
         """Builds the full filepath for an asset data file and ensures the stage directory exists."""
-        return (
-            self._asset_location
-            / str(passport.stage)
-            / f"{passport.name}.{str(passport.file_format)}"
-        )
+
+        filename = f"{str(passport.id.asset_type)}_{str(passport.id.stage)}_{passport.id.name}"
+        file_ext = str(passport.file_format)
+        return self._asset_location / str(passport.stage) / f"{filename}.{file_ext}"
 
     @abstractmethod
     def get_passport_filepath(self, asset_id: ID) -> Path:
         """Builds the full filepath for an asset passport JSON file."""
-        filename = f"{str(asset_id.stage)}_{asset_id.name}_passport.json"
-        return self._store_location / filename
+        filename = f"{str(asset_id.asset_type)}_{str(asset_id.stage)}_{asset_id.name}"
+        return self._asset_registry / f"{filename}_passport.json"
 
     @abstractmethod
     def get_asset_stage_location(self, stage: Stage) -> Path:

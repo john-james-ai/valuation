@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday October 17th 2025 11:19:18 pm                                                #
-# Modified   : Thursday October 23rd 2025 05:28:24 am                                              #
+# Modified   : Saturday October 25th 2025 06:10:14 pm                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -32,7 +32,7 @@ from valuation.asset.store import AssetStore
 from valuation.core.types import AssetType
 from valuation.infra.exception import AssetStoreNotFoundError
 from valuation.infra.file.base import FileSystem
-from valuation.infra.file.io import IOService
+from valuation.infra.file.io.fast import IOService
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -99,14 +99,14 @@ class AssetStoreBase(AssetStore):
 
         # Get the
 
-        store_location = self._file_system.asset_store_location
+        asset_registry = self._file_system.asset_asset_registry
 
-        if not store_location:
-            raise AssetStoreNotFoundError(f"Error: Directory not found at '{store_location}'")
+        if not asset_registry:
+            raise AssetStoreNotFoundError(f"Error: Directory not found at '{asset_registry}'")
 
         registry = [
             data
-            for path in store_location.glob("*.json")
+            for path in asset_registry.glob("*.json")
             if (data := self._io.read(path)) is not None
         ]
 
