@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Saturday October 18th 2025 08:07:16 pm                                              #
-# Modified   : Thursday October 23rd 2025 08:26:56 am                                              #
+# Modified   : Saturday October 25th 2025 09:45:15 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -43,4 +43,9 @@ class DatasetStage(Stage):
 class ModelStage(Stage):
     INITIAL = "initial"
     TUNED = "tuned"
+    FINAL = "final"
+
+
+class ArtifactStage(Stage):
+    DRAFT = "draft"
     FINAL = "final"

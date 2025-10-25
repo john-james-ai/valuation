@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 9th 2025 11:01:16 pm                                               #
-# Modified   : Saturday October 25th 2025 08:49:40 am                                              #
+# Modified   : Saturday October 25th 2025 09:33:33 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -100,7 +100,7 @@ def run_sales_data_transform_pipeline(
     force: bool = False,
 ) -> Optional[TransformSalesDataPipelineResult]:
     store = DatasetStore()
-    source = store.file_system.get_stage_location(stage=DatasetStage.CLEAN)
+    source = store.file_system.get_asset_stage_location(stage=DatasetStage.CLEAN)
     target = DatasetPassport.create(
         name="sales_transform",
         description="Transformed and Aggregated Sales Data",
@@ -111,6 +111,7 @@ def run_sales_data_transform_pipeline(
         TransformSalesDataPipelineBuilder()
         .with_source(source=source)
         .with_target(target=target)
+        .with_full_year_filter_task(min_weeks=50)
         .with_aggregate_task()
         .build()
     )

@@ -4,14 +4,14 @@
 # Project    : Valuation - Discounted Cash Flow Method                                             #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
-# Filename   : /valuation/infra/store/fast/dataset.py                                              #
+# Filename   : /valuation/infra/store/dataset.py                                                   #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Saturday October 25th 2025 01:58:06 am                                              #
-# Modified   : Saturday October 25th 2025 08:43:26 am                                              #
+# Modified   : Saturday October 25th 2025 11:04:44 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -22,7 +22,7 @@ from typing import Optional
 
 from loguru import logger
 
-from valuation.asset.dataset.dataset import Dataset
+from valuation.asset.dataset import Dataset
 from valuation.asset.identity.base import Passport
 from valuation.asset.identity.dataset import DatasetID, DatasetPassport
 from valuation.core.types import AssetType

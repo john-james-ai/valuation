@@ -1,7 +1,11 @@
-# Data
+# Assets
+asset_store/ 
 /data/
 tests/data
-asset_store/
+/model/
+/artifacts/
+
+
 # Mac OS-specific storage files
 .DS_Store
 

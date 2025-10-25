@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Tuesday October 14th 2025 10:53:05 pm                                               #
-# Modified   : Saturday October 25th 2025 08:45:39 am                                              #
+# Modified   : Saturday October 25th 2025 11:04:39 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -28,7 +28,7 @@ from loguru import logger
 import polars as pl
 from tqdm import tqdm
 
-from valuation.asset.dataset.dataset import Dataset
+from valuation.asset.dataset import Dataset
 from valuation.asset.identity.dataset import DatasetPassport
 from valuation.core.state import Status
 from valuation.flow.base.pipeline import PipelineResult
@@ -109,7 +109,7 @@ class CleanSalesDataPipeline(DataPrepPipeline):
             logger.debug(f"Category filenames mapping loaded: {len(category_filenames)}")
 
             # Get the stage and entity from the target passport
-            directory = self._dataset_store.file_system.get_stage_location(
+            directory = self._dataset_store.file_system.get_asset_stage_location(
                 stage=DatasetStage.RAW,
             )
             logger.debug(f"Raw sales data directory: {directory}\n")

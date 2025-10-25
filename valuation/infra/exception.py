@@ -11,32 +11,49 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday October 17th 2025 05:55:14 pm                                                #
-# Modified   : Saturday October 25th 2025 03:03:42 am                                              #
+# Modified   : Saturday October 25th 2025 10:02:07 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
 # ================================================================================================ #
 
+"""Project-specific exceptions used across the infra layer.
+
+This module defines exception types raised by storage and dataset operations.
+"""
+
+
+class ArtifactNotFoundError(Exception):
+    """Raised when a requested artifact is not found."""
+
+    pass
+
 
 class DatasetNotFoundError(Exception):
-    """Exception raised when there is a file conflict, such as attempting to overwrite an existing file without permission."""
+    """Raised when a requested dataset file or passport cannot be found."""
+
+    pass
+
+
+class ArtifactExistsError(Exception):
+    """Raised when attempting to create an artifact that already exists."""
 
     pass
 
 
 class DatasetExistsError(Exception):
-    """Exception raised when there is a file conflict, such as attempting to overwrite an existing file without permission."""
+    """Raised when attempting to create a dataset file that already exists."""
 
     pass
 
 
 class AssetExistsError(Exception):
-    """Exception raised when there is a file conflict, such as attempting to overwrite an existing file without permission."""
+    """Raised when attempting to create an asset that already exists in the store."""
 
     pass
 
 
 class AssetStoreNotFoundError(Exception):
-    """Exception raised when there is a file conflict, such as attempting to overwrite an existing file without permission."""
+    """Raised when the configured asset store cannot be located or instantiated."""
 
     pass

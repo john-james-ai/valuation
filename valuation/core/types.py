@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Saturday October 18th 2025 08:09:04 pm                                              #
-# Modified   : Monday October 20th 2025 01:57:06 am                                                #
+# Modified   : Saturday October 25th 2025 10:22:21 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -29,3 +29,5 @@ class AssetType(StrEnum):
     MODEL = "model"
     REPORT = "report"
     PLOT = "plot"
+    ARTIFACT = "artifact"
+    TABLE = "table"

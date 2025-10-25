@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Wednesday October 8th 2025 02:52:13 pm                                              #
-# Modified   : Saturday October 25th 2025 04:51:14 am                                              #
+# Modified   : Saturday October 25th 2025 09:31:34 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -108,3 +108,7 @@ class Passport(DataClass, ABC):
 @dataclass
 class ID(DataClass):
     """Base Class for Asset IDs."""
+
+    name: str
+    stage: Stage
+    asset_type: AssetType

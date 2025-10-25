@@ -10,65 +10,33 @@
 # Email      : john.james.ai.studio@gmail.com                                                      #
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
-# Created    : Sunday October 19th 2025 02:01:46 pm                                                #
-# Modified   : Thursday October 23rd 2025 04:20:13 pm                                              #
+# Created    : Saturday October 25th 2025 09:36:31 am                                              #
+# Modified   : Saturday October 25th 2025 10:05:19 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
 # ================================================================================================ #
+"""Filesystem path utilities for model assets and passports."""
 from pathlib import Path
 
-from valuation.asset.identity.model import ModelID, ModelPassport
+from valuation.asset.identity.model import ModelID
 from valuation.core.stage import ModelStage
 from valuation.core.types import AssetType
-from valuation.infra.file.base import MODE, FileSystem
-
+from valuation.infra.file.base import FileSystem
 
 # ------------------------------------------------------------------------------------------------ #
+
+
 class ModelFileSystem(FileSystem):
-    """Utility providing filesystem path construction for models and model passports.
-
-    This class encapsulates the logic for building consistent filepaths for model data
-    and passport JSON files on a local filesystem.
-
-    Args:
-        asset_type (AssetType): The asset type used to determine store and asset base locations.
-
-    Methods:
-        get_asset_path(name: str, stage: ModelStage) -> Path:
-            Constructs the filesystem path for a model asset.
-        get_passport_path(name: str, stage: ModelStage) -> Path:
-            Constructs the filesystem path for a model passport.
-    """
+    """Filesystem path utilities for model assets and passports."""
 
     def __init__(self) -> None:
-        super().__init__(asset_type=self.asset_type)
+        super().__init__(asset_type=AssetType.MODEL)
 
-    @property
-    def asset_type(self) -> AssetType:
-        return AssetType.MODEL
+    def get_passport_filepath(self, model_id: ModelID) -> Path:
+        """Builds the full filepath for an asset passport JSON file."""
+        return super().get_passport_filepath(asset_id=model_id)
 
-    def get_asset_filepath(
-        self,
-        passport: ModelPassport,
-        **kwargs,
-    ) -> Path:
-
-        return Path(
-            self._asset_location
-            / MODE
-            / str(passport.stage)
-            / f"{passport.name}.{str(passport.file_format)}"
-        )
-
-    def get_passport_filepath(self, model_id: ModelID, **kwargs) -> Path:
-
-        return Path(
-            self._store_location
-            / MODE
-            / f"{str(model_id.asset_type)}_{str(model_id.stage)}_{model_id.name}_passport.json"
-        )
-
-    def get_stage_location(self, stage: ModelStage) -> Path:
+    def get_asset_stage_location(self, stage: ModelStage) -> Path:
         """Builds the full filepath for an asset stage directory."""
-        return Path(self._asset_location) / MODE / str(stage)
+        return super().get_asset_stage_location(stage=stage)
