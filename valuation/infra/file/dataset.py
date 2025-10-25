@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday October 19th 2025 02:01:46 pm                                                #
-# Modified   : Saturday October 25th 2025 02:23:52 am                                              #
+# Modified   : Saturday October 25th 2025 08:45:48 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -58,8 +58,4 @@ class DatasetFileSystem(FileSystem):
 
     def get_stage_location(self, stage: DatasetStage) -> Path:
         """Builds the full filepath for an asset stage directory."""
-        return Path(self._asset_location) / MODE / str(stage)
-
-    def get_stage_entity_location(self, stage: DatasetStage) -> Path:
-        """Builds the full filepath for an asset stage/entity directory."""
         return Path(self._asset_location) / MODE / str(stage)

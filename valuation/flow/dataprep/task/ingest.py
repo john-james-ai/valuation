@@ -11,34 +11,33 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday October 12th 2025 11:51:12 pm                                                #
-# Modified   : Saturday October 25th 2025 03:47:52 am                                              #
+# Modified   : Saturday October 25th 2025 08:43:23 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
 # ================================================================================================ #
-from typing import Optional
+from typing import Optional, Union
 
-import pandas as pd
+import polars as pl
 
-from valuation.asset.dataset.dataset import DTYPES
 from valuation.flow.dataprep.base.task import DataPrepTask
 from valuation.flow.dataprep.validation import Validation
 
 # ------------------------------------------------------------------------------------------------ #
 REQUIRED_COLUMNS_INGEST = {
-    "category": "string",
-    "store": "Int64",
-    "upc": "Int64",
-    "week": "Int64",
-    "qty": "Int64",
-    "move": "Int64",
-    "ok": "Int64",
-    "sale": "string",
-    "price": "float64",
-    "profit": "float64",
-    "year": "Int64",
-    "start": "datetime64[ns]",
-    "end": "datetime64[ns]",
+    "category": pl.Utf8,
+    "store": pl.Int64,
+    "upc": pl.Int64,
+    "week": pl.Int64,
+    "qty": pl.Int64,
+    "move": pl.Int64,
+    "ok": pl.Int64,
+    "sale": pl.Utf8,
+    "price": pl.Float64,
+    "profit": pl.Float64,
+    "year": pl.Int32,  # changed to Int32 to match actual parquet/csv load
+    "start": pl.Date,
+    "end": pl.Date,
 }
 
 NON_NEGATIVE_COLUMNS_INGEST = ["qty", "move", "price"]
@@ -46,65 +45,111 @@ NON_NEGATIVE_COLUMNS_INGEST = ["qty", "move", "price"]
 
 # ------------------------------------------------------------------------------------------------ #
 class IngestSalesDataTask(DataPrepTask):
-    """Ingests a raw sales data file.
+    """
+    Ingests a raw sales data file.
 
     The ingestion adds category and date information to the raw sales data.
 
     Args:
-        weeks (pd.DataFrame): The week decode table containing start and end dates for each week
-            number.
-
+        week_decode_table: DataFrame containing start and end dates for each week number.
+        validation: Optional validation configuration.
     """
 
     def __init__(
         self,
-        week_decode_table: pd.DataFrame,
+        week_decode_table: Union[pl.DataFrame, pl.LazyFrame],
         validation: Optional[Validation] = None,
     ) -> None:
         """Initializes the ingestion task with the provided configuration."""
-        super().__init__(validation=validation)
+        super().__init__()
+        self._validation = validation or Validation()
         self._week_decode_table = week_decode_table
 
-    def run(self, df: pd.DataFrame, category: str, **kwargs) -> pd.DataFrame:
-        # Add category and dates to the data
-        df_out = self._add_category(df=df, category=category).pipe(
-            self._add_dates, week_dates=self._week_decode_table
+    def run(
+        self,
+        df: Union[pl.DataFrame, pl.LazyFrame],
+        category: str,
+        lazy: bool = False,
+        **kwargs,
+    ) -> Union[pl.DataFrame, pl.LazyFrame]:
+        """
+        Run the ingestion task.
+
+        Args:
+            df: Input sales data
+            category: Category name to assign
+            lazy: If True, return LazyFrame; if False, return DataFrame
+            **kwargs: Additional arguments
+
+        Returns:
+            Union[pl.DataFrame, pl.LazyFrame]: Processed sales data with category and dates
+        """
+        # Convert to LazyFrame if needed for processing
+        was_eager = isinstance(df, pl.DataFrame)
+        if was_eager:
+            df = df.lazy()
+
+        # Add category and dates to the data using polars-compatible calls
+        df_out = self._add_category(df, category=category)
+        df_out = self._add_dates(df_out, week_dates=self._week_decode_table)
+
+        # Convert column names to lowercase using polars LazyFrame API
+        # df_out.columns works for LazyFrame and DataFrame
+        cols = list(df_out.collect_schema().names())
+        rename_map = {col: col.lower() for col in cols}
+        df_out = df_out.rename(rename_map)
+
+        # Return in the requested format
+        if lazy:
+            return df_out
+        else:
+            return df_out.collect()
+
+    def _add_dates(
+        self,
+        df: pl.LazyFrame,
+        week_dates: Union[pl.DataFrame, pl.LazyFrame],
+    ) -> pl.LazyFrame:
+        """
+        Adds year, start, and end dates to the DataFrame based on the week number.
+        """
+
+        # Collect week_dates if lazy
+        week_df = week_dates.collect() if isinstance(week_dates, pl.LazyFrame) else week_dates
+
+        # Parse dates - simple and direct
+        week_df = week_df.with_columns(
+            [
+                pl.col("START").str.to_date("%m/%d/%Y"),
+                pl.col("END").str.to_date("%m/%d/%Y"),
+                pl.col("WEEK").cast(pl.Int64),
+            ]
         )
-        # Convert column names to lowercase
-        df_out.columns = [col.lower() for col in df_out.columns]
 
-        return df_out
+        # Ensure WEEK column matches
+        df = df.with_columns(pl.col("WEEK").cast(pl.Int64))
 
-    def _add_category(self, df: pd.DataFrame, category: str) -> pd.DataFrame:
-        """Adds a category column to the DataFrame.
+        # Join
+        df = df.join(week_df.lazy(), on="WEEK", how="left")
 
-        Args:
-            df (pd.DataFrame): The DataFrame to which the category will be added.
-            category (str): The category name to assign to all records in the DataFrame.
-
-        Returns:
-            pd.DataFrame: The input DataFrame with an added 'category' column.
-        """
-        df["CATEGORY"] = category
-
-        # Correct dtype
-        df["CATEGORY"] = df["CATEGORY"].astype(DTYPES["CATEGORY"])  # type: ignore
-        return df
-
-    def _add_dates(self, df: pd.DataFrame, week_dates: pd.DataFrame) -> pd.DataFrame:
-        """Adds year, start and end dates to the DataFrame based on the week number.
-
-        Args:
-            df (pd.DataFrame): The DataFrame to which dates will be added. Must contain
-                a 'week' column.
-            week_decode_filepath (Path): The path to the week decode CSV file.
-        Returns:
-            pd.DataFrame: The input DataFrame with added 'start_date' and 'end_date' columns.
-        """
-
-        df = df.merge(week_dates, on="WEEK", how="left")
-        # Add year column for trend analysis
-        df["YEAR"] = df["END"].dt.year
-        df["YEAR"] = df["YEAR"].astype("Int64")
+        # Add year
+        df = df.with_columns(pl.col("END").dt.year().alias("YEAR"))
 
         return df
+
+    def _add_category(
+        self,
+        df: pl.LazyFrame,
+        category: str,
+    ) -> pl.LazyFrame:
+        """
+        Adds a category column to the DataFrame.
+
+        Args:
+            df (pl.LazyFrame): The LazyFrame to which the category will be added.
+            category (str): The category name to assign.
+
+        Returns:
+            pl.LazyFrame: The input DataFrame with an added 'CATEGORY' column.
+        """
+        return df.with_columns(pl.lit(category).alias("CATEGORY"))

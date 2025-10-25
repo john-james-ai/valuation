@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday October 9th 2025 11:01:16 pm                                               #
-# Modified   : Saturday October 25th 2025 04:52:03 am                                              #
+# Modified   : Saturday October 25th 2025 08:49:40 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -29,20 +29,19 @@ import typer
 from valuation.asset.identity.dataset import DatasetPassport
 from valuation.core.file import FileFormat
 from valuation.core.stage import DatasetStage
-from valuation.flow.dataprep.fast.pipeline.clean import (
+from valuation.flow.dataprep.pipeline.clean import (
     CleanSalesDataPipelineBuilder,
     CleanSalesDataPipelineResult,
 )
-from valuation.flow.dataprep.fast.pipeline.model_dataprep import (
+from valuation.flow.dataprep.pipeline.model_dataprep import (
     ModelDataPipelineBuilder,
     ModelDataPipelineConfig,
     ModelDataPipelineResult,
 )
-from valuation.flow.dataprep.fast.pipeline.transform import (
+from valuation.flow.dataprep.pipeline.transform import (
     TransformSalesDataPipelineBuilder,
     TransformSalesDataPipelineResult,
 )
-from valuation.flow.dataprep.fast.task.filter import MIN_WEEKS_PER_YEAR
 from valuation.infra.loggers import configure_logging
 from valuation.infra.store.dataset import DatasetStore
 
@@ -101,10 +100,10 @@ def run_sales_data_transform_pipeline(
     force: bool = False,
 ) -> Optional[TransformSalesDataPipelineResult]:
     store = DatasetStore()
-    source = store.file_system.get_stage_entity_location(stage=DatasetStage.CLEAN)
+    source = store.file_system.get_stage_location(stage=DatasetStage.CLEAN)
     target = DatasetPassport.create(
         name="sales_transform",
-        description="Transformed Sales Data",
+        description="Transformed and Aggregated Sales Data",
         stage=DatasetStage.TRANSFORM,
         file_format=FileFormat.PARQUET,
     )
@@ -113,7 +112,6 @@ def run_sales_data_transform_pipeline(
         .with_source(source=source)
         .with_target(target=target)
         .with_aggregate_task()
-        .with_full_year_filter_task(min_weeks=MIN_WEEKS_PER_YEAR)
         .build()
     )
     return pipeline.run(force=force)

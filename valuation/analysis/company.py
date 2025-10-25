@@ -4,14 +4,14 @@
 # Project    : Valuation - Discounted Cash Flow Method                                             #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
-# Filename   : /valuation/app/analysis/company.py                                                  #
+# Filename   : /valuation/analysis/company.py                                                      #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Saturday October 11th 2025 07:04:50 pm                                              #
-# Modified   : Saturday October 18th 2025 11:15:33 pm                                              #
+# Modified   : Saturday October 25th 2025 08:43:27 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -19,12 +19,11 @@
 
 import pandas as pd
 
-from valuation.analysis.base import Dataset
 from valuation.analysis.financials import Financials
 
 
 # ------------------------------------------------------------------------------------------------ #
-class CompanyDataset(Dataset):
+class CompanyAnalysis(Analysis):
     """Class for storing company information."""
 
     def __init__(self, financials: Financials, sales: pd.DataFrame, min_weeks: int = 50) -> None:

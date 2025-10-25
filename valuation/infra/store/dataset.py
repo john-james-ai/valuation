@@ -4,32 +4,14 @@
 # Project    : Valuation - Discounted Cash Flow Method                                             #
 # Version    : 0.1.0                                                                               #
 # Python     : 3.12.11                                                                             #
-# Filename   : /valuation/infra/store/dataset.py                                                   #
+# Filename   : /valuation/infra/store/fast/dataset.py                                              #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
-# Created    : Friday October 17th 2025 11:19:18 pm                                                #
-# Modified   : Saturday October 25th 2025 02:09:56 am                                              #
-# ------------------------------------------------------------------------------------------------ #
-# License    : MIT License                                                                         #
-# Copyright  : (c) 2025 John James                                                                 #
-# ================================================================================================ #
-#!/usr/bin/env python3
-# -*- coding:utf-8 -*-
-# ================================================================================================ #
-# Project    : Valuation - Discounted Cash Flow Method                                             #
-# Version    : 0.1.0                                                                               #
-# Python     : 3.12.11                                                                             #
-# Filename   : /valuation/infra/store/dataset.py                                                   #
-# ------------------------------------------------------------------------------------------------ #
-# Author     : John James                                                                          #
-# Email      : john.james.ai.studio@gmail.com                                                      #
-# URL        : https://github.com/john-james-ai/valuation                                          #
-# ------------------------------------------------------------------------------------------------ #
-# Created    : Friday October 17th 2025 11:19:18 pm                                                #
-# Modified   : Saturday October 25th 2025 12:19:47 am                                              #
+# Created    : Saturday October 25th 2025 01:58:06 am                                              #
+# Modified   : Saturday October 25th 2025 08:43:26 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #

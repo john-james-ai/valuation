@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Tuesday October 14th 2025 10:53:05 pm                                               #
-# Modified   : Saturday October 25th 2025 01:14:40 am                                              #
+# Modified   : Saturday October 25th 2025 08:43:27 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -32,8 +32,8 @@ from valuation.asset.identity.dataset import DatasetPassport
 from valuation.core.state import Status
 from valuation.flow.base.pipeline import PipelineResult
 from valuation.flow.dataprep.base.pipeline import DataPrepPipeline, DataPrepPipelineBuilder
-from valuation.flow.dataprep.fast.task.aggregate import AggregateSalesDataTask
-from valuation.flow.dataprep.fast.task.filter import FilterPartialYearsTask
+from valuation.flow.dataprep.task.aggregate import AggregateSalesDataTask
+from valuation.flow.dataprep.task.filter import FilterPartialYearsTask
 from valuation.infra.store.dataset import DatasetStore
 
 
@@ -67,11 +67,12 @@ class TransformSalesDataPipelineResult(PipelineResult):
 
 # ------------------------------------------------------------------------------------------------ #
 class TransformSalesDataPipeline(DataPrepPipeline):
-    """Pipeline implementation for preparing sales datasets.
+    """
+    Pipeline implementation for transforming sales datasets using Polars.
 
     Args:
-        dataset_store (type[DatasetStore]): The DatasetStore class or factory used by the pipeline.
-        result (type[TransformSalesDataPipelineResult]): Result class used to create result instances.
+        dataset_store: The DatasetStore class or factory used by the pipeline.
+        result: Result class used to create result instances.
     """
 
     _dataset_store: DatasetStore
@@ -88,16 +89,27 @@ class TransformSalesDataPipeline(DataPrepPipeline):
         self._target = None
 
     def run(self, force: bool = False) -> Optional[TransformSalesDataPipelineResult]:
+        """
+        Execute the transformation pipeline.
+
+        Args:
+            force: If True, force reprocessing even when target dataset exists.
+
+        Returns:
+            Optional[TransformSalesDataPipelineResult]: Pipeline result object.
+        """
         self._result.start_pipeline()
 
         try:
+            # Check if target exists and skip if not forcing
             if self._target is not None:
                 if self._dataset_store.exists(dataset_id=self._target.id) and not force:
                     logger.info(
-                        f"Dataset {self._target.label} already exists in the datastore. \nSkipping processing."
+                        f"Dataset {self._target.label} already exists in the datastore.\n"
+                        "Skipping processing."
                     )
                     dataset = self._dataset_store.get(passport=self._target)
-                    self._result.dataset = dataset
+                    self._result.dataset = dataset  # type: ignore
                     self._result.status_obj = Status.SKIPPED
                     self._result.end_pipeline()
                     return self._result
@@ -105,25 +117,29 @@ class TransformSalesDataPipeline(DataPrepPipeline):
             # Delete the target if it exists
             self._dataset_store.remove(passport=self._target)
 
-            # Load data using same kwargs as target
+            # Load data using lazy evaluation
             logger.debug(f"Loading source data from {self._source}")
             df = self._load(filepath=Path(self._source), **self._target.read_kwargs)  # type: ignore
 
-            # Initial metrics
+            # Initial metrics (collect only row count for efficiency)
             logger.debug("Calculating initial dataset metrics.")
-            self._result.records_in = df.select(pl.count()).collect().item(0, 0)
+            self._result.records_in = df.select(pl.len()).collect().item()
 
+            # Process through tasks
             for task in self._tasks:
-
                 logger.info(f"Running task: {task.__class__.__name__}")
-                # Run the task
-                df = task.run(df=df)
+
+                # Run the task (keep as LazyFrame)
+                df = task.run(df=df, lazy=True)
+
+                # Collect for validation
+                df_collected = df.collect()
 
                 # Validate the result
-                task.validation.validate(df=df, classname=task.__class__.__name__)
+                task.validation.validate(df=df_collected, classname=task.__class__.__name__)
 
                 # Update metrics
-                self._update_metrics(df=df)
+                self._update_metrics(df=df_collected)
 
                 # Check validation status
                 if not task.validation.is_valid:
@@ -131,11 +147,16 @@ class TransformSalesDataPipeline(DataPrepPipeline):
                     task.validation.report()
                     break
 
-            # Convert the polars DataFrame to a pandas DataFrame for storage
-            logger.debug("Converting Polars DataFrame to Pandas DataFrame for storage.")
-            df = df.to_pandas()  # type: ignore
-            # Create the target dataset
-            dataset = Dataset(passport=self._target, df=df)
+                # Convert back to lazy for next task
+                df = df_collected.lazy()
+
+            # Collect final result
+            logger.debug("Collecting final Polars DataFrame.")
+            df_final = df.collect()
+
+            # Create the target dataset (store as Polars DataFrame)
+            dataset = Dataset(passport=self._target, df=df_final)
+
             # Persist the dataset to the store
             logger.debug(f"Saving dataset {self._target.label} to the dataset store.")  # type: ignore
             self._dataset_store.add(dataset=dataset, overwrite=force)
@@ -144,7 +165,7 @@ class TransformSalesDataPipeline(DataPrepPipeline):
             self._result.dataset = dataset
             self._result.status_obj = Status.SUCCESS
 
-            # Finalize the result and log it.
+            # Finalize the result and log it
             self._result.end_pipeline()
             logger.info(self._result)
 
@@ -157,81 +178,82 @@ class TransformSalesDataPipeline(DataPrepPipeline):
             raise e
 
     def _update_metrics(self, df: pl.DataFrame) -> None:
-        """Updates pipeline result metrics based on the provided DataFrame.
-        Args:
-            df (pd.DataFrame): The DataFrame to analyze for metrics.
-        Returns:
-            None
         """
+        Update pipeline result metrics based on the provided DataFrame.
 
-        # 1. Get row count (Polars uses .height)
-        self._result.records_out = df.height
-
-        # 2. Get unique counts (Polars uses .n_unique())
-        self._result.stores = df.get_column("store").n_unique()
-        self._result.categories = df.get_column("category").n_unique()
-        self._result.weeks = df.get_column("week").n_unique()
-
-        # 3. Get all year stats in one efficient pass
-        #    Polars aggregations (min, max, n_unique) run in parallel
-        year_stats = df.select(
+        Args:
+            df: The DataFrame to analyze for metrics.
+        """
+        # Get all metrics in one efficient aggregation pass
+        metrics = df.select(
             [
+                pl.len().alias("records_out"),
+                pl.col("store").n_unique().alias("stores"),
+                pl.col("category").n_unique().alias("categories"),
+                pl.col("week").n_unique().alias("weeks"),
                 pl.col("year").n_unique().alias("num_years"),
                 pl.col("year").min().alias("first_year"),
                 pl.col("year").max().alias("last_year"),
             ]
         )
 
-        # 4. Assign the results
-        #    year_stats is a 1-row DataFrame. We extract the values.
-        num_years = year_stats.item(0, "num_years")
-        first_year = year_stats.item(0, "first_year")
-        last_year = year_stats.item(0, "last_year")
+        # Extract all values at once
+        row = metrics.row(0, named=True)
 
-        self._result.num_years = int(num_years)
+        # Assign to result
+        self._result.records_out = row["records_out"]
+        self._result.stores = row["stores"]
+        self._result.categories = row["categories"]
+        self._result.weeks = row["weeks"]
+        self._result.num_years = row["num_years"]
 
+        # Handle year values (may be None if no data)
         if self._result.num_years > 0:
-            # We cast to int() here, as Polars might return None
-            # if the column was all null, but int(None) fails.
-            self._result.first_year = int(first_year) if first_year is not None else None
-            self._result.last_year = int(last_year) if last_year is not None else None
+            self._result.first_year = row["first_year"]
+            self._result.last_year = row["last_year"]
         else:
             self._result.first_year = None
             self._result.last_year = None
 
     def _load(self, filepath: Path, **kwargs) -> pl.LazyFrame:
-        """Loads sales data from the specified filepath into a Polars DataFrame.
+        """
+        Load sales data from the specified filepath into a Polars LazyFrame.
+
         Args:
-            filepath (Path): Path to the sales data file or directory.
+            filepath: Path to the sales data file or directory.
             **kwargs: Additional keyword arguments for data loading.
+
         Returns:
-            pl.DataFrame: Loaded sales data as a Polars DataFrame.
+            pl.LazyFrame: Loaded sales data as a Polars LazyFrame.
         """
         logger.debug(f"Loading sales data from {filepath} with Polars.")
-        # Use Polars to read all parquet files in the directory
+
+        # Scan all parquet files in the directory
         directory_path = str(filepath)
         df = pl.scan_parquet(f"{directory_path}/*.parquet")
 
-        # 2. Get your DataFrame's columns (using a set is faster)
-        df_cols = df.collect_schema().names()  # Ensure schema is collected
+        # Get DataFrame columns
+        df_cols = df.collect_schema().names()
 
-        # 3. Filter the DTYPES dict, just like in your Pandas code
+        # Filter DTYPES dict to only columns present in the data
         casts_to_apply = {k: v for k, v in DTYPES.items() if k in df_cols}
 
-        # 4. Apply the casts
-        df = df.cast(casts_to_apply)
+        # Apply casts if any
+        if casts_to_apply:
+            df = df.cast(casts_to_apply)
 
         return df
 
 
 # ------------------------------------------------------------------------------------------------ #
 class TransformSalesDataPipelineBuilder(DataPrepPipelineBuilder):
-    """Builder for TransformSalesDataPipeline instances.
+    """
+    Builder for TransformSalesDataPipeline instances.
 
     Use the fluent `with_*` methods to configure source, target and tasks, then call `build()`.
 
     Attributes:
-        _pipeline (TransformSalesDataPipeline): The pipeline instance being built.
+        _pipeline: The pipeline instance being built.
     """
 
     _pipeline: TransformSalesDataPipeline
@@ -241,18 +263,17 @@ class TransformSalesDataPipelineBuilder(DataPrepPipelineBuilder):
         self.reset()
 
     def reset(self) -> None:
-        """Reset the internal builder state and create a fresh pipeline instance.
-
-        Returns:
-            None
+        """
+        Reset the internal builder state and create a fresh pipeline instance.
         """
         self._pipeline = TransformSalesDataPipeline()
 
-    def with_source(self, source: str) -> TransformSalesDataPipelineBuilder:
-        """Set the pipeline source (category mapping file path).
+    def with_source(self, source: str) -> "TransformSalesDataPipelineBuilder":
+        """
+        Set the pipeline source (category mapping file path).
 
         Args:
-            source (str): Path to the category mapping JSON file.
+            source: Path to the category mapping JSON file.
 
         Returns:
             TransformSalesDataPipelineBuilder: The builder instance.
@@ -260,11 +281,12 @@ class TransformSalesDataPipelineBuilder(DataPrepPipelineBuilder):
         self._pipeline.add_source(source=source)
         return self
 
-    def with_target(self, target: DatasetPassport) -> TransformSalesDataPipelineBuilder:
-        """Set the pipeline target dataset passport.
+    def with_target(self, target: DatasetPassport) -> "TransformSalesDataPipelineBuilder":
+        """
+        Set the pipeline target dataset passport.
 
         Args:
-            target (DatasetPassport): Passport describing the pipeline's target dataset.
+            target: Passport describing the pipeline's target dataset.
 
         Returns:
             TransformSalesDataPipelineBuilder: The builder instance.
@@ -272,35 +294,37 @@ class TransformSalesDataPipelineBuilder(DataPrepPipelineBuilder):
         self._pipeline.add_target(target=target)
         return self
 
-    def with_aggregate_task(self) -> TransformSalesDataPipelineBuilder:
-        """Add the aggregate task to the pipeline and configure its validator.
+    def with_aggregate_task(self) -> "TransformSalesDataPipelineBuilder":
+        """
+        Add the aggregate task to the pipeline and configure its validator.
 
         Returns:
             TransformSalesDataPipelineBuilder: The builder instance.
         """
-
         task = AggregateSalesDataTask()
         self._pipeline.add_task(task=task)
         return self
 
-    def with_full_year_filter_task(self, min_weeks: int = 50) -> TransformSalesDataPipelineBuilder:
-        """Add the filter partial years task to the pipeline and configure its validator.
+    def with_full_year_filter_task(
+        self, min_weeks: int = 50
+    ) -> "TransformSalesDataPipelineBuilder":
+        """
+        Add the filter partial years task to the pipeline and configure its validator.
+
         Args:
-            min_weeks (int): Minimum number of weeks required for a year to be considered full.
+            min_weeks: Minimum number of weeks required for a year to be considered full.
                 Defaults to 50.
 
         Returns:
             TransformSalesDataPipelineBuilder: The builder instance.
         """
-
         task = FilterPartialYearsTask(min_weeks=min_weeks)
         self._pipeline.add_task(task=task)
         return self
 
-    def build(
-        self,
-    ) -> TransformSalesDataPipeline:
-        """Finalize and return the built TransformSalesDataPipeline.
+    def build(self) -> TransformSalesDataPipeline:
+        """
+        Finalize and return the built TransformSalesDataPipeline.
 
         Returns:
             TransformSalesDataPipeline: The constructed pipeline instance.

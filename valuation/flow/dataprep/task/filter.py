@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Saturday October 18th 2025 10:52:13 pm                                              #
-# Modified   : Saturday October 25th 2025 03:47:43 am                                              #
+# Modified   : Saturday October 25th 2025 08:43:26 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -19,22 +19,22 @@
 """Module for filtering sales data to remove partial years."""
 from typing import Optional
 
-import pandas as pd
+import polars as pl
 
 from valuation.flow.dataprep.base.task import DataPrepTask
 from valuation.flow.dataprep.validation import Validation
 
 # ------------------------------------------------------------------------------------------------ #
 REQUIRED_COLUMNS_FILTER = {
-    "category": "string",
-    "store": "Int64",
-    "week": "Int64",
-    "year": "Int64",
-    "start": "datetime64[ns]",
-    "end": "datetime64[ns]",
-    "revenue": "float64",
-    "gross_profit": "float64",
-    "gross_margin_pct": "float64",
+    "category": pl.Utf8,
+    "store": pl.Int64,
+    "week": pl.Int64,
+    "year": pl.Int64,
+    "start": pl.Datetime("ns"),
+    "end": pl.Datetime("ns"),
+    "revenue": pl.Float64,
+    "gross_profit": pl.Float64,
+    "gross_margin_pct": pl.Float64,
 }
 NON_NEGATIVE_COLUMNS_FILTER = ["revenue", "gross_profit", "gross_margin_pct"]
 MIN_WEEKS_PER_YEAR = 50
@@ -48,27 +48,10 @@ class FilterPartialYearsTask(DataPrepTask):
         min_weeks: int = 50,
         validation: Optional[Validation] = None,
     ) -> None:
-        super().__init__(validation=validation)
+        super().__init__()
+        self._validation = validation or Validation()
         self._min_weeks = min_weeks
 
-    def run(self, df: pd.DataFrame, **kwargs) -> pd.DataFrame:
-        """Executes the filtering of partial years.
-
-        Args:
-            df (pd.DataFrame): Sales data DataFrame.
-
-        Returns:
-            DatasetContainer: Container with filtered data and list of full years.
-        """
-
-        """Returns a DataFrame containing only full years of data."""
-        # 1. Group by year and count the number of unique weeks in each group
-        weeks_per_year = df.groupby("year")["week"].nunique()
-
-        # 2. Filter to get a sorted list of years that have more than min_weeks of data
-        years = weeks_per_year[weeks_per_year >= self._min_weeks].index.tolist()
-
-        # 3. Filter the original DataFrame to include only rows from the full years
-        df_out = df[df["year"].isin(years)].copy()
-
-        return df_out
+    def run(self, df: pl.DataFrame, **kwargs) -> pl.DataFrame:
+        # Calculate the number of weekly records available for each year
+        return df.filter(pl.col("week").n_unique().over("year") >= self._min_weeks)

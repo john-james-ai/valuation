@@ -11,30 +11,30 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday October 12th 2025 11:51:12 pm                                                #
-# Modified   : Saturday October 25th 2025 03:47:26 am                                              #
+# Modified   : Saturday October 25th 2025 08:43:26 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
 # ================================================================================================ #
 
-from typing import Optional
+from typing import Optional, Union
 
 from loguru import logger
-import pandas as pd
+import polars as pl
 
 from valuation.flow.dataprep.base.task import DataPrepTask
 from valuation.flow.dataprep.validation import Validation
 
 # ------------------------------------------------------------------------------------------------ #
 REQUIRED_COLUMNS_CLEAN = {
-    "category": "string",
-    "store": "Int64",
-    "week": "Int64",
-    "year": "Int64",
-    "start": "datetime64[ns]",
-    "end": "datetime64[ns]",
-    "revenue": "float64",
-    "gross_profit": "float64",
+    "category": pl.Utf8,
+    "store": pl.Int64,
+    "week": pl.Int64,
+    "year": pl.Int64,
+    "start": pl.Datetime,
+    "end": pl.Datetime,
+    "revenue": pl.Float64,
+    "gross_profit": pl.Float64,
 }
 
 NON_NEGATIVE_COLUMNS_CLEAN = ["revenue"]
@@ -42,106 +42,124 @@ NON_NEGATIVE_COLUMNS_CLEAN = ["revenue"]
 
 # ------------------------------------------------------------------------------------------------ #
 class CleanSalesDataTask(DataPrepTask):
-    """"""
+    """
+    Cleans sales data by removing invalid records, normalizing columns,
+    and calculating derived metrics.
+    """
 
     def __init__(
         self,
         validation: Optional[Validation] = None,
     ) -> None:
-        super().__init__(validation=validation)
+        super().__init__()
+        self._validation = validation or Validation()
 
-    def run(self, df: pd.DataFrame, **kwargs) -> pd.DataFrame:
-        """Execute the cleaning pipeline on the provided DataFrame.
+    def run(
+        self,
+        df: Union[pl.DataFrame, pl.LazyFrame],
+        lazy: bool = False,
+        **kwargs,
+    ) -> Union[pl.DataFrame, pl.LazyFrame]:
+        """
+        Execute the cleaning pipeline on the provided DataFrame.
 
         Args:
-            df (pd.DataFrame): Input DataFrame to be cleaned.
+            df: Input DataFrame to be cleaned.
+            lazy: If True, return LazyFrame; if False, return DataFrame.
+            **kwargs: Additional arguments.
 
         Returns:
-            pd.DataFrame: Cleaned DataFrame after all transformations.
+            Union[pl.DataFrame, pl.LazyFrame]: Cleaned DataFrame after all transformations.
         """
         logger.debug("Cleaning sales data.")
 
-        return (
+        # Convert to LazyFrame for processing
+        if isinstance(df, pl.DataFrame):
+            df = df.lazy()
+
+        result = (
             df.pipe(self._remove_invalid_records)
             .pipe(self._normalize_columns)
             .pipe(self._calculate_revenue)
             .pipe(self._calculate_gross_profit)
         )
 
-    def _remove_invalid_records(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Removes records that do not meet business criteria.
+        # Return in requested format
+        return result if lazy else result.collect()
+
+    def _remove_invalid_records(self, df: pl.LazyFrame) -> pl.LazyFrame:
+        """
+        Removes records that do not meet business criteria.
 
         The rules applied are:
-            1. 'ok' flag is '1'
+            1. 'ok' flag is 1
             2. 'price' > 0
             3. 'move' > 0
             4. 'qty' >= 1
 
         Args:
-            df (pd.DataFrame): The ingested sales data.
+            df: The ingested sales data.
 
         Returns:
-            pd.DataFrame: The cleaned sales data.
+            pl.LazyFrame: The cleaned sales data.
         """
-        # Define the query string for filtering
-        query_string = """
-            ok == 1 and \
-            price > 0 and \
-            move > 0 and \
-            qty >= 1
+        return df.filter(
+            (pl.col("ok") == 1)
+            & (pl.col("price") > 0)
+            & (pl.col("move") > 0)
+            & (pl.col("qty") >= 1)
+        )
+
+    def _normalize_columns(self, df: pl.LazyFrame) -> pl.LazyFrame:
         """
-
-        df_clean = df.query(
-            query_string, engine="python"
-        ).copy()  # Python engine required for compatability betweeen numexpr and pandas
-        return df_clean
-
-    def _normalize_columns(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Standardize column names and drop unneeded columns.
+        Standardize column names and drop unneeded columns.
 
         Args:
-            df (pd.DataFrame): The cleaned sales data.
+            df: The cleaned sales data.
 
         Returns:
-            pd.DataFrame: The cleaned sales data with standardized column names.
+            pl.LazyFrame: The cleaned sales data with standardized column names.
         """
-        df_clean = df.copy()
-        # Rename columns for clarity and drop unneeded ones.
-        df_clean = (
-            df_clean.rename(columns={"profit": "gross_margin_pct"}).drop(columns=["sale"])
-        ).copy()
-        # Standardize column names to lowercase
-        df_clean.columns = df_clean.columns.str.lower()
-        return df_clean
+        # Rename columns for clarity and drop unneeded ones
+        df = df.rename({"profit": "gross_margin_pct"}).drop("sale")
 
-    def _calculate_revenue(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Calculate transaction-level revenue, accounting for product bundles.
+        # Standardize column names to lowercase
+        df = df.rename({col: col.lower() for col in df.collect_schema().names()})
+
+        return df
+
+    def _calculate_revenue(self, df: pl.LazyFrame) -> pl.LazyFrame:
+        """
+        Calculate transaction-level revenue, accounting for product bundles.
 
         Revenue is derived from bundle price, individual units sold, and bundle size.
         Formula: revenue = (price * move) / qty.
 
         Args:
-            df (pd.DataFrame): The cleaned sales data. Must contain columns 'price', 'move', and 'qty'.
+            df: The cleaned sales data. Must contain columns 'price', 'move', and 'qty'.
 
         Returns:
-            pd.DataFrame: DataFrame with an added 'revenue' column.
+            pl.LazyFrame: DataFrame with an added 'revenue' column.
         """
-        df["revenue"] = (df["price"] * df["move"]) / df["qty"]
-        df["revenue"] = df["revenue"].astype("float64")
-        return df
+        return df.with_columns(
+            ((pl.col("price") * pl.col("move")) / pl.col("qty")).cast(pl.Float64).alias("revenue")
+        )
 
-    def _calculate_gross_profit(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Calculate transaction-level gross profit.
+    def _calculate_gross_profit(self, df: pl.LazyFrame) -> pl.LazyFrame:
+        """
+        Calculate transaction-level gross profit.
 
         Gross profit is derived from revenue and gross margin percentage.
         Formula: gross_profit = revenue * (gross_margin_pct / 100).
 
         Args:
-            df (pd.DataFrame): The cleaned sales data. Must contain columns 'revenue' and 'gross_margin_pct'.
+            df: The cleaned sales data. Must contain columns 'revenue' and 'gross_margin_pct'.
 
         Returns:
-            pd.DataFrame: DataFrame with an added 'gross_profit' column.
+            pl.LazyFrame: DataFrame with an added 'gross_profit' column.
         """
-        df["gross_profit"] = df["revenue"] * (df["gross_margin_pct"] / 100.0)
-        df["gross_profit"] = df["gross_profit"].astype("float64")
-        return df
+        return df.with_columns(
+            (pl.col("revenue") * (pl.col("gross_margin_pct") / 100.0))
+            .cast(pl.Float64)
+            .alias("gross_profit")
+        )

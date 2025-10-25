@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday October 10th 2025 02:27:30 am                                                #
-# Modified   : Saturday October 25th 2025 03:46:49 am                                              #
+# Modified   : Saturday October 25th 2025 08:43:27 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -23,7 +23,7 @@ from typing import Optional
 
 from abc import abstractmethod
 
-import pandas as pd
+import polars as pl
 
 from valuation.flow.base.task import Task
 from valuation.flow.dataprep.validation import Validation
@@ -40,9 +40,9 @@ class DataPrepTask(Task):
         config (TaskConfig): The task configuration.
     """
 
-    def __init__(self, validation: Optional[Validation] = None) -> None:
+    def __init__(self, validition: Optional[Validation] = None) -> None:
         super().__init__()
-        self._validation = validation or Validation()
+        self._validation = validition or Validation()
 
     @property
     def validation(self) -> Validation:
@@ -50,14 +50,14 @@ class DataPrepTask(Task):
         return self._validation
 
     @abstractmethod
-    def run(self, df: pd.DataFrame, force: bool = False) -> pd.DataFrame:
+    def run(self, df: pl.DataFrame, force: bool = False) -> pl.DataFrame:
         """Execute the task using the supplied DataFrame and produce a transformed DataFrame.
 
         Args:
-            df (pd.DataFrame): Input DataFrame to be processed by the task.
+            df (pl.DataFrame): Input DataFrame to be processed by the task.
             force (bool): If True, force reprocessing even if outputs already exist. Defaults to False.
 
         Returns:
-            pd.DataFrame: The resulting DataFrame after task execution.
+            pl.DataFrame: The resulting DataFrame after task execution.
         """
         pass

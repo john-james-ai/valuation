@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Tuesday October 14th 2025 10:53:05 pm                                               #
-# Modified   : Saturday October 25th 2025 03:30:40 am                                              #
+# Modified   : Saturday October 25th 2025 08:43:26 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -24,15 +24,16 @@ from typing import Dict, Optional
 from dataclasses import dataclass
 
 from loguru import logger
-import pandas as pd
+import polars as pl
 
 from valuation.asset.dataset.dataset import Dataset
 from valuation.asset.identity.dataset import DatasetPassport
 from valuation.core.state import Status
 from valuation.flow.base.pipeline import PipelineResult
 from valuation.flow.dataprep.base.pipeline import DataPrepPipeline, DataPrepPipelineBuilder
-from valuation.flow.dataprep.base.task.feature import FeatureEngineeringTask
 from valuation.flow.dataprep.task.densify import DensifySalesDataTask
+from valuation.flow.dataprep.task.feature import FeatureEngineeringTask
+from valuation.infra.file.io import IOService
 from valuation.infra.store.dataset import DatasetStore
 from valuation.utils.split import TimeSeriesDataSplitter
 
@@ -92,6 +93,9 @@ class ModelDataPipelineConfig:
 
 # ------------------------------------------------------------------------------------------------ #
 class ModelDataPipeline(DataPrepPipeline):
+    """
+    Pipeline for creating model-ready datasets with train/validation and test splits.
+    """
 
     _dataset_store: DatasetStore
     _result: ModelDataPipelineResult
@@ -101,33 +105,49 @@ class ModelDataPipeline(DataPrepPipeline):
         config: ModelDataPipelineConfig,
         dataset_store: type[DatasetStore] = DatasetStore,
         result: type[ModelDataPipelineResult] = ModelDataPipelineResult,
+        io: type[IOService] = IOService,
     ) -> None:
         super().__init__(dataset_store=dataset_store)
         self._result = result(name=self.__class__.__name__)
         self._config = config
+        self._io = io
 
     def run(self, force: bool = False) -> Optional[ModelDataPipelineResult]:
+        """
+        Execute the model data preparation pipeline.
+
+        Args:
+            force: If True, force reprocessing even when target datasets exist.
+
+        Returns:
+            Optional[ModelDataPipelineResult]: Pipeline result object.
+        """
         self._result.start_pipeline()
 
         try:
+            # Check if endpoints exist
             if self._endpoint_exists():
                 if force:
                     logger.info(
-                        f"Datasets {self._config.train_val_target.label} and {self._config.test_target.label} already exist in the datastore. \nOverwriting as 'force' is set to True."  # type: ignore
+                        f"Datasets {self._config.train_val_target.label} and "
+                        f"{self._config.test_target.label} already exist in the datastore.\n"
+                        "Overwriting as 'force' is set to True."
                     )
                     # Remove any existing datasets if force is True
                     self._dataset_store.remove(passport=self._config.train_val_target)
                     self._dataset_store.remove(passport=self._config.test_target)
                 else:
                     logger.info(
-                        f"Datasets {self._config.train_val_target.label} and {self._config.test_target.label} already exist in the datastore. \nSkipping processing."  # type: ignore
+                        f"Datasets {self._config.train_val_target.label} and "
+                        f"{self._config.test_target.label} already exist in the datastore.\n"
+                        "Skipping processing."
                     )
                     self._result.train_val_dataset = self._dataset_store.get(
                         passport=self._config.train_val_target
-                    )
+                    )  # type: ignore
                     self._result.test_dataset = self._dataset_store.get(
                         passport=self._config.test_target
-                    )
+                    )  # type: ignore
                     self._result.status_obj = Status.SKIPPED
                     self._result.end_pipeline()
                     logger.info(self._result)
@@ -136,11 +156,27 @@ class ModelDataPipeline(DataPrepPipeline):
             # Load data
             dataset = self._dataset_store.get(passport=self._config.source)
             df = dataset.data
-            self._result.records_in = df.shape[0]
 
+            # Get initial record count
+            if isinstance(df, pl.LazyFrame):
+                # Collect the LazyFrame to an eager DataFrame then compute length
+                df = df.collect()
+                self._result.records_in = len(df)
+            else:
+                self._result.records_in = len(df)
+
+            # Process through tasks
             for task in self._tasks:
                 logger.info(f"Running task: {task.__class__.__name__}")
+
+                # Run task
                 df = task.run(df=df)
+
+                # Collect if LazyFrame
+                if isinstance(df, pl.LazyFrame):
+                    df = df.collect()
+
+                # Validate
                 if not task.validation.validate(df=df, classname=self.__class__.__name__):
                     msg = f"Validation failed for task: {task.__class__.__name__}"
                     logger.error(msg)
@@ -149,20 +185,22 @@ class ModelDataPipeline(DataPrepPipeline):
 
             # Store the full dataset after preprocessing
             full_dataset = Dataset(passport=self._config.target, df=df)
-            self._dataset_store.remove(passport=self._config.target)  # Just in case it exists
+            self._dataset_store.remove(passport=self._config.target)  # Remove if exists
             self._dataset_store.add(dataset=full_dataset)
 
             # Split the data into train_val and test sets
             splitter = TimeSeriesDataSplitter(year_to_split=YEAR_TO_SPLIT)
             split_dfs = splitter.split(df=df)
 
+            # Create and persist datasets
             self._create_and_persist_datasets(data=split_dfs)
 
+            # Update metrics
             self._update_metrics(data=split_dfs)
 
             self._result.status_obj = Status.SUCCESS
 
-            # Finalize the result and log it.
+            # Finalize the result and log it
             self._result.end_pipeline()
             logger.info(self._result)
 
@@ -174,24 +212,28 @@ class ModelDataPipeline(DataPrepPipeline):
             self._result.end_pipeline()
             raise e
 
-    def _create_and_persist_datasets(self, data: Dict[str, pd.DataFrame]) -> None:
-        """Creates and persists the train_val and test datasets.
+    def _create_and_persist_datasets(self, data: Dict[str, pl.DataFrame]) -> None:
+        """
+        Create and persist the train_val and test datasets.
 
         Args:
-            data (Dict[str, pd.DataFrame]): Dictionary containing 'train_val' and 'test' DataFrames.
+            data: Dictionary containing 'train_val' and 'test' DataFrames.
         """
         train_val_dataset = Dataset(passport=self._config.train_val_target, df=data["train_val"])
         test_dataset = Dataset(passport=self._config.test_target, df=data["test"])
+
         self._dataset_store.add(dataset=train_val_dataset)
         self._dataset_store.add(dataset=test_dataset)
+
         self._result.train_val_dataset = train_val_dataset
         self._result.test_dataset = test_dataset
 
     def _endpoint_exists(self) -> bool:
-        """Checks if the target dataset already exists in the dataset store.
+        """
+        Check if the target datasets already exist in the dataset store.
 
         Returns:
-            bool: True if the target dataset exists, False otherwise.
+            bool: True if both target datasets exist, False otherwise.
         """
         if self._config.train_val_target is None or self._config.test_target is None:
             return False
@@ -200,10 +242,16 @@ class ModelDataPipeline(DataPrepPipeline):
             dataset_id=self._config.train_val_target.id
         ) and self._dataset_store.exists(dataset_id=self._config.test_target.id)
 
-    def _update_metrics(self, data: Dict[str, pd.DataFrame]) -> None:
-        self._result.records_out = data["train_val"].shape[0] + data["test"].shape[0]
-        self._result.train_val_size = data["train_val"].shape[0]
-        self._result.test_size = data["test"].shape[0]
+    def _update_metrics(self, data: Dict[str, pl.DataFrame]) -> None:
+        """
+        Update pipeline metrics based on the split datasets.
+
+        Args:
+            data: Dictionary containing 'train_val' and 'test' DataFrames.
+        """
+        self._result.train_val_size = len(data["train_val"])
+        self._result.test_size = len(data["test"])
+        self._result.records_out = self._result.train_val_size + self._result.test_size
 
 
 # ------------------------------------------------------------------------------------------------ #

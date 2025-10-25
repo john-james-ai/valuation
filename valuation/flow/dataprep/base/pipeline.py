@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Tuesday October 14th 2025 10:53:05 pm                                               #
-# Modified   : Saturday October 25th 2025 02:44:27 am                                              #
+# Modified   : Saturday October 25th 2025 08:43:26 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -24,7 +24,7 @@ from typing import Any, Dict, Union
 from pathlib import Path
 
 from loguru import logger
-import pandas as pd
+import polars as pl
 
 from valuation.asset.dataset.dataset import DTYPES
 from valuation.asset.identity.dataset import DatasetPassport
@@ -53,15 +53,48 @@ class DataPrepPipeline(Pipeline):
         self._target = target
         return self
 
-    def _load(self, filepath: Path, **kwargs) -> pd.DataFrame | Dict[str, Any]:
-        logger.debug(f"Loading data from {filepath} with pandas from {__name__}")
-        try:
+    def _load(
+        self,
+        filepath: Path,
+        lazy: bool = True,
+        cast_dtypes: bool = True,
+        **kwargs,
+    ) -> Union[pl.LazyFrame, pl.DataFrame, Dict[str, Any]]:
+        """
+        Load data from file using IOService with lazy loading support.
 
-            data = IOService.read(filepath=filepath, **kwargs)
-            # Ensure correct data types
-            if isinstance(data, pd.DataFrame):
-                data = data.astype({k: v for k, v in DTYPES.items() if k in data.columns})
+        Args:
+            filepath: Path to the data file
+            lazy: If True, return LazyFrame for DataFrames; if False, return DataFrame
+            cast_dtypes: If True, cast columns to dtypes defined in DTYPES
+            **kwargs: Additional arguments passed to IOService.read
+
+        Returns:
+            Union[pl.LazyFrame, pl.DataFrame, Dict]: Loaded data with correct dtypes
+        """
+        try:
+            logger.debug(
+                f"Loading data from {filepath} with lazy={lazy} and cast_dtypes={cast_dtypes} from {__name__}"
+            )
+            # Load data with lazy parameter
+            data = IOService.read(filepath=filepath, lazy=lazy, **kwargs)
+
+            # Cast dtypes for DataFrames only
+            if cast_dtypes and isinstance(data, (pl.DataFrame, pl.LazyFrame)):
+                # Get columns and build cast dict
+                columns = (
+                    data.collect_schema().names()
+                    if isinstance(data, pl.LazyFrame)
+                    else data.columns
+                )
+                cast_dict = {col: DTYPES[col] for col in columns if col in DTYPES}
+
+                # Apply casting if needed
+                if cast_dict:
+                    data = data.cast(cast_dict)
+
             return data
+
         except Exception as e:
             logger.critical(f"Failed to load data from {filepath.name} with exception: {e}")
             raise e

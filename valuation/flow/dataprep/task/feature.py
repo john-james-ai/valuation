@@ -11,27 +11,27 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday October 12th 2025 11:51:12 pm                                                #
-# Modified   : Saturday October 25th 2025 03:47:38 am                                              #
+# Modified   : Saturday October 25th 2025 08:43:26 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
 # ================================================================================================ #
 from typing import Optional
 
-import pandas as pd
+import polars as pl
 
 from valuation.flow.dataprep.base.task import DataPrepTask
 from valuation.flow.dataprep.validation import Validation
 
 # ------------------------------------------------------------------------------------------------ #
 REQUIRED_COLUMNS_INGEST = {
-    "category": "string",
-    "store": "Int64",
-    "week": "Int64",
-    "revenue": "float64",
-    "year": "Int64",
-    "start": "datetime64[ns]",
-    "end": "datetime64[ns]",
+    "category": pl.Utf8,
+    "store": pl.Int64,
+    "week": pl.Int64,
+    "revenue": pl.Float64,
+    "year": pl.Int64,
+    "start": pl.Datetime("ns"),
+    "end": pl.Datetime("ns"),
 }
 
 
@@ -43,26 +43,33 @@ class FeatureEngineeringTask(DataPrepTask):
         validation: Optional[Validation] = None,
     ) -> None:
         """Initializes the ingestion task with the provided configuration."""
-        super().__init__(validation=validation)
+        super().__init__()
+        self._validation = validation or Validation()
 
-    def run(self, df: pd.DataFrame, **kwargs) -> pd.DataFrame:
+    def run(self, df: pl.LazyFrame, **kwargs) -> pl.LazyFrame:
         """Adds year, start and end dates to the DataFrame based on the week number.
 
         Args:
-            df (pd.DataFrame): The DataFrame to which dates will be added. Must contain
-                a 'week' column.
-            week_decode_filepath (Path): The path to the week decode CSV file.
+            df (pl.LazyFrame): The lazy DataFrame to which dates will be added.
+                Must contain a 'week' column.
+
         Returns:
-            pd.DataFrame: The input DataFrame with added 'start_date' and 'end_date' columns.
+            pl.LazyFrame: The input lazy DataFrame with added columns and transformations.
         """
 
-        df["unique_id"] = (
-            df["store"].astype("string")
-            + "_"
-            + df["category"].str.lower().replace(" ", "_").astype("string")
+        df = (
+            df.with_columns(
+                pl.concat_str(
+                    [
+                        pl.col("store").cast(pl.Utf8),
+                        pl.lit("_"),
+                        pl.col("category").str.to_lowercase().str.replace_all(" ", "_"),
+                    ]
+                ).alias("unique_id")
+            )
+            .sort(["unique_id", "week"])
+            .rename({"revenue": "y", "end": "ds"})
+            .select(["unique_id", "ds", "y"])
         )
-        df = df.sort_values(by=["unique_id", "week"]).reset_index(drop=True)
-        df = df.rename(columns={"revenue": "y"})
-        df = df.rename(columns={"end": "ds"})
 
-        return df[["unique_id", "ds", "y"]]
+        return df

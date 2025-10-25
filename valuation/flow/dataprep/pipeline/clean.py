@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Tuesday October 14th 2025 10:53:05 pm                                               #
-# Modified   : Saturday October 25th 2025 03:52:51 am                                              #
+# Modified   : Saturday October 25th 2025 08:45:39 am                                              #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -25,12 +25,11 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from loguru import logger
-import pandas as pd
+import polars as pl
 from tqdm import tqdm
 
-from valuation.asset.dataset.dataset import DTYPES, Dataset
+from valuation.asset.dataset.dataset import Dataset
 from valuation.asset.identity.dataset import DatasetPassport
-from valuation.core.stage import DatasetStage
 from valuation.core.state import Status
 from valuation.flow.base.pipeline import PipelineResult
 from valuation.flow.dataprep.base.pipeline import DataPrepPipeline, DataPrepPipelineBuilder
@@ -66,12 +65,15 @@ class CleanSalesDataPipelineResult(PipelineResult):
 
 
 # ------------------------------------------------------------------------------------------------ #
+
+
 class CleanSalesDataPipeline(DataPrepPipeline):
-    """Pipeline implementation for preparing sales datasets.
+    """
+    Pipeline implementation for preparing sales datasets using Polars.
 
     Args:
-        dataset_store (type[DatasetStore]): The DatasetStore class or factory used by the pipeline.
-        result (type[CleanSalesDataPipelineResult]): Result class used to create result instances.
+        dataset_store: The DatasetStore class or factory used by the pipeline.
+        result: Result class used to create result instances.
     """
 
     _dataset_store: DatasetStore
@@ -88,18 +90,18 @@ class CleanSalesDataPipeline(DataPrepPipeline):
         self._target = None
 
     def run(self, force: bool = False) -> Optional[CleanSalesDataPipelineResult]:
-        """Execute the configured pipeline over source categories and produce a dataset.
+        """
+        Execute the configured pipeline over source categories and produce a dataset.
 
         Args:
-            force (bool): If True, force reprocessing even when target dataset already exists. Defaults to False.
+            force: If True, force reprocessing even when target dataset already exists.
 
         Returns:
-            Optional[CleanSalesDataPipelineResult]: Pipeline result object if execution completes or is skipped.
+            Optional[CleanSalesDataPipelineResult]: Pipeline result object if execution completes.
         """
         self._result.start_pipeline()
 
         try:
-
             # Read category filenames mapping
             category_filenames = IOService.read(filepath=Path(self._source))[
                 CONFIG_CATEGORY_INFO_KEY
@@ -107,8 +109,8 @@ class CleanSalesDataPipeline(DataPrepPipeline):
             logger.debug(f"Category filenames mapping loaded: {len(category_filenames)}")
 
             # Get the stage and entity from the target passport
-            directory = self._dataset_store.file_system.get_stage_entity_location(
-                stage=DatasetStage.RAW
+            directory = self._dataset_store.file_system.get_stage_location(
+                stage=DatasetStage.RAW,
             )
             logger.debug(f"Raw sales data directory: {directory}\n")
 
@@ -122,8 +124,9 @@ class CleanSalesDataPipeline(DataPrepPipeline):
 
             # Iterate through category sales files
             for _, category_info in pbar:
-                # Initialize empty dataframe for category
-                df_category = pd.DataFrame()
+                # Initialize empty LazyFrame for category
+                category_frames = []
+
                 # Get filename and category
                 filename = category_info["filename"]
                 filepath = directory / filename
@@ -134,10 +137,12 @@ class CleanSalesDataPipeline(DataPrepPipeline):
                 # Set target dataset name
                 if self._target is not None:
                     self._target.name = "sales_" + category.replace(" ", "_").lower()
+
                     # Check if dataset already exists and skip if not forcing
                     if self._dataset_store.exists(dataset_id=self._target.id) and not force:
                         logger.debug(
-                            f"Dataset {self._target.label} already exists in the datastore.\nSkipping processing."
+                            f"Dataset {self._target.label} already exists in the datastore.\n"
+                            "Skipping processing."
                         )
                         continue
 
@@ -145,16 +150,19 @@ class CleanSalesDataPipeline(DataPrepPipeline):
                 if self._dataset_store.exists(dataset_id=self._target.id):  # type: ignore
                     self._dataset_store.remove(passport=self._target)
 
-                # Load the data
-                df = self._load(filepath=filepath, **DTYPES)
+                # Load the data (lazy by default)
+                df = self._load(filepath=filepath, lazy=True)
 
+                # Process through tasks
                 for task in self._tasks:
+                    # Run the task (returns LazyFrame)
+                    df = task.run(df=df, category=category, lazy=True)
 
-                    # Run the task
-                    df = task.run(df=df, category=category)
+                    # Collect for validation (validates eagerly)
+                    df_validated = df.collect()
 
                     # Validate the result
-                    task.validation.validate(df=df, classname=task.__class__.__name__)
+                    task.validation.validate(df=df_validated, classname=task.__class__.__name__)
 
                     # Update metrics
                     self._update_metrics(validation=task.validation)
@@ -165,13 +173,24 @@ class CleanSalesDataPipeline(DataPrepPipeline):
                         task.validation.report()
                         break
 
-                    # Append to cumulative dataframe
-                    df_category = pd.concat([df_category, df], ignore_index=True)
+                    # Convert back to lazy for next task
+                    df = df_validated.lazy()
+
+                # Collect final result and append to category frames
+                category_frames.append(df.collect())
+
+                # Concatenate all frames for this category
+                if category_frames:
+                    df_category = pl.concat(category_frames, how="vertical")
+                else:
+                    df_category = pl.DataFrame()
 
                 # Create and persist the category-level data to the dataset store
                 self._target.name = "sales_" + category.replace(" ", "_").lower()  # type: ignore
+                self._dataset_store.remove(passport=self._target)  # type: ignore
                 dataset_category = Dataset(passport=self._target, df=df_category)
                 self._dataset_store.add(dataset=dataset_category, overwrite=force)
+
                 # Update result dataset reference
                 self._result.num_datasets += 1
 
@@ -187,10 +206,11 @@ class CleanSalesDataPipeline(DataPrepPipeline):
             raise e
 
     def _update_metrics(self, validation: Validation) -> None:
-        """Update pipeline result metrics based on validation results.
-        Args:
-            validation (Validation): The validation object containing metrics to update.
+        """
+        Update pipeline result metrics based on validation results.
 
+        Args:
+            validation: The validation object containing metrics to update.
         """
         self._result.num_errors += validation.num_errors
         self._result.num_warnings += validation.num_warnings
@@ -263,7 +283,11 @@ class CleanSalesDataPipelineBuilder(DataPrepPipelineBuilder):
             .with_range_validator(column="profit", min_value=-100.00, max_value=100.00)
             .build()
         )
-        week_decode_table = self._pipeline._load(filepath=Path(week_decode_table_filepath))
+        week_decode_table = IOService.read(
+            filepath=Path(week_decode_table_filepath), try_parse_dates=True
+        )
+        logger.debug("Week decode table loaded for ingest task.")
+        logger.debug(week_decode_table.head())
 
         task = IngestSalesDataTask(validation=validation, week_decode_table=week_decode_table)
         self._pipeline.add_task(task=task)
@@ -280,6 +304,12 @@ class CleanSalesDataPipelineBuilder(DataPrepPipelineBuilder):
         return self
 
     def with_full_year_filter_task(self, min_weeks: int = 50) -> CleanSalesDataPipelineBuilder:
+        """Add the filter partial years task to the pipeline and configure its validator.
+
+        Args:
+            min_weeks (int): Minimum number of weeks required for a year to be considered full
+                (default is 50).
+        """
         task = FilterPartialYearsTask(min_weeks=min_weeks)
         self._pipeline.add_task(task=task)
         return self
