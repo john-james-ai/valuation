@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Saturday October 11th 2025 05:32:44 pm                                              #
-# Modified   : Friday October 24th 2025 07:26:49 pm                                                #
+# Modified   : Friday October 24th 2025 08:23:41 pm                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -108,6 +108,9 @@ class Financials(DataClass):
     prior_current_liabilities_excl_debt: int = 298376000
     prior_total_equity: int = 139850000
 
+    # CAPITAL EXPENDITURES PERCENTAGE
+    capex_pct: float = 0.0
+
     # PROFITABILITY METRICS
     ebitda: int = 114900000
     ebit: int = 0
@@ -117,7 +120,7 @@ class Financials(DataClass):
     return_on_invested_capital: float = 0.0
 
     # PROFITABIITY RATIOS
-    gross_profit_margin: float = 0.0
+    gross_margin: float = 0.0
     operating_margin: float = 0.0
     net_profit_margin: float = 0.0
     ebit_margin: float = 0.0
@@ -150,6 +153,7 @@ class Financials(DataClass):
     nwc_to_sales: float = 0.0
 
     # LIQUIDITY METRICS
+    working_capital_pct: float = 0.0
     net_working_capital: int = 0
     net_working_capital_change: int = 0
     net_working_capital_change_per_pct_sales_growth: float = 0.0
@@ -160,13 +164,13 @@ class Financials(DataClass):
         self.total_liabilities = self.total_liabilities_and_equity - self.total_equity
         # Profiability Metrics
         self.ebit = self.ebitda - self.depreciation_and_amortization
-        # Profitability Ratios
-        self.gross_profit_margin = self.gross_profit / self.revenue * 100 if self.revenue else 0.0
-        self.operating_margin = self.operating_income / self.revenue * 100 if self.revenue else 0.0
-        self.net_profit_margin = self.net_income / self.revenue * 100 if self.revenue else 0.0
+        # Profitability Ratios (Expressed as Ratios, not Percentages)
+        self.gross_margin = self.gross_profit / self.revenue if self.revenue else 0.0
+        self.operating_margin = self.operating_income / self.revenue if self.revenue else 0.0
+        self.net_profit_margin = self.net_income / self.revenue if self.revenue else 0.0
 
-        self.ebit_margin = self.ebit / self.revenue * 100 if self.revenue else 0.0
-        self.ebitda_margin = self.ebitda / self.revenue * 100 if self.revenue else 0.0
+        self.ebit_margin = self.ebit / self.revenue if self.revenue else 0.0
+        self.ebitda_margin = self.ebitda / self.revenue if self.revenue else 0.0
         self.nopat = int(self.ebit * (1 - self.tax_rate))
         # Average Assets & Equity
         self.average_assets = (
@@ -188,6 +192,7 @@ class Financials(DataClass):
         )
 
         # Liquidity Ratios
+        self.working_capital_pct = self.nwc_to_sales / 100
         self.working_capital = self.current_assets - self.current_liabilities
         self.current_ratio = (
             self.current_assets / self.current_liabilities if self.current_liabilities else 0.0
@@ -236,6 +241,7 @@ class Financials(DataClass):
         self.capex_to_sales = (
             self.capital_expenditures / self.revenue * 100 if self.revenue else 0.0
         )
+        self.capex_pct = abs(self.capex_to_sales / 100)
         self.nwc_to_sales = self.capital_expenditures / self.revenue * 100 if self.revenue else 0.0
 
         # Liquidity Metrics
@@ -296,7 +302,7 @@ class Financials(DataClass):
     def profitability_ratios(self) -> ProfitabilityRatios:
         """Returns the profitability ratios as a dataclass."""
         return ProfitabilityRatios(
-            gross_profit_margin=self.gross_profit_margin,
+            gross_margin=self.gross_margin,
             operating_margin=self.operating_margin,
             net_profit_margin=self.net_profit_margin,
             ebit_margin=self.ebit_margin,
@@ -450,7 +456,7 @@ class CashflowStatement(DataClass):
 class ProfitabilityRatios(DataClass):
     """Dataclass representing profitability ratios of a company."""
 
-    gross_profit_margin: float  # Gross Profit Margin (%)
+    gross_margin: float  # Gross Profit Margin (%)
     operating_margin: float  # Operating Margin (%)
     net_profit_margin: float  # Net Profit Margin (%)
     ebit_margin: float  # EBIT Margin (%)

@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday October 24th 2025 01:00:33 pm                                                #
-# Modified   : Friday October 24th 2025 07:42:14 pm                                                #
+# Modified   : Friday October 24th 2025 08:42:30 pm                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -20,16 +20,17 @@
 
 from typing import Dict, Optional, Tuple
 
+from dataclasses import dataclass
 from pathlib import Path
 import warnings
 
-from attr import dataclass
 from loguru import logger
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
 
+from valuation.analysis.financials import Financials
 from valuation.core.dataclass import DataClass
 
 warnings.filterwarnings("ignore")
@@ -50,6 +51,15 @@ class ValuationAssumptions(DataClass):
     # Terminal Value Assumptions
     terminal_growth_rate: float = 0.03  # Perpetual growth rate after forecast period
     terminal_fcf_multiple: float = 12  # Exit multiple (alternative TV method)
+
+    # Minority Interest and Other Adjustments
+    minority_interest: float = 0.0  # Minority interest to subtract from EV
+    other_adjustments: float = 0.0  # Other adjustments to bridge EV to equity value
+
+    wacc: Optional[float] = None  # Weighted average cost of capital
+
+    def __post_init__(self):
+        self.wacc = self.risk_free_rate + self.beta * self.market_risk_premium
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -76,16 +86,11 @@ class ValuationDCF:
 
     def __init__(
         self,
-        financials,
+        financials: Financials,
+        assumptions: ValuationAssumptions,
         forecast_df: pd.DataFrame,
         forecast_col: str,
         valuation_date: pd.Timestamp,
-        wacc: Optional[float] = None,
-        terminal_growth_rate: float = 0.03,
-        terminal_fcf_multiple: float = 12,
-        net_debt: float = 0.0,
-        minority_interest: float = 0,
-        other_adjustments: float = 0,
     ):
         """
         Initialize DCF Valuation.
@@ -103,17 +108,12 @@ class ValuationDCF:
             other_adjustments: Other adjustments to bridge EV to equity value
         """
         self.financials = financials
+        self.assumptions = assumptions
         self.forecast_df = forecast_df.copy()
         self.forecast_col = forecast_col
         self.valuation_date = valuation_date
-        self.terminal_growth_rate = terminal_growth_rate
-        self.terminal_fcf_multiple = terminal_fcf_multiple
-        self.net_debt = net_debt
-        self.minority_interest = minority_interest
-        self.other_adjustments = other_adjustments
 
         # Initialize containers
-        self.assumptions = {}
         self.company_revenue_weekly_df = None
         self.annual_revenue = None
         self.dcf_df = None
@@ -122,60 +122,14 @@ class ValuationDCF:
         self.enterprise_value = None
         self.equity_value = None
         self.sensitivity_df = None
-
-        # Setup assumptions from financials
-        self._setup_assumptions(wacc)
+        self.net_debt = self.financials.total_debt - self.financials.cash_and_equivalents
 
         logger.info("=" * 80)
         logger.info("DCF VALUATION INITIALIZED")
         logger.info("=" * 80)
         logger.info(f"Valuation Date: {self.valuation_date.date()}")
         logger.info(f"Forecast Column: {self.forecast_col}")
-        logger.info(f"WACC: {self.assumptions['wacc']:.2%}")
-
-    def _setup_assumptions(self, wacc: Optional[float]) -> None:
-        """Setup valuation assumptions from financials dataclass."""
-
-        # Calculate operating metrics from financials
-        operating_margin = self.financials.operating_margin / 100  # Convert from percentage
-        gross_margin = self.financials.gross_profit_margin / 100
-        tax_rate = self.financials.tax_rate
-
-        # Calculate working capital as % of revenue
-        working_capital_pct = (
-            abs(self.financials.nwc_to_sales / 100) if self.financials.nwc_to_sales else 0.10
-        )
-
-        # Calculate capex as % of revenue
-        capex_pct = (
-            abs(self.financials.capex_to_sales / 100) if self.financials.capex_to_sales else 0.03
-        )
-
-        # Calculate WACC if not provided
-        if wacc is None:
-            # Use a simple CAPM approach
-            risk_free_rate = 0.06  # 1997 10-year Treasury
-            market_risk_premium = 0.08
-            beta = 1.2  # Retail sector beta
-            wacc = risk_free_rate + beta * market_risk_premium
-            logger.info(f"WACC calculated using CAPM: {wacc:.2%}")
-
-        self.assumptions = {
-            "gross_margin": gross_margin,
-            "operating_margin": operating_margin,
-            "tax_rate": tax_rate,
-            "working_capital_pct": working_capital_pct,
-            "capex_pct": capex_pct,
-            "wacc": wacc,
-            "terminal_growth_rate": self.terminal_growth_rate,
-            "terminal_fcf_multiple": self.terminal_fcf_multiple,
-        }
-
-        logger.info("Assumptions loaded from financials:")
-        logger.info(f"  Operating Margin: {operating_margin:.1%}")
-        logger.info(f"  Tax Rate: {tax_rate:.1%}")
-        logger.info(f"  CapEx % of Revenue: {capex_pct:.1%}")
-        logger.info(f"  Working Capital % of Rev Change: {working_capital_pct:.1%}")
+        logger.info(f"WACC: {self.assumptions.wacc:.2%}")
 
     def aggregate_revenue(self) -> None:
         """
@@ -252,15 +206,14 @@ class ValuationDCF:
             Dictionary with FCF components
         """
         # NOPAT (Net Operating Profit After Tax)
-        ebit = revenue * self.assumptions["operating_margin"]
-        nopat = ebit * (1 - self.assumptions["tax_rate"])
-
+        ebit = revenue * self.financials.operating_margin
+        nopat = ebit * (1 - self.financials.tax_rate)
         # Capital Expenditures
-        capex = revenue * self.assumptions["capex_pct"]
+        capex = revenue * self.financials.capex_pct
 
         # Change in Net Working Capital
         revenue_change = revenue - prior_revenue
-        nwc_change = revenue_change * self.assumptions["working_capital_pct"]
+        nwc_change = revenue_change * self.financials.working_capital_pct
 
         # Free Cash Flow
         fcf = nopat - capex - nwc_change
@@ -290,7 +243,7 @@ class ValuationDCF:
 
         dcf_model = []
         prior_revenue = 0
-        wacc = self.assumptions["wacc"]
+        wacc = self.assumptions.wacc if self.assumptions.wacc is not None else 0.1
 
         for idx, row in self.annual_revenue.iterrows():  # type: ignore
             year = row["year"]
@@ -303,7 +256,7 @@ class ValuationDCF:
             years_from_valuation = year - self.valuation_date.year + 0.5
 
             # Calculate discount factor
-            discount_factor = 1 / (1 + wacc) ** years_from_valuation
+            discount_factor = 1 / (1.0 + wacc) ** years_from_valuation
 
             # Calculate present value
             pv_fcf = fcf_calc["fcf"] * discount_factor
@@ -345,15 +298,19 @@ class ValuationDCF:
         # Get terminal year FCF
         terminal_fcf = self.dcf_df.iloc[-1]["fcf"]  # type: ignore
         terminal_year = self.dcf_df.iloc[-1]["year"]  # type: ignore
-        wacc = self.assumptions["wacc"]
-        g = self.assumptions["terminal_growth_rate"]
+        wacc = self.assumptions.wacc if self.assumptions.wacc is not None else 0.1
+        g = self.assumptions.terminal_growth_rate
 
         # Method 1: Perpetuity Growth Model
         # TV = FCF_terminal * (1 + g) / (WACC - g)
-        terminal_value_perpetuity = (terminal_fcf * (1 + g)) / (wacc - g)
+        terminal_value_perpetuity = (
+            (terminal_fcf * (1 + g)) / (self.assumptions.wacc - g)
+            if self.assumptions.wacc is not None
+            else 0.1
+        )
 
         # Method 2: Exit Multiple Method
-        terminal_value_multiple = terminal_fcf * self.assumptions["terminal_fcf_multiple"]
+        terminal_value_multiple = terminal_fcf * self.assumptions.terminal_fcf_multiple
 
         # Use perpetuity method as primary
         self.terminal_value = terminal_value_perpetuity
@@ -367,7 +324,7 @@ class ValuationDCF:
         logger.info(f"\nMethod 1 - Perpetuity Growth:")
         logger.info(f"  Terminal Value: ${terminal_value_perpetuity:,.0f}")
         logger.info(f"  PV of Terminal Value: ${self.pv_terminal_value:,.0f}")
-        logger.info(f"\nMethod 2 - Exit Multiple ({self.assumptions['terminal_fcf_multiple']}x):")
+        logger.info(f"\nMethod 2 - Exit Multiple ({self.assumptions.terminal_fcf_multiple}x):")
         logger.info(f"  Terminal Value: ${terminal_value_multiple:,.0f}")
         logger.info(f"  PV: ${terminal_value_multiple * discount_factor_terminal:,.0f}")
 
@@ -430,13 +387,16 @@ class ValuationDCF:
             raise ValueError("Enterprise value is not available.")
 
         self.equity_value = (
-            self.enterprise_value - self.net_debt - self.minority_interest + self.other_adjustments
+            self.enterprise_value
+            - self.net_debt
+            - self.assumptions.minority_interest
+            + self.assumptions.other_adjustments
         )
 
         logger.info(f"Enterprise Value: ${self.enterprise_value:,.0f}")
         logger.info(f"Less: Net Debt: ${self.net_debt:,.0f}")
-        logger.info(f"Less: Minority Interest: ${self.minority_interest:,.0f}")
-        logger.info(f"Plus/Less: Other Adjustments: ${self.other_adjustments:,.0f}")
+        logger.info(f"Less: Minority Interest: ${self.assumptions.minority_interest:,.0f}")
+        logger.info(f"Plus/Less: Other Adjustments: ${self.assumptions.other_adjustments:,.0f}")
         logger.info("=" * 80)
         logger.info(f"EQUITY VALUE: ${self.equity_value:,.0f}")
         logger.info("=" * 80)
@@ -464,8 +424,8 @@ class ValuationDCF:
             self.build_dcf_model()
             self.calculate_terminal_value()
 
-        wacc = self.assumptions["wacc"]
-        g = self.assumptions["terminal_growth_rate"]
+        wacc = self.assumptions.wacc if self.assumptions.wacc is not None else 0.1
+        g = self.assumptions.terminal_growth_rate
 
         # Default ranges
         if wacc_range is None:
@@ -676,7 +636,11 @@ class ValuationDCF:
             label="Operating Margin",
         )
         ax7.axhline(
-            y=self.assumptions["operating_margin"] * 100,
+            y=(
+                self.financials.operating_margin * 100
+                if self.financials.operating_margin is not None
+                else 0.0
+            ),
             color="red",
             linestyle="--",
             alpha=0.5,
@@ -770,10 +734,10 @@ class ValuationDCF:
         # Create summary report
         summary_report = {
             "Valuation Date": self.valuation_date.date(),
-            "WACC": f'{self.assumptions["wacc"]:.2%}',
-            "Terminal Growth Rate": f'{self.assumptions["terminal_growth_rate"]:.2%}',
-            "Operating Margin": f'{self.assumptions["operating_margin"]:.2%}',
-            "Tax Rate": f'{self.assumptions["tax_rate"]:.2%}',
+            "WACC": f"{self.assumptions.wacc:.2%}",
+            "Terminal Growth Rate": f"{self.assumptions.terminal_growth_rate:.2%}",
+            "Operating Margin": f"{self.financials.operating_margin:.2%}",
+            "Tax Rate": f"{self.financials.tax_rate:.2%}",
             "Total Forecast Revenue": f'${self.dcf_df["revenue"].sum():,.0f}',
             "Total Forecast FCF": f'${self.dcf_df["fcf"].sum():,.0f}',
             "PV Forecast Period": f'${self.dcf_df["pv_fcf"].sum():,.0f}',
@@ -844,8 +808,8 @@ class ValuationDCF:
             "pv_terminal_value": (
                 self.pv_terminal_value.round(2) if self.pv_terminal_value is not None else None
             ),
-            "wacc": round(self.assumptions["wacc"], 2),
-            "terminal_growth_rate": round(self.assumptions["terminal_growth_rate"], 2),
+            "wacc": round(self.assumptions.wacc, 2) if self.assumptions.wacc is not None else 0.1,
+            "terminal_growth_rate": round(self.assumptions.terminal_growth_rate, 2),
         }
 
         logger.info("=" * 80)
