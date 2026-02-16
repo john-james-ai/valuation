@@ -11,7 +11,7 @@
 # URL        : https://github.com/john-james-ai/valuation                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Saturday October 11th 2025 05:32:44 pm                                              #
-# Modified   : Saturday October 25th 2025 07:45:13 pm                                              #
+# Modified   : Tuesday October 28th 2025 11:26:32 pm                                               #
 # ------------------------------------------------------------------------------------------------ #
 # License    : MIT License                                                                         #
 # Copyright  : (c) 2025 John James                                                                 #
@@ -102,7 +102,10 @@ class Financials(DataClass):
     # HISTORICAL FIGURES
     prior_total_assets: int = 1086423000
     prior_current_assets: int = 274318000
+    prior_current_liabilities: int = 308504000
     prior_inventory: int = 182880000
+    prior_accounts_receivable: int = 25314000
+    prior_accounts_payable: int = 171209000
     prior_cogs: int = 1884161000
     prior_revenue: int = 2433724000
     prior_current_liabilities_excl_debt: int = 298376000
@@ -138,10 +141,17 @@ class Financials(DataClass):
     debt_ratio: float = 0.0
     debt_to_equity_ratio: float = 0.0
 
+    # AVERAGE BALANCES
+    average_inventory: float = 0.0
+    average_accounts_receivable: float = 0.0
+    average_accounts_payable: float = 0.0
+
     # EFFICIENCY RATIOS
     inventory_turnover: float = 0.0
     days_inventory_outstanding: float = 0.0
     days_payables_outstanding: float = 0.0
+    days_sales_outstanding: float = 0.0
+    cash_conversion_cycle: float = 0.0
     sga_to_sales: float = 0.0
     dna_to_sales: float = 0.0
     cogs_growth_rate: float = 0.0
@@ -209,26 +219,32 @@ class Financials(DataClass):
 
         # Efficiency Ratios
         self.inventory_turnover = self.cogs / self.inventory if self.inventory else 0.0
-        self.days_inventory_outstanding = (
-            365
-            * (
-                (self.inventory + self.prior_inventory) / 2
-                if self.prior_inventory
-                else self.inventory
-            )
-            / self.cogs
-            if self.cogs > 0
-            else 0
-        )
-        self.days_payables_outstanding = (
-            365 * self.accounts_payable / self.cogs if self.cogs > 0 else 0
-        )
+
         self.sga_to_sales = self.sga / self.revenue * 100 if self.revenue else 0.0
         self.dna_to_sales = (
             self.depreciation_and_amortization / self.revenue * 100 if self.revenue else 0.0
         )
         self.cogs_growth_rate = (
             (self.cogs - self.prior_cogs) / self.prior_cogs * 100 if self.prior_cogs else 0.0
+        )
+        self.average_inventory = (self.inventory + self.prior_inventory) / 2
+        self.days_inventory_outstanding = (
+            365 * self.average_inventory / self.cogs if self.cogs > 0 else 0
+        )
+        self.average_accounts_payable = (self.accounts_payable + self.prior_accounts_payable) / 2
+        self.days_payables_outstanding = (
+            365 * self.average_accounts_payable / self.cogs if self.cogs > 0 else 0
+        )
+        self.average_accounts_receivable = (
+            self.accounts_receivable + self.prior_accounts_receivable
+        ) / 2
+        self.days_sales_outstanding = (
+            365 * self.average_accounts_receivable / self.revenue if self.revenue > 0 else 0
+        )
+        self.cash_conversion_cycle = (
+            self.days_inventory_outstanding
+            + self.days_sales_outstanding
+            - self.days_payables_outstanding
         )
 
         # Growth Metrics
@@ -247,11 +263,22 @@ class Financials(DataClass):
         self.nwc_to_sales = self.capital_expenditures / self.revenue * 100 if self.revenue else 0.0
 
         # Liquidity Metrics
+        self.average_working_capital = (
+            (self.current_assets - self.current_liabilities)
+            + (self.prior_current_assets - self.prior_current_liabilities)
+        ) / 2
         self.net_working_capital = self.current_assets - self.current_liabilities
+        self.net_working_capital_turnover = (
+            self.average_working_capital / self.revenue if self.revenue else 0.0
+        )
         self.net_working_capital_change = self._calculate_change_in_net_working_capital()
         self.net_working_capital_change_per_pct_sales_growth = (
             self._calculate_net_working_capital_change_per_pct_sales_growth()
         )
+
+        self.free_cash_flow = self._calculate_free_cash_flow()
+
+        ##
 
     @property
     def income_statement(self) -> IncomeStatement:
@@ -336,6 +363,8 @@ class Financials(DataClass):
         """Returns the liquidity metrics as a dataclass."""
         return LiquidityMetrics(
             net_working_capital=self.net_working_capital,
+            average_net_working_capital=self.average_working_capital,
+            net_working_capital_turnover=self.net_working_capital_turnover,
             net_working_capital_change=self.net_working_capital_change,
             net_working_capital_change_per_pct_sales_growth=self.net_working_capital_change_per_pct_sales_growth,
         )
@@ -353,8 +382,20 @@ class Financials(DataClass):
         """Returns the efficiency ratios as a dataclass."""
         return EfficiencyRatios(
             inventory_turnover=self.inventory_turnover,
+            inventory=self.inventory,
+            prior_inventory=self.prior_inventory,
+            average_inventory=self.average_inventory,
+            accounts_payable=self.accounts_payable,
+            prior_accounts_payable=self.prior_accounts_payable,
+            average_accounts_payable=self.average_accounts_payable,
+            accounts_receivable=self.accounts_receivable,
+            prior_accounts_receivable=self.prior_accounts_receivable,
+            average_accounts_receivable=self.average_accounts_receivable,
+            revenue=self.revenue,
+            days_sales_outstanding=self.days_sales_outstanding,
             days_inventory_outstanding=self.days_inventory_outstanding,
             days_payables_outstanding=self.days_payables_outstanding,
+            cash_conversion_cycle=self.cash_conversion_cycle,
             sga_to_sales=self.sga_to_sales,
             dna_to_sales=self.dna_to_sales,
             cogs_growth_rate=self.cogs_growth_rate,
@@ -399,12 +440,7 @@ class Financials(DataClass):
 
     def _calculate_free_cash_flow(self) -> int:
         """Calculates Free Cash Flow (FCF)."""
-        return (
-            self.nopat
-            + self.depreciation_and_amortization
-            + self.capital_expenditures
-            - self.net_working_capital_change
-        )
+        return self.operating_activities - self.capital_expenditures
 
 
 @dataclass
@@ -490,6 +526,8 @@ class LiquidityMetrics(DataClass):
     """Dataclass representing liquidity metrics of a company."""
 
     net_working_capital: float  # Net Working Capital
+    average_net_working_capital: float  # Average Net Working Capital
+    net_working_capital_turnover: float  # Net Working Capital Turnover
     net_working_capital_change: float  # Change in Net Working Capital
     net_working_capital_change_per_pct_sales_growth: float  # Change in NWC per % Sales Growth
 
@@ -507,8 +545,20 @@ class EfficiencyRatios(DataClass):
     """Dataclass representing efficiency ratios of a company."""
 
     inventory_turnover: float  # Inventory Turnover
+    inventory: float  # Current Inventory
+    prior_inventory: float  # Prior Inventory
+    average_inventory: float  # Average Inventory
     days_inventory_outstanding: float  # Days Inventory Outstanding
+    accounts_payable: float  # Current Accounts Payable
+    prior_accounts_payable: float  # Prior Accounts Payable
+    average_accounts_payable: float  # Average Accounts Payable
     days_payables_outstanding: float  # Days Payables Outstanding
+    accounts_receivable: float  # Current Accounts Receivable
+    prior_accounts_receivable: float  # Prior Accounts Receivable
+    average_accounts_receivable: float  # Average Accounts Receivable
+    revenue: float
+    days_sales_outstanding: float  # Days Sales Outstanding
+    cash_conversion_cycle: float  # Cash Conversion Cycle
     sga_to_sales: float  # SGA to Sales (%)
     dna_to_sales: float  # D&A to Sales (%)
     cogs_growth_rate: float  # COGS Growth Rate (%)
